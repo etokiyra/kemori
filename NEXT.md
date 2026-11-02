@@ -1,6 +1,6 @@
 # NEXT — the working plan for turning Kemori into a full IDE
 
-**Status snapshot:** 2026-11-02, version 3.0.0, after the bottom-panel work.
+**Status snapshot:** 2026-11-02, version 3.0.0, commit `3f1083e`.
 **Verification at the time of writing:** `cargo check --all-targets`, `cargo clippy --all-targets` clean; `cargo test` green (633 library tests, 49 render tests, plus tooling suites with ignored live tests).
 **Release status:** `kemori` 3.0.0 is on crates.io, docs.rs and the GitHub `v3.0.0` release. The AUR packages are prepared and validated locally; pushing them still needs the maintainer's AUR SSH key.
 
@@ -553,8 +553,8 @@ Keep this table current so the next session knows where to resume.
 | 0. Oversized-file splits | in progress | a5bb9ea | `app/mod.rs` and `ui/editor` split; `tools.rs` and `document.rs` remain |
 | Release / identity | done | dd64f6b | Renamed to Kemori; 3.0.0 on crates.io, docs.rs and GitHub; old `koda-ide` deprecated |
 | AUR publication | prepared | dd64f6b | Packages built and validated; waiting for the maintainer's AUR SSH key |
-| 1. Bottom panel | done | pending | Problems, Output and Debug Console; `Ctrl+J`, tab switching, resize, per-tab state |
-| 1. Problems panel | partial | pending | Covers open files and groups by file; workspace-wide sweep and pull diagnostics remain |
+| 1. Bottom panel | done | 3f1083e | Problems, Output and Debug Console; `Ctrl+J`, tab switching, resize, per-tab state |
+| 1. Problems panel | partial | 3f1083e | Covers open files and groups by file; workspace-wide sweep and pull diagnostics remain |
 | 1. Integrated terminal | not started | — | Needs the PTY dependency decision (open decision 3) |
 | 1. Live tasks | not started | — | Output is a completed batch in the panel; streaming, cancel and rerun remain |
 | 1. Project search/replace | not started | — | — |
