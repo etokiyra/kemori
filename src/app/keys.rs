@@ -176,7 +176,35 @@ impl App {
         }
     }
 
+    /// Handle the key after a `Ctrl+K` fold prefix.
+    fn handle_fold_key(&mut self, key: KeyEvent) -> bool {
+        if key
+            .modifiers
+            .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT)
+        {
+            return false;
+        }
+        match key.code {
+            KeyCode::Char('z') => self.execute_command(ids::FOLD_TOGGLE),
+            KeyCode::Char('c') => self.execute_command(ids::FOLD_CLOSE),
+            KeyCode::Char('o') => self.execute_command(ids::FOLD_OPEN),
+            KeyCode::Char('0') => self.execute_command(ids::FOLD_ALL),
+            KeyCode::Char('j') => self.execute_command(ids::UNFOLD_ALL),
+            KeyCode::Esc => {
+                self.set_status("Fold command cancelled");
+            }
+            _ => self.set_status("Unknown fold command — Ctrl+K z/c/o/0/j"),
+        }
+        true
+    }
+
     pub(super) fn handle_key(&mut self, key: KeyEvent) {
+        if self.fold_prefix {
+            self.fold_prefix = false;
+            if self.handle_fold_key(key) {
+                return;
+            }
+        }
         // A hover popup is informational; the next key dismisses it.
         if self.hover.is_some() {
             self.hover = None;
@@ -248,6 +276,7 @@ impl App {
                         'd' => self.with_doc(|d| d.select_next_occurrence()),
                         'l' if shift => self.with_doc(|d| d.select_all_occurrences()),
                         'k' if shift => self.with_doc(|d| d.delete_line()),
+                        'k' => self.fold_prefix = true,
                         'm' => self.goto_matching_bracket(),
                         '/' => self.toggle_comment(),
                         '.' => self.code_actions(),

@@ -73,6 +73,7 @@ struct ServerCapabilities {
     workspace_symbol: bool,
     signature_help: bool,
     document_formatting: bool,
+    folding_range: bool,
     sync: TextDocumentSyncKind,
 }
 
@@ -124,6 +125,7 @@ pub enum RequestKind {
     WorkspaceSymbols,
     SignatureHelp,
     Formatting,
+    FoldingRange,
 }
 
 /// Something the app consumes from a running server.
@@ -318,7 +320,8 @@ impl Server {
                             },
                             "contextSupport": true
                         },
-                        "formatting": { "dynamicRegistration": false }
+                        "formatting": { "dynamicRegistration": false },
+                        "foldingRange": { "dynamicRegistration": false }
                     },
                     "workspace": { "configuration": true, "symbol": {} }
                 },
@@ -350,6 +353,7 @@ impl Server {
             RequestKind::WorkspaceSymbols => self.capabilities.workspace_symbol,
             RequestKind::SignatureHelp => self.capabilities.signature_help,
             RequestKind::Formatting => self.capabilities.document_formatting,
+            RequestKind::FoldingRange => self.capabilities.folding_range,
         }
     }
 
@@ -490,6 +494,18 @@ impl Server {
         });
         self.send_request(RequestKind::Formatting, "textDocument/formatting", params)
             .ok()
+    }
+
+    /// Ask the server for a document's folding ranges, returning the request id
+    /// so a response for an older buffer can be ignored.
+    pub fn folding_ranges(&mut self, path: &Path) -> Option<i64> {
+        let params = json!({ "textDocument": { "uri": path_to_uri(path) } });
+        self.send_request(
+            RequestKind::FoldingRange,
+            "textDocument/foldingRange",
+            params,
+        )
+        .ok()
     }
 
     /// Ask the server for signature help, returning the request id so a caller
@@ -796,6 +812,7 @@ fn parse_initialize(result: &Value) -> (PositionEncoding, ServerCapabilities) {
             workspace_symbol: advertised("workspaceSymbolProvider"),
             signature_help: advertised("signatureHelpProvider"),
             document_formatting: advertised("documentFormattingProvider"),
+            folding_range: advertised("foldingRangeProvider"),
             sync,
         },
     )

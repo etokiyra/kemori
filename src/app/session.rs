@@ -68,11 +68,15 @@ impl App {
         self.close_armed = None;
         self.diagnostics_dirty_at = None;
         self.pending_format = None;
+        self.pending_folding = None;
         self.pending_workspace_symbols = None;
         self.pending_workspace_symbols_query = None;
         self.pending_project_search = None;
         self.pending_rename = None;
         self.pending_code_actions.clear();
+        self.pending_git_op = None;
+        self.pending_git_diff = None;
+        self.git_markers_revision = self.git_markers_revision.wrapping_add(1);
         self.lsp.clear();
         self.welcome_target = None;
         self.welcome_selected = 0;

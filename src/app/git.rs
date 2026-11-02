@@ -36,106 +36,89 @@ impl App {
             _ => return,
         };
 
-        match crate::git::apply_patch(&root, &patch, reverse, staged) {
-            Ok(()) => {
-                self.set_status(if reverse {
-                    "Hunk reverted".to_string()
-                } else {
-                    "Hunk applied".to_string()
-                });
-                // Refresh so the diff and gutter reflect the new state.
-                self.request_git_refresh();
-                // Reopen the diff for the same file.
-                self.show_diff(path, Some(staged));
-            }
-            Err(err) => self.set_error(format!("Could not apply hunk: {err}")),
-        }
+        self.background
+            .git_apply_patch(root, path, staged, patch, reverse);
+        self.set_status(if reverse {
+            "Reverting hunk…".to_string()
+        } else {
+            "Applying hunk…".to_string()
+        });
     }
 
     pub(super) fn git_push(&mut self) {
-        let root = self.workspace.root().to_path_buf();
-        match crate::git::push(&root) {
-            Ok(msg) => {
-                self.set_status(msg);
-                self.request_git_refresh();
-            }
-            Err(err) => self.set_error(format!("Push failed: {err}")),
-        }
+        self.start_git_operation("Push");
     }
 
     pub(super) fn git_pull(&mut self) {
-        let root = self.workspace.root().to_path_buf();
-        match crate::git::pull(&root) {
-            Ok(msg) => {
-                self.set_status(msg);
-                self.request_git_refresh();
-            }
-            Err(err) => self.set_error(format!("Pull failed: {err}")),
-        }
+        self.start_git_operation("Pull");
     }
 
     pub(super) fn git_fetch(&mut self) {
-        let root = self.workspace.root().to_path_buf();
-        match crate::git::fetch(&root) {
-            Ok(msg) => {
-                self.set_status(msg);
-                self.request_git_refresh();
-            }
-            Err(err) => self.set_error(format!("Fetch failed: {err}")),
+        self.start_git_operation("Fetch");
+    }
+
+    /// Start a push/pull/fetch on the worker, refusing a second concurrent one.
+    fn start_git_operation(&mut self, label: &'static str) {
+        if let Some(running) = self.pending_git_op {
+            self.set_status(format!("{running} is already running"));
+            return;
         }
+        self.pending_git_op = Some(label);
+        let root = self.workspace.root().to_path_buf();
+        match label {
+            "Push" => self.background.git_push(root),
+            "Pull" => self.background.git_pull(root),
+            _ => self.background.git_fetch(root),
+        }
+        self.set_status(format!("{label}ing…"));
     }
 
     pub(super) fn github_create_repo(&mut self) {
-        if !crate::github::available() {
-            self.set_error("GitHub CLI (gh) is not installed");
+        if let Some(running) = self.pending_git_op {
+            self.set_status(format!("{running} is already running"));
             return;
         }
-        if crate::github::auth_status().is_none() {
-            self.set_error("Not logged in to GitHub — run `gh auth login`");
-            return;
-        }
+        self.pending_git_op = Some("GitHub");
         let root = self.workspace.root().to_path_buf();
         let name = root
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("koda-project")
             .to_string();
-        match crate::github::create_repo(&root, &name, false) {
-            Ok(msg) => {
-                self.set_status(msg);
-                self.request_git_refresh();
-            }
-            Err(err) => self.set_error(format!("GitHub: {err}")),
-        }
+        self.background.github_create(root, name);
+        self.set_status("Creating GitHub repository…");
     }
 
     pub(super) fn show_diff(&mut self, path: PathBuf, staged: Option<bool>) {
         let root = self.workspace.root().to_path_buf();
-        let try_show = |side: bool| crate::git::diff(&root, &path, side);
-        let (text, side) = match staged {
-            Some(side) => match try_show(side) {
-                Ok(text) => (text, side),
-                Err(err) => {
-                    self.set_error(format!("Could not diff {}: {err}", path.display()));
-                    return;
-                }
-            },
-            None => match try_show(false) {
-                Ok(text) if !text.is_empty() => (text, false),
-                Ok(_) => match try_show(true) {
-                    Ok(text) => (text, true),
-                    Err(err) => {
-                        self.set_error(format!("Could not diff {}: {err}", path.display()));
-                        return;
-                    }
-                },
-                Err(err) => {
-                    self.set_error(format!("Could not diff {}: {err}", path.display()));
-                    return;
-                }
-            },
-        };
+        let name = path
+            .strip_prefix(&root)
+            .unwrap_or(&path)
+            .display()
+            .to_string();
+        self.pending_git_diff = Some((path.clone(), staged));
+        self.background.git_diff(root, path, staged);
+        self.set_status(format!("Loading diff for {name}…"));
+    }
 
+    /// Show a diff that finished on the worker.
+    pub(super) fn apply_git_diff(
+        &mut self,
+        root: PathBuf,
+        path: PathBuf,
+        staged: bool,
+        result: Result<String, String>,
+    ) {
+        if self.workspace.root() != root.as_path() {
+            return;
+        }
+        let text = match result {
+            Ok(text) => text,
+            Err(message) => {
+                self.set_error(message);
+                return;
+            }
+        };
         if text.is_empty() {
             self.set_status(format!("No changes to show for {}", path.display()));
             return;
@@ -145,10 +128,10 @@ impl App {
             .unwrap_or(&path)
             .display()
             .to_string();
-        let where_ = if side { "staged" } else { "working tree" };
+        let where_ = if staged { "staged" } else { "working tree" };
         let title = format!("{where_} · {name}");
         self.overlay =
-            Overlay::Diff(DiffState::from_unified(title, &text).with_context(root, path, side));
+            Overlay::Diff(DiffState::from_unified(title, &text).with_context(root, path, staged));
     }
 
     /// Build and show the changed-files picker from the current snapshot.

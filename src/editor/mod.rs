@@ -5,6 +5,7 @@
 
 pub mod buffer;
 pub mod document;
+mod folding;
 pub mod history;
 pub mod layout;
 pub mod position;

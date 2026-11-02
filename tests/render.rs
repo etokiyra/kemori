@@ -113,6 +113,26 @@ fn renders_indent_guides_at_the_detected_width() {
 }
 
 #[test]
+fn folded_block_hides_its_lines_and_marks_the_header() {
+    let dir = temp_project("folding");
+    let file = dir.join("src/main.rs");
+    let mut app = app_with_file(&file);
+    app.execute_command(ids::FOLD_TOGGLE);
+
+    let screen = draw(&mut app);
+    assert!(
+        !screen.contains("println!"),
+        "folded line should be hidden:\n{screen}"
+    );
+    assert!(
+        screen.contains('▸'),
+        "the fold header should be marked:\n{screen}"
+    );
+
+    cleanup(&dir);
+}
+
+#[test]
 fn renders_the_signature_help_popup() {
     use koda::app::overlay::SignatureState;
     use koda::language::lsp::convert::{Signature, SignatureHelp};

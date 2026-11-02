@@ -885,6 +885,60 @@ mod tests {
     }
 
     #[test]
+    fn applies_and_reverts_a_hunk() {
+        if std::process::Command::new("git")
+            .arg("--version")
+            .output()
+            .is_err()
+        {
+            return;
+        }
+        let dir = std::env::temp_dir().join(format!("koda-git-patch-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let dir = std::fs::canonicalize(&dir).unwrap();
+        let git = |args: &[&str]| {
+            std::process::Command::new("git")
+                .arg("-C")
+                .arg(&dir)
+                .args(args)
+                .output()
+        };
+        assert!(git(&["init", "-q"]).unwrap().status.success());
+        assert!(
+            git(&["config", "user.email", "koda@example.com"])
+                .unwrap()
+                .status
+                .success()
+        );
+        assert!(
+            git(&["config", "user.name", "Koda Test"])
+                .unwrap()
+                .status
+                .success()
+        );
+
+        let path = dir.join("a.txt");
+        std::fs::write(&path, "one\ntwo\n").unwrap();
+        assert!(git(&["add", "--", "a.txt"]).unwrap().status.success());
+        assert!(git(&["commit", "-qm", "init"]).unwrap().status.success());
+        std::fs::write(&path, "one\nthree\n").unwrap();
+
+        let patch = diff(&dir, &path, false).unwrap();
+        assert!(patch.contains("+three"), "{patch}");
+        // `run_checked` trims its output; git apply wants the final newline.
+        let patch = format!("{patch}\n");
+
+        apply_patch(&dir, &patch, true, false).expect("revert");
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "one\ntwo\n");
+
+        apply_patch(&dir, &patch, false, false).expect("apply");
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "one\nthree\n");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn line_changes_untracked_file_is_all_added() {
         if std::process::Command::new("git")
             .arg("--version")

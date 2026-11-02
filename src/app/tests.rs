@@ -1694,6 +1694,50 @@ fn space_in_changed_files_stages_the_selected_file() {
 }
 
 #[test]
+fn ctrl_k_chord_folds_and_unfolds() {
+    let dir = temp_project("fold-chord");
+    let file = dir.join("src/main.rs");
+    let mut app = app_with_file(&file);
+
+    app.handle_key(KeyEvent::new(KeyCode::Char('k'), KeyModifiers::CONTROL));
+    assert!(app.fold_prefix);
+    app.handle_key(KeyEvent::new(KeyCode::Char('z'), KeyModifiers::NONE));
+    let doc = app.editor.active_document().unwrap();
+    assert!(doc.folded.contains(&0));
+    assert!(doc.is_hidden(1));
+
+    app.handle_key(KeyEvent::new(KeyCode::Char('k'), KeyModifiers::CONTROL));
+    app.handle_key(KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE));
+    let doc = app.editor.active_document().unwrap();
+    assert!(doc.folded.is_empty());
+    assert!(!doc.is_hidden(1));
+    fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
+fn git_operations_are_queued_on_the_worker() {
+    let dir = temp_project("git-queued");
+    let file = dir.join("src/main.rs");
+    let mut app = app_with_file(&file);
+
+    app.git_fetch();
+    // Nothing has run yet: the UI only recorded the request.
+    assert_eq!(app.pending_git_op, Some("Fetch"));
+    assert!(
+        app.status_message().unwrap_or("").contains("Fetching"),
+        "status was {:?}",
+        app.status_message()
+    );
+
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while app.pending_git_op.is_some() && Instant::now() < deadline {
+        app.pump_background(Duration::from_millis(50));
+    }
+    assert!(app.pending_git_op.is_none(), "fetch did not finish");
+    fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
 fn diff_active_file_shows_working_tree_changes() {
     if std::process::Command::new("git")
         .arg("--version")
@@ -1738,6 +1782,13 @@ fn diff_active_file_shows_working_tree_changes() {
     // Change the file on disk so the working tree differs from the index.
     fs::write(&file, "fn main() {\n    let y = 2;\n}\n").unwrap();
     app.diff_active_file();
+    // The diff is computed on the worker; the UI thread only queues it.
+    assert!(app.pending_git_diff.is_some());
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while app.pending_git_diff.is_some() && Instant::now() < deadline {
+        app.pump_background(Duration::from_millis(50));
+    }
+    assert!(app.pending_git_diff.is_none(), "diff did not finish");
 
     match &app.overlay {
         Overlay::Diff(diff) => assert!(

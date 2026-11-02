@@ -55,6 +55,10 @@ pub mod ids {
     pub const TOGGLE_BREAKPOINT: &str = "debug.toggleBreakpoint";
     pub const DEBUG_START: &str = "debug.start";
     pub const FOLD_TOGGLE: &str = "view.foldToggle";
+    pub const FOLD_CLOSE: &str = "view.foldClose";
+    pub const FOLD_OPEN: &str = "view.foldOpen";
+    pub const FOLD_ALL: &str = "view.foldAll";
+    pub const UNFOLD_ALL: &str = "view.unfoldAll";
 
     pub const FORMAT: &str = "language.format";
     pub const HOVER: &str = "language.hover";
@@ -331,11 +335,16 @@ impl CommandRegistry {
             .describes("Jump to the bracket matching the one under the cursor")
             .needs_doc(),
             Command::new(TOGGLE_BREAKPOINT, "Toggle Breakpoint", "Debug", Some("F9"))
-                .describes("Toggle a breakpoint on the current line")
+                .describes("Toggle a visual breakpoint marker on the current line")
                 .needs_doc(),
-            Command::new(DEBUG_START, "Start Debugging", "Debug", None)
-                .describes("Launch a debug adapter for the active file")
-                .needs_doc(),
+            Command::new(
+                DEBUG_START,
+                "Debug Adapter Handshake (Preview)",
+                "Debug",
+                None,
+            )
+            .describes("Spawn an adapter and perform the DAP handshake (does not debug yet)")
+            .needs_doc(),
             Command::new(FORMAT, "Format Document", "Language", Some("Ctrl+Shift+I"))
                 .describes("Format the active file with its language formatter")
                 .needs_doc()
@@ -486,8 +495,20 @@ impl CommandRegistry {
             .describes("Show or hide diagnostic messages at the end of each line"),
             Command::new(TOGGLE_WRAP, "Toggle Soft Wrap", "View", Some("Alt+Z"))
                 .describes("Wrap long lines to the width of the editor"),
-            Command::new(FOLD_TOGGLE, "Toggle Fold", "View", None)
+            Command::new(FOLD_TOGGLE, "Toggle Fold", "View", Some("Ctrl+K z"))
                 .describes("Collapse or expand the fold at the cursor")
+                .needs_doc(),
+            Command::new(FOLD_CLOSE, "Fold at Cursor", "View", Some("Ctrl+K c"))
+                .describes("Collapse the fold at the cursor")
+                .needs_doc(),
+            Command::new(FOLD_OPEN, "Unfold at Cursor", "View", Some("Ctrl+K o"))
+                .describes("Expand the fold at the cursor")
+                .needs_doc(),
+            Command::new(FOLD_ALL, "Fold All", "View", Some("Ctrl+K 0"))
+                .describes("Collapse every fold in the file")
+                .needs_doc(),
+            Command::new(UNFOLD_ALL, "Unfold All", "View", Some("Ctrl+K j"))
+                .describes("Expand every fold in the file")
                 .needs_doc(),
             Command::new(REFRESH, "Refresh File Tree", "View", Some("F5"))
                 .describes("Re-read the project tree and git status"),

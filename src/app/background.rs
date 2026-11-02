@@ -151,10 +151,26 @@ impl App {
             BackgroundEvent::Git(info) => {
                 let root = info.repo_root.clone();
                 self.workspace.git = info;
-                if let Some(root) = root {
-                    for doc in &mut self.editor.documents {
-                        if let Some(path) = doc.buffer.path.clone() {
-                            doc.set_git_markers(crate::git::line_changes(&root, &path));
+                match root {
+                    Some(root) => {
+                        let paths: Vec<PathBuf> = self
+                            .editor
+                            .documents
+                            .iter()
+                            .filter_map(|doc| doc.buffer.path.clone())
+                            .collect();
+                        if !paths.is_empty() {
+                            self.git_markers_revision = self.git_markers_revision.wrapping_add(1);
+                            self.background.git_line_markers(
+                                root,
+                                paths,
+                                self.git_markers_revision,
+                            );
+                        }
+                    }
+                    None => {
+                        for doc in &mut self.editor.documents {
+                            doc.set_git_markers(Vec::new());
                         }
                     }
                 }
@@ -163,6 +179,83 @@ impl App {
                     if matches!(&self.overlay, Overlay::Picker(picker) if picker.title == "Changed Files")
                     {
                         self.show_changed_files();
+                    }
+                }
+                true
+            }
+            BackgroundEvent::GitLineMarkers { revision, markers } => {
+                if revision != self.git_markers_revision {
+                    return false;
+                }
+                for (path, marks) in markers {
+                    if let Some(doc) = self
+                        .editor
+                        .documents
+                        .iter_mut()
+                        .find(|doc| same_file(doc.buffer.path.as_deref(), &path))
+                    {
+                        doc.set_git_markers(marks);
+                    }
+                }
+                true
+            }
+            BackgroundEvent::GitDiff {
+                root,
+                path,
+                staged,
+                result,
+            } => {
+                let current =
+                    self.pending_git_diff
+                        .as_ref()
+                        .is_some_and(|(pending_path, pending_side)| {
+                            *pending_path == path
+                                && pending_side.is_none_or(|expected| expected == staged)
+                        });
+                if !current {
+                    return false;
+                }
+                self.pending_git_diff = None;
+                self.apply_git_diff(root, path, staged, result);
+                true
+            }
+            BackgroundEvent::GitPatchApplied {
+                root,
+                path,
+                staged,
+                reverse,
+                result,
+            } => {
+                if self.workspace.root() != root.as_path() {
+                    return false;
+                }
+                match result {
+                    Ok(()) => {
+                        self.set_status(if reverse {
+                            "Hunk reverted"
+                        } else {
+                            "Hunk applied"
+                        });
+                        // Refresh so the diff and gutter reflect the new state.
+                        self.request_git_refresh();
+                        // Reopen the diff for the same file.
+                        self.show_diff(path, Some(staged));
+                    }
+                    Err(message) => self.set_error(format!("Could not apply hunk: {message}")),
+                }
+                true
+            }
+            BackgroundEvent::GitOperation { label, result } => {
+                self.pending_git_op = None;
+                match result {
+                    Ok(message) => {
+                        self.set_status(message.clone());
+                        self.push_toast(ToastKind::Success, message);
+                    }
+                    Err(message) => {
+                        let text = format!("{label} failed — {message}");
+                        self.set_error(text.clone());
+                        self.push_toast(ToastKind::Error, text);
                     }
                 }
                 true

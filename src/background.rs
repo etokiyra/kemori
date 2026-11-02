@@ -55,6 +55,34 @@ enum Request {
     InstallTool(Tool),
     /// Recompute git status for a repository root.
     RefreshGit { root: PathBuf },
+    /// Recompute per-line git gutter markers for open documents.
+    GitLineMarkers {
+        root: PathBuf,
+        paths: Vec<PathBuf>,
+        revision: u64,
+    },
+    /// Show the diff for one path (working tree preferred, then staged).
+    GitDiff {
+        root: PathBuf,
+        path: PathBuf,
+        staged: Option<bool>,
+    },
+    /// Apply or revert one hunk.
+    GitApplyPatch {
+        root: PathBuf,
+        path: PathBuf,
+        staged: bool,
+        patch: String,
+        reverse: bool,
+    },
+    /// Push the current branch.
+    GitPush { root: PathBuf },
+    /// Pull from the upstream.
+    GitPull { root: PathBuf },
+    /// Fetch from all remotes.
+    GitFetch { root: PathBuf },
+    /// Create a GitHub repository with `gh` and push.
+    GithubCreate { root: PathBuf, name: String },
     /// Stage all changes and commit them.
     GitCommit { root: PathBuf, message: String },
     /// Stage or unstage one path.
@@ -109,6 +137,32 @@ pub enum Event {
         result: Result<String, String>,
     },
     Git(GitInfo),
+    /// Per-line gutter markers for open documents, tagged with the request
+    /// revision so a stale refresh cannot overwrite a newer one.
+    GitLineMarkers {
+        revision: u64,
+        markers: Vec<(PathBuf, Vec<crate::git::GitLineMarker>)>,
+    },
+    /// The resolved diff for one path; `staged` says which side was shown.
+    GitDiff {
+        root: PathBuf,
+        path: PathBuf,
+        staged: bool,
+        result: Result<String, String>,
+    },
+    /// The result of applying or reverting one hunk.
+    GitPatchApplied {
+        root: PathBuf,
+        path: PathBuf,
+        staged: bool,
+        reverse: bool,
+        result: Result<(), String>,
+    },
+    /// A push, pull, fetch or GitHub action, with a label for the status line.
+    GitOperation {
+        label: &'static str,
+        result: Result<String, String>,
+    },
     /// The result of staging and committing.
     GitCommitted {
         result: Result<String, String>,
@@ -284,6 +338,59 @@ impl Background {
         let _ = self.requests.send(Request::RefreshGit { root });
     }
 
+    /// Ask for gutter markers for the given open documents.
+    pub fn git_line_markers(&self, root: PathBuf, paths: Vec<PathBuf>, revision: u64) {
+        let _ = self.requests.send(Request::GitLineMarkers {
+            root,
+            paths,
+            revision,
+        });
+    }
+
+    /// Ask for a path's diff. `staged` of `None` prefers the working tree and
+    /// falls back to the index when the working tree is clean.
+    pub fn git_diff(&self, root: PathBuf, path: PathBuf, staged: Option<bool>) {
+        let _ = self.requests.send(Request::GitDiff { root, path, staged });
+    }
+
+    /// Ask to apply or revert one hunk.
+    pub fn git_apply_patch(
+        &self,
+        root: PathBuf,
+        path: PathBuf,
+        staged: bool,
+        patch: String,
+        reverse: bool,
+    ) {
+        let _ = self.requests.send(Request::GitApplyPatch {
+            root,
+            path,
+            staged,
+            patch,
+            reverse,
+        });
+    }
+
+    /// Ask to push the current branch.
+    pub fn git_push(&self, root: PathBuf) {
+        let _ = self.requests.send(Request::GitPush { root });
+    }
+
+    /// Ask to pull from the upstream.
+    pub fn git_pull(&self, root: PathBuf) {
+        let _ = self.requests.send(Request::GitPull { root });
+    }
+
+    /// Ask to fetch from all remotes.
+    pub fn git_fetch(&self, root: PathBuf) {
+        let _ = self.requests.send(Request::GitFetch { root });
+    }
+
+    /// Ask `gh` to create and push a GitHub repository.
+    pub fn github_create(&self, root: PathBuf, name: String) {
+        let _ = self.requests.send(Request::GithubCreate { root, name });
+    }
+
     /// Ask to stage all changes and commit them.
     pub fn commit_all(&self, root: PathBuf, message: String) {
         let _ = self.requests.send(Request::GitCommit { root, message });
@@ -384,10 +491,108 @@ fn handle_request(request: Request, language: &LanguageService, events: &Sender<
         }
         Request::RefreshGit { root } => {
             // Routed through the pluggable command runner: local unless
-            // KODA_REMOTE names an SSH host.
+            // KODA_REMOTE names an SSH host (an experimental, git-only seam).
             let remote = std::env::var("KODA_REMOTE").ok();
             let runner = crate::remote::runner_for(remote.as_deref());
             let _ = events.send(Event::Git(GitInfo::detect_with(runner.as_ref(), &root)));
+        }
+        Request::GitLineMarkers {
+            root,
+            paths,
+            revision,
+        } => {
+            let markers = paths
+                .into_iter()
+                .map(|path| {
+                    let markers = crate::git::line_changes(&root, &path);
+                    (path, markers)
+                })
+                .collect();
+            let _ = events.send(Event::GitLineMarkers { revision, markers });
+        }
+        Request::GitDiff { root, path, staged } => {
+            let resolved = match staged {
+                Some(side) => crate::git::diff(&root, &path, side)
+                    .map(|text| (text, side))
+                    .map_err(|err| format!("Could not diff {}: {err}", path.display())),
+                None => match crate::git::diff(&root, &path, false) {
+                    Ok(text) if !text.is_empty() => Ok((text, false)),
+                    Ok(_) => crate::git::diff(&root, &path, true)
+                        .map(|text| (text, true))
+                        .map_err(|err| format!("Could not diff {}: {err}", path.display())),
+                    Err(err) => Err(format!("Could not diff {}: {err}", path.display())),
+                },
+            };
+            let event = match resolved {
+                Ok((text, staged)) => Event::GitDiff {
+                    root,
+                    path,
+                    staged,
+                    result: Ok(text),
+                },
+                Err(message) => Event::GitDiff {
+                    root,
+                    path,
+                    staged: staged.unwrap_or(false),
+                    result: Err(message),
+                },
+            };
+            let _ = events.send(event);
+        }
+        Request::GitApplyPatch {
+            root,
+            path,
+            staged,
+            patch,
+            reverse,
+        } => {
+            let result = crate::git::apply_patch(&root, &patch, reverse, staged);
+            let _ = events.send(Event::GitPatchApplied {
+                root: root.clone(),
+                path,
+                staged,
+                reverse,
+                result,
+            });
+            let _ = events.send(Event::Git(GitInfo::detect(&root)));
+        }
+        Request::GitPush { root } => {
+            let result = crate::git::push(&root);
+            let _ = events.send(Event::GitOperation {
+                label: "Push",
+                result,
+            });
+            let _ = events.send(Event::Git(GitInfo::detect(&root)));
+        }
+        Request::GitPull { root } => {
+            let result = crate::git::pull(&root);
+            let _ = events.send(Event::GitOperation {
+                label: "Pull",
+                result,
+            });
+            let _ = events.send(Event::Git(GitInfo::detect(&root)));
+        }
+        Request::GitFetch { root } => {
+            let result = crate::git::fetch(&root);
+            let _ = events.send(Event::GitOperation {
+                label: "Fetch",
+                result,
+            });
+            let _ = events.send(Event::Git(GitInfo::detect(&root)));
+        }
+        Request::GithubCreate { root, name } => {
+            let result = if !crate::github::available() {
+                Err("GitHub CLI (gh) is not installed".to_string())
+            } else if crate::github::auth_status().is_none() {
+                Err("Not logged in to GitHub — run `gh auth login`".to_string())
+            } else {
+                crate::github::create_repo(&root, &name, false)
+            };
+            let _ = events.send(Event::GitOperation {
+                label: "GitHub",
+                result,
+            });
+            let _ = events.send(Event::Git(GitInfo::detect(&root)));
         }
         Request::GitCommit { root, message } => {
             let result = crate::git::commit_all(&root, &message);

@@ -5,7 +5,10 @@
 //! module abstracts *how* a command is run behind a trait so a future
 //! remote (SSH) backend can reuse the same call sites without rewriting them.
 //!
-//! Only a local implementation exists today; the SSH backend is not wired.
+//! **Experimental.** `KODA_REMOTE` is consulted only by the git-status
+//! refresh; the file tree, editor, language servers and tasks remain local.
+//! It is an internal seam, not remote development, and must not be advertised
+//! as a user-facing feature until the rest of the IDE can follow it.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};

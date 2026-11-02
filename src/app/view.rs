@@ -29,6 +29,24 @@ impl App {
         self.set_status("Fold toggled");
     }
 
+    pub(super) fn fold_close(&mut self) {
+        self.with_doc(|doc| doc.fold_at_cursor());
+    }
+
+    pub(super) fn fold_open(&mut self) {
+        self.with_doc(|doc| doc.unfold_at_cursor());
+    }
+
+    pub(super) fn fold_all(&mut self) {
+        self.with_doc(|doc| doc.fold_all());
+        self.set_status("Folded all");
+    }
+
+    pub(super) fn unfold_all(&mut self) {
+        self.with_doc(|doc| doc.unfold_all());
+        self.set_status("Unfolded all");
+    }
+
     pub(super) fn toggle_wrap(&mut self) {
         self.wrap = !self.wrap;
         // Soft wrap is also a user preference, so the palette toggle persists

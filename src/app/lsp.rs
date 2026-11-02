@@ -265,6 +265,51 @@ impl App {
         {
             server.did_open(path, &text);
         }
+        if self.active_document_is(path) {
+            self.request_folding_ranges(path, language);
+        }
+    }
+
+    /// Ask the active document's server for folding ranges, when it offers them.
+    pub(super) fn request_folding_ranges(&mut self, path: &Path, language: LanguageId) {
+        let Some(version) = self.document_version(path) else {
+            return;
+        };
+        let Some(server) = self
+            .lsp
+            .get_mut(&(self.workspace.root().to_path_buf(), language))
+            .and_then(|job| job.server.as_mut())
+        else {
+            return;
+        };
+        if !server.is_ready()
+            || !server.supports(RequestKind::FoldingRange)
+            || !server.has_open_document(path)
+        {
+            return;
+        }
+        let Some(id) = server.folding_ranges(path) else {
+            return;
+        };
+        self.pending_folding = Some(PendingDocRequest {
+            language,
+            id,
+            path: path.to_path_buf(),
+            version,
+        });
+    }
+
+    /// Request folding ranges for the active document, if its server provides
+    /// them.
+    pub(super) fn request_folding_ranges_for_active(&mut self) {
+        let Some(doc) = self.editor.active_document() else {
+            return;
+        };
+        let Some(path) = doc.buffer.path.clone() else {
+            return;
+        };
+        let language = doc.buffer.language;
+        self.request_folding_ranges(&path, language);
     }
 
     /// Aggregate connection state across every language server, for the
@@ -351,6 +396,9 @@ impl App {
             for (path, text) in documents {
                 server.did_open(&path, &text);
             }
+        }
+        if self.editor.active_document().map(|doc| doc.buffer.language) == Some(language) {
+            self.request_folding_ranges_for_active();
         }
     }
 
@@ -570,6 +618,7 @@ impl App {
             RequestKind::Rename => self.pending_rename_request = None,
             RequestKind::CodeActions => self.pending_code_action_request = None,
             RequestKind::Formatting => self.pending_lsp_format = None,
+            RequestKind::FoldingRange => self.pending_folding = None,
             RequestKind::WorkspaceSymbols => self.ws_lsp_pending = false,
         }
     }
@@ -594,6 +643,7 @@ impl App {
         self.pending_rename_request = None;
         self.pending_code_action_request = None;
         self.pending_lsp_format = None;
+        self.pending_folding = None;
         self.pending_code_actions_context = None;
         self.ws_lsp_pending = false;
     }
@@ -810,6 +860,23 @@ impl App {
                     self.set_status("Formatted");
                 } else {
                     self.set_status("Nothing to format");
+                }
+            }
+            RequestKind::FoldingRange => {
+                let Some(request) = self.pending_folding.take() else {
+                    return;
+                };
+                if !request.is_current(self, language, id) {
+                    return;
+                }
+                let ranges = convert::folding_ranges(&value);
+                if let Some(doc) = self
+                    .editor
+                    .documents
+                    .iter_mut()
+                    .find(|doc| same_file(doc.buffer.path.as_deref(), &request.path))
+                {
+                    doc.set_server_folds(ranges);
                 }
             }
         }

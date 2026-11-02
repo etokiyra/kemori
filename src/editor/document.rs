@@ -72,6 +72,8 @@ pub struct Document {
     pub git_markers: Vec<crate::git::GitLineMarker>,
     /// Lines that begin a collapsed fold (0-based).
     pub folded: std::collections::BTreeSet<usize>,
+    /// Server-published fold ranges: header row → last hidden row, inclusive.
+    pub server_folds: std::collections::BTreeMap<usize, usize>,
     /// Breakpoint lines (0-based) for the debug adapter.
     pub breakpoints: std::collections::BTreeSet<usize>,
 }
@@ -103,6 +105,7 @@ impl Document {
             saved_id: None,
             git_markers: Vec::new(),
             folded: std::collections::BTreeSet::new(),
+            server_folds: std::collections::BTreeMap::new(),
             breakpoints: std::collections::BTreeSet::new(),
         }
     }
@@ -226,6 +229,8 @@ impl Document {
         self.selection = None;
         self.cursors.clear();
         self.preferred_col = None;
+        self.folded.clear();
+        self.server_folds.clear();
         self.cursor = self.buffer.clamp_position(cursor);
         self.invalidate_highlight(0);
         self.clear_diagnostics();
@@ -363,56 +368,6 @@ impl Document {
         self.git_markers = markers;
     }
 
-    /// The indentation of `row`, in columns.
-    fn row_indent(&self, row: usize) -> usize {
-        let text = self.buffer.line_text(row);
-        text.chars().take_while(|c| *c == ' ' || *c == '\t').count()
-    }
-
-    /// The range of lines collapsed by folding `row`, if it is a foldable header.
-    pub fn fold_range(&self, row: usize) -> Option<(usize, usize)> {
-        let total = self.buffer.len_lines();
-        if row + 1 >= total {
-            return None;
-        }
-        let base = self.row_indent(row);
-        // A header must have at least one following line more indented.
-        if self.row_indent(row + 1) <= base {
-            return None;
-        }
-        let mut end = row + 1;
-        for candidate in (row + 2)..total {
-            if self.row_indent(candidate) > base {
-                end = candidate;
-            } else if self.buffer.line_text(candidate).trim().is_empty() {
-                // Allow blank lines inside the fold.
-                end = candidate;
-            } else {
-                break;
-            }
-        }
-        if end > row {
-            Some((row + 1, end))
-        } else {
-            None
-        }
-    }
-
-    pub fn is_foldable(&self, row: usize) -> bool {
-        self.fold_range(row).is_some()
-    }
-
-    pub fn toggle_fold(&mut self) {
-        let row = self.clamped_cursor().row;
-        if self.folded.contains(&row) {
-            self.folded.remove(&row);
-            return;
-        }
-        if self.fold_range(row).is_some() {
-            self.folded.insert(row);
-        }
-    }
-
     pub fn toggle_breakpoint(&mut self) {
         let row = self.clamped_cursor().row;
         if self.breakpoints.contains(&row) {
@@ -424,17 +379,6 @@ impl Document {
 
     pub fn has_breakpoint(&self, row: usize) -> bool {
         self.breakpoints.contains(&row)
-    }
-
-    /// Whether `row` is hidden inside a collapsed fold.
-    pub fn is_hidden(&self, row: usize) -> bool {
-        self.folded.iter().any(|&header| {
-            if let Some((start, end)) = self.fold_range(header) {
-                row >= start && row <= end
-            } else {
-                false
-            }
-        })
     }
 
     // ----------------------------------------------------------------------
@@ -476,6 +420,13 @@ impl Document {
         if !inserted.is_empty() {
             self.buffer.insert(start_char, &inserted);
         }
+        // A fold header is a line identity: keep it attached to its text as
+        // lines move, and drop it when an edit swallows the block. A server's
+        // ranges describe the pre-edit text, so fall back to indentation.
+        let removed_lines = removed.matches('\n').count();
+        let inserted_lines = inserted.matches('\n').count();
+        self.clear_server_folds();
+        self.remap_folds_after_edit(a.row, a.col, removed_lines, inserted_lines);
         let cursor_after = a.advanced_by(&inserted);
         self.history.push(Edit::single(
             start_char,
@@ -591,6 +542,7 @@ impl Document {
 
         let mut ops = Vec::new();
         let mut min_row = usize::MAX;
+        self.clear_server_folds();
         for edit in &application {
             let start = self.buffer.clamp_position(edit.start);
             let end = self.buffer.clamp_position(edit.end);
@@ -608,6 +560,12 @@ impl Document {
             if !inserted.is_empty() {
                 self.buffer.insert(start_char, &inserted);
             }
+            self.remap_folds_after_edit(
+                start.row,
+                start.col,
+                removed.matches('\n').count(),
+                inserted.matches('\n').count(),
+            );
             min_row = min_row.min(start.row);
             ops.push(EditOp {
                 start: start_char,
@@ -824,14 +782,15 @@ impl Document {
     }
 
     fn add_cursor_vertical(&mut self, direction: isize) {
-        let last = self.buffer.len_lines().saturating_sub(1);
         let specs = self.all_cursor_specs();
         let mut added: Vec<Cursor> = Vec::new();
         for (_, _, caret) in specs {
-            let row = match caret.row.checked_add_signed(direction) {
-                Some(row) if row <= last => row,
-                _ => continue,
+            let row = if direction < 0 {
+                self.visible_row_above(caret.row)
+            } else {
+                self.visible_row_below(caret.row)
             };
+            let Some(row) = row else { continue };
             let col = caret.col.min(self.buffer.line_char_len(row));
             added.push(Cursor::caret(Position::new(row, col)));
         }
@@ -1479,6 +1438,10 @@ impl Document {
             self.selection = None;
             self.cursors.clear();
             self.preferred_col = None;
+            // Undo restores positions from arbitrary history entries; keeping
+            // folds could leave a header over unrelated text.
+            self.folded.clear();
+            self.server_folds.clear();
             self.invalidate_highlight(self.cursor.row);
             self.refresh_dirty();
             self.diagnostics.clear();
@@ -1501,6 +1464,8 @@ impl Document {
             self.selection = None;
             self.cursors.clear();
             self.preferred_col = None;
+            self.folded.clear();
+            self.server_folds.clear();
             self.invalidate_highlight(self.cursor.row);
             self.refresh_dirty();
             self.diagnostics.clear();
@@ -1681,7 +1646,7 @@ impl Document {
     }
 
     fn set_cursor_inner(&mut self, pos: Position, shift: bool, reset_preferred: bool) {
-        let pos = self.buffer.clamp_position(pos);
+        let pos = self.snap_out_of_fold(self.buffer.clamp_position(pos));
         self.history.break_coalesce();
         // Navigating collapses a multi-cursor session onto the primary; that is
         // predictable, and a new session starts with `Ctrl+D`/`Ctrl+Alt+Arrow`.
@@ -1707,7 +1672,7 @@ impl Document {
             self.preferred_col = None;
             return;
         }
-        let pos = self.prev_pos(self.cursor);
+        let pos = self.prev_visible_pos(self.cursor);
         if let Some(pos) = pos {
             self.set_cursor(pos, shift);
         }
@@ -1721,7 +1686,7 @@ impl Document {
             self.preferred_col = None;
             return;
         }
-        let pos = self.next_pos(self.cursor);
+        let pos = self.next_visible_pos(self.cursor);
         if let Some(pos) = pos {
             self.set_cursor(pos, shift);
         }
@@ -1732,11 +1697,10 @@ impl Document {
             self.move_visual(-1, shift);
             return;
         }
-        if self.cursor.row == 0 {
+        let Some(row) = self.visible_row_above(self.cursor.row) else {
             return;
-        }
+        };
         let target_col = *self.preferred_col.get_or_insert(self.cursor.col);
-        let row = self.cursor.row - 1;
         let col = target_col.min(self.buffer.line_char_len(row));
         self.set_cursor_inner(Position::new(row, col), shift, false);
     }
@@ -1746,11 +1710,10 @@ impl Document {
             self.move_visual(1, shift);
             return;
         }
-        if self.cursor.row + 1 >= self.buffer.len_lines() {
+        let Some(row) = self.visible_row_below(self.cursor.row) else {
             return;
-        }
+        };
         let target_col = *self.preferred_col.get_or_insert(self.cursor.col);
-        let row = self.cursor.row + 1;
         let col = target_col.min(self.buffer.line_char_len(row));
         self.set_cursor_inner(Position::new(row, col), shift, false);
     }
@@ -1792,17 +1755,19 @@ impl Document {
         let (target_row, target_seg) = if direction < 0 {
             if seg > 0 {
                 (row, Some(seg - 1))
-            } else if row > 0 {
-                (row - 1, None)
             } else {
-                return;
+                match self.visible_row_above(row) {
+                    Some(previous) => (previous, None),
+                    None => return,
+                }
             }
         } else if seg + 1 < segments.len() {
             (row, Some(seg + 1))
-        } else if row + 1 < self.buffer.len_lines() {
-            (row + 1, Some(0))
         } else {
-            return;
+            match self.visible_row_below(row) {
+                Some(next) => (next, Some(0)),
+                None => return,
+            }
         };
 
         let target_layout = self.line_layout(target_row);
@@ -1842,7 +1807,7 @@ impl Document {
     }
 
     pub fn move_document_end(&mut self, shift: bool) {
-        let row = self.buffer.len_lines().saturating_sub(1);
+        let row = self.visible_row_at_or_below(self.buffer.len_lines().saturating_sub(1));
         let col = self.buffer.line_char_len(row);
         self.set_cursor(Position::new(row, col), shift);
     }
@@ -1926,6 +1891,32 @@ impl Document {
         } else {
             None
         }
+    }
+
+    /// The previous position, skipping rows hidden by a collapsed fold.
+    fn prev_visible_pos(&self, pos: Position) -> Option<Position> {
+        let mut candidate = self.prev_pos(pos)?;
+        while self.is_hidden(candidate.row) {
+            if candidate.row == 0 {
+                return None;
+            }
+            let row = candidate.row - 1;
+            candidate = Position::new(row, self.buffer.line_char_len(row));
+        }
+        Some(candidate)
+    }
+
+    /// The next position, skipping rows hidden by a collapsed fold.
+    fn next_visible_pos(&self, pos: Position) -> Option<Position> {
+        let mut candidate = self.next_pos(pos)?;
+        let last = self.buffer.len_lines().saturating_sub(1);
+        while self.is_hidden(candidate.row) {
+            if candidate.row >= last {
+                return None;
+            }
+            candidate = Position::new(candidate.row + 1, 0);
+        }
+        Some(candidate)
     }
 
     /// A safe copy of the current position, clamped to the buffer.

@@ -314,6 +314,8 @@ pub struct App {
     pub viewport_height: usize,
     pub should_quit: bool,
     quit_armed: bool,
+    /// Whether `z` was pressed and the next editor key selects a fold action.
+    fold_prefix: bool,
     /// Tab index armed for a forced close (dirty, first Ctrl+W).
     close_armed: Option<usize>,
     /// Monotonic id for diagnostics requests.
@@ -327,6 +329,8 @@ pub struct App {
     /// A language-server formatting request awaiting a result, with the buffer
     /// version it was computed against.
     pending_lsp_format: Option<(PathBuf, LanguageId, i64, u64)>,
+    /// An in-flight folding-range request.
+    pending_folding: Option<PendingDocRequest>,
     /// An in-flight definition request.
     pending_definition: Option<PendingDocRequest>,
     /// An in-flight references request.
@@ -372,6 +376,12 @@ pub struct App {
     pending_install: Option<Tool>,
     /// Whether a git commit is running on the worker.
     pending_commit: bool,
+    /// A push, pull, fetch or GitHub action running on the worker.
+    pending_git_op: Option<&'static str>,
+    /// The diff request awaiting a result, if any.
+    pending_git_diff: Option<(PathBuf, Option<bool>)>,
+    /// Monotonic id for gutter-marker refreshes.
+    git_markers_revision: u64,
     /// Whether a background run task is in flight, guarding a second run.
     pending_task: bool,
     /// Whether a stage/unstage is running and the changed-files picker should
@@ -488,12 +498,14 @@ impl App {
             viewport_height: 20,
             should_quit: false,
             quit_armed: false,
+            fold_prefix: false,
             close_armed: None,
             diagnostics_seq: 0,
             diagnostics_dirty_at: None,
             format_seq: 0,
             pending_format: None,
             pending_lsp_format: None,
+            pending_folding: None,
             pending_definition: None,
             pending_references: None,
             pending_rename_request: None,
@@ -516,6 +528,9 @@ impl App {
             pending_copy_file: None,
             pending_install: None,
             pending_commit: false,
+            pending_git_op: None,
+            pending_git_diff: None,
+            git_markers_revision: 0,
             pending_task: false,
             pending_stage_refresh: false,
             pending_code_actions: Vec::new(),

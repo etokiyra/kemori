@@ -363,6 +363,25 @@ mod tests {
     }
 
     #[test]
+    fn opens_non_utf8_read_only_until_converted() {
+        let path = temp_path("latin1-lossy");
+        // `café` in Latin-1 ends with a byte that is not valid UTF-8.
+        std::fs::write(&path, b"caf\xe9\n").unwrap();
+
+        let mut buffer = Buffer::from_path_lossy(&path).expect("lossy open");
+        assert!(buffer.is_read_only());
+        assert!(buffer.text().contains('\u{FFFD}'));
+        assert!(buffer.save().is_err(), "read-only files cannot be saved");
+
+        buffer.convert_to_utf8();
+        assert!(!buffer.is_read_only());
+        assert!(buffer.save().unwrap());
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "caf\u{FFFD}\n");
+
+        let _ = std::fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
     fn refuses_binary_and_non_utf8_files() {
         let binary = temp_path("binary");
         std::fs::write(&binary, b"abc\0def").unwrap();

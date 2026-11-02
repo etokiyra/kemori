@@ -61,7 +61,7 @@ impl App {
 
     pub(super) fn toggle_breakpoint(&mut self) {
         self.with_doc(|doc| doc.toggle_breakpoint());
-        self.set_status("Breakpoint toggled");
+        self.set_status("Breakpoint marker toggled (visual only — no debugger yet)");
     }
 
     pub(super) fn debug_start(&mut self) {
@@ -72,8 +72,10 @@ impl App {
             .unwrap_or_default();
         let adapter = std::env::var("KODA_DEBUG_ADAPTER").unwrap_or_else(|_| "gdb".to_string());
         match crate::debug::launch(&adapter, &[], &breakpoints) {
-            Ok(message) => self.set_status(message),
-            Err(err) => self.set_error(err),
+            Ok(message) => self.set_status(format!(
+                "{message} — preview only; execution will not stop on breakpoints"
+            )),
+            Err(err) => self.set_error(format!("Debug adapter preview: {err}")),
         }
     }
 
