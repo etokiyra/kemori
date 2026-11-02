@@ -1,11 +1,16 @@
 # NEXT — the working plan for turning Kemori into a full IDE
 
-**Status snapshot:** 2026-11-02, version 3.0.0, commit `5b0cafd`.
+**Status snapshot:** 2026-11-02, version 3.1.0, commit `36c349e`.
 **Verification at the time of writing:** `cargo check --all-targets`, `cargo clippy --all-targets` clean; `cargo test` green (653 library tests, 51 render tests, plus tooling suites with ignored live tests).
-**Release status:** `kemori` 3.0.0 is on crates.io, docs.rs and the GitHub `v3.0.0` release. The AUR packages are prepared and validated locally; pushing them still needs the maintainer's AUR SSH key.
+**Release status:** `kemori` 3.1.0 is on crates.io, docs.rs and the GitHub `v3.1.0` release. The AUR packages are prepared for 3.0.0 and still need their version and checksum refreshed for 3.1.0; pushing them still needs the maintainer's AUR SSH key.
 
 ### What this session completed
 
+- **Released 3.1.0.** crates.io, docs.rs and the GitHub `v3.1.0` release carry
+  four tarballs (Linux glibc/musl, macOS x86_64/arm64), `.deb`, `.rpm`,
+  per-archive checksums and `SHA256SUMS`; every checksum was verified locally.
+  The release workflow now pins `macos-15-intel` for x86_64 and `macos-15` for
+  arm64 after a runner-acquisition failure on the shared arm64 pool.
 - **Project-wide built-in diagnostics.** **Problems** now scans every unopened
   project file with its provider's structural checks (4,000 files / 2,000
   problems), deduplicates against live document diagnostics, and groups
@@ -574,7 +579,8 @@ Keep this table current so the next session knows where to resume.
 | 0. 2.1 regression tests | done | 45d099f | Folding, breakpoints, gutter, hunk patch, non-UTF-8, workspace, incremental sync, mouse, icons |
 | 0. Oversized-file splits | in progress | a5bb9ea | `app/mod.rs` and `ui/editor` split; `tools.rs` and `document.rs` remain |
 | Release / identity | done | dd64f6b | Renamed to Kemori; 3.0.0 on crates.io, docs.rs and GitHub; old `koda-ide` deprecated |
-| AUR publication | prepared | dd64f6b | Packages built and validated; waiting for the maintainer's AUR SSH key |
+| Release 3.1.0 | done | 36c349e | crates.io, docs.rs, GitHub release with four tarballs, deb/rpm and verified checksums |
+| AUR publication | prepared | dd64f6b | Packages built for 3.0.0; refresh the version/checksum for 3.1.0; waiting for the maintainer's AUR SSH key |
 | 1. Bottom panel | done | 3f1083e | Problems, Output and Debug Console; `Ctrl+J`, tab switching, resize, per-tab state |
 | 1. Integrated terminal | not started | — | Needs the PTY dependency decision (open decision 3) |
 | 1. Live tasks | done | 03d5362 | Streaming, follow-tail, cancel and rerun |

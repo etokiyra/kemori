@@ -307,3 +307,5 @@ restore, incremental LSP sync, partial mouse support and file icons.
 3.0 renamed the project to **Kemori**, fixed the Phase 0 correctness and
 responsiveness gaps, and published `kemori` 3.0.0 on crates.io, docs.rs and
 GitHub; the old `koda-ide` crate is deprecated.
+3.1 added the bottom panel, live task output, project-wide search and replace,
+task history and Run Active File, and built-in workspace problem scanning.
