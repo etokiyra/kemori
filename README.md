@@ -1,6 +1,6 @@
 # Kemori
 
-<p align="center"><em>A modern, lightweight, terminal-native IDE.</em></p>
+<p align="center"><em>Kemori — a zero-configuration, terminal-native IDE.</em></p>
 
 <p align="center">
   <a href="LICENSE"><img alt="License: MPL 2.0" src="https://img.shields.io/badge/license-MPL--2.0-90b99f?style=flat-square"></a>
