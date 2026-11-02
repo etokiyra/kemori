@@ -1,7 +1,8 @@
 # NEXT — the working plan for turning Kemori into a full IDE
 
-**Status snapshot:** 2026-11-02, version 3.0.0, commit `08f8fa1`.
+**Status snapshot:** 2026-11-02, version 3.0.0, commit `15dc93d`.
 **Verification at the time of writing:** `cargo check --all-targets`, `cargo clippy --all-targets` clean; `cargo test` green (627 library tests, 46 render tests, plus tooling suites with ignored live tests).
+**Release status:** `kemori` 3.0.0 is on crates.io, docs.rs and the GitHub `v3.0.0` release. The AUR packages are prepared and validated locally; pushing them still needs the maintainer's AUR SSH key.
 
 > Read `AGENTS.md`, `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`,
 > `docs/DECISIONS.md`, `docs/LIMITATIONS.md` and
