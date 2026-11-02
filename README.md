@@ -332,6 +332,9 @@ The editor is the heart of Kemori, and it is built for real projects.
   task, `r` reruns the last one, and `h` reopens a completed run from this
   session's history. Its `file:line` references are added to **Problems**, and
   `Enter` jumps to the selected reference.
+- **Run Active File** runs a standalone Python, Shell, JavaScript, Ruby, PHP,
+  Lua, Perl, Go, Dart or Elixir script with its interpreter. It refuses an
+  unsaved buffer and explains when a language has no single-file runner.
 - A background worker keeps detection, diagnostics, formatting and git off the
   UI thread.
 

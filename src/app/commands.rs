@@ -234,6 +234,7 @@ impl App {
             ids::WORKSPACE_SYMBOLS => self.open_workspace_symbols(),
             ids::PROJECT_SEARCH => self.open_project_search(),
             ids::RUN_TASKS => self.open_task_picker(),
+            ids::RUN_ACTIVE_FILE => self.run_active_file(),
             ids::CANCEL_TASK => self.cancel_task(),
             ids::RERUN_TASK => self.rerun_task(),
             ids::TASK_HISTORY => self.open_task_history(),
@@ -746,6 +747,22 @@ impl App {
             ids::CANCEL_TASK if !self.pending_task => {
                 (false, Some("no task is running".to_string()))
             }
+            ids::RUN_ACTIVE_FILE => match document {
+                Some(doc) if doc.is_dirty() => (false, Some("save the file first".to_string())),
+                Some(doc) => match doc.buffer.path.as_deref().and_then(|path| {
+                    crate::project::tasks::active_file_task(doc.buffer.language, path)
+                }) {
+                    Some(_) => (true, None),
+                    None => (
+                        false,
+                        Some(format!(
+                            "no runner for {} files",
+                            doc.buffer.language.name()
+                        )),
+                    ),
+                },
+                None => (false, Some("no file open".to_string())),
+            },
             ids::RERUN_TASK if self.last_task.is_none() => {
                 (false, Some("run a task first".to_string()))
             }

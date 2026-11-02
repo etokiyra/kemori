@@ -11,6 +11,8 @@ use std::path::Path;
 
 use serde_json::Value;
 
+use crate::language::LanguageId;
+
 /// A task the project provides: a command run in the project root.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Task {
@@ -134,6 +136,33 @@ fn detect_scripts(path: &Path) -> Vec<Task> {
         .collect()
 }
 
+/// A zero-configuration runner for a standalone script, when one exists.
+///
+/// This is intentionally narrower than the language matrix: it names only
+/// interpreters and toolchains that run a single file without a project. A
+/// compiled language whose file is not a complete program returns `None`, and
+/// the palette explains that there is no runner instead of running something
+/// surprising.
+pub fn active_file_task(language: LanguageId, path: &Path) -> Option<Task> {
+    let (program, prefix): (&str, &[&str]) = match language {
+        LanguageId::Python => ("python3", &[]),
+        LanguageId::Shell => ("sh", &[]),
+        LanguageId::JavaScript => ("node", &[]),
+        LanguageId::Ruby => ("ruby", &[]),
+        LanguageId::Php => ("php", &[]),
+        LanguageId::Lua => ("lua", &[]),
+        LanguageId::Perl => ("perl", &[]),
+        LanguageId::Go => ("go", &["run"]),
+        LanguageId::Dart => ("dart", &["run"]),
+        LanguageId::Elixir => ("elixir", &[]),
+        _ => return None,
+    };
+    let name = path.file_name().and_then(|name| name.to_str())?;
+    let mut task = Task::builtin(&format!("Run {name}"), program, prefix);
+    task.args.push(path.display().to_string());
+    Some(task)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -238,6 +267,21 @@ mod tests {
         fs::write(dir.join("package.json"), "{ not json").unwrap();
         assert!(detect(&dir).is_empty());
         fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn standalone_scripts_get_a_runner_when_one_exists() {
+        let python =
+            active_file_task(LanguageId::Python, Path::new("/tmp/demo.py")).expect("python runner");
+        assert_eq!(python.command_line(), "python3 /tmp/demo.py");
+        assert_eq!(python.label, "Run demo.py");
+
+        let go = active_file_task(LanguageId::Go, Path::new("/tmp/main.go")).expect("go runner");
+        assert_eq!(go.command_line(), "go run /tmp/main.go");
+
+        // A compiled language without a single-file runner is not guessed.
+        assert!(active_file_task(LanguageId::Rust, Path::new("/tmp/main.rs")).is_none());
+        assert!(active_file_task(LanguageId::C, Path::new("/tmp/main.c")).is_none());
     }
 
     #[test]

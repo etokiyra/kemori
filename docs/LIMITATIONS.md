@@ -61,6 +61,11 @@ describes the current state.
   exist, and infers severity from the words `error`/`warning` in the line. A
   compiler or test runner with an unusual format may not produce entries; the
   raw Output tab is always authoritative.
+- **Run Active File covers interpreters, not compiled files.** Python, Shell,
+  JavaScript, Ruby, PHP, Lua, Perl, Go, Dart and Elixir have a single-file
+  runner. Rust, C/C++, Java, C#, Kotlin, Swift, Assembly and configuration
+  languages are refused with a reason instead of guessing a build. The file must
+  be saved first, because the task runs the bytes on disk, not the buffer.
 - **A task can run to its ten-minute deadline if it is never cancelled.**
 - **The Problems tab covers the open files only.** Diagnostics exist for
   documents Kemori has opened and analysed; there is no workspace-wide

@@ -79,6 +79,7 @@ pub mod ids {
     pub const WORKSPACE_SYMBOLS: &str = "project.symbols";
     pub const PROJECT_SEARCH: &str = "project.search";
     pub const RUN_TASKS: &str = "project.tasks";
+    pub const RUN_ACTIVE_FILE: &str = "project.runFile";
     pub const CANCEL_TASK: &str = "project.cancelTask";
     pub const RERUN_TASK: &str = "project.rerunTask";
     pub const TASK_HISTORY: &str = "project.taskHistory";
@@ -451,6 +452,9 @@ impl CommandRegistry {
                 .describes("Install the language tooling this project needs"),
             Command::new(RUN_TASKS, "Run Task…", "Project", Some("Ctrl+Shift+R"))
                 .describes("Run one of the project's own commands"),
+            Command::new(RUN_ACTIVE_FILE, "Run Active File", "Project", None)
+                .describes("Run a standalone script with its language's interpreter")
+                .needs_doc(),
             Command::new(CANCEL_TASK, "Cancel Task", "Project", None)
                 .describes("Stop the task that is currently running"),
             Command::new(RERUN_TASK, "Rerun Last Task", "Project", None)

@@ -11,6 +11,12 @@ Historical entries below retain the old name; 3.0.0 is the rename release.
 ## [Unreleased]
 
 ### Added
+- **Run Active File.** A standalone script in Python, Shell, JavaScript, Ruby,
+  PHP, Lua, Perl, Go, Dart or Elixir can be run from the palette with its
+  interpreter/toolchain (`python3 file.py`, `go run file.go`, …). It uses the
+  same streaming Output tab, stays unavailable for a language without a
+  single-file runner, and refuses an unsaved buffer instead of running stale
+  code.
 - **Project-wide search and replace.** `Ctrl+Shift+F` opens a search form with
   literal or regular-expression matching, case and whole-word toggles,
   include/exclude globs, results grouped by file, and a per-line replacement

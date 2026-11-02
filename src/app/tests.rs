@@ -611,6 +611,53 @@ fn a_finished_task_adds_its_errors_to_the_problems_tab() {
     fs::remove_dir_all(&dir).ok();
 }
 
+#[cfg(unix)]
+#[test]
+fn run_active_file_runs_a_standalone_script() {
+    let dir = temp_project("run-active");
+    let script = dir.join("script.sh");
+    fs::write(&script, "echo KEMORI_ACTIVE_FILE_RAN\n").unwrap();
+    let mut app = app_with_file(&script);
+
+    app.execute_command(ids::RUN_ACTIVE_FILE);
+    let deadline = Instant::now() + Duration::from_secs(15);
+    while app.pending_task && Instant::now() < deadline {
+        app.pump_background(Duration::from_millis(20));
+    }
+    let run = app.panel.output.as_ref().expect("task output");
+    assert!(run.success);
+    assert_eq!(run.command, format!("sh {}", script.display()));
+    assert!(
+        run.lines
+            .iter()
+            .any(|line| line.contains("KEMORI_ACTIVE_FILE_RAN"))
+    );
+    fs::remove_dir_all(&dir).ok();
+}
+
+#[cfg(unix)]
+#[test]
+fn run_active_file_refuses_an_unsaved_buffer() {
+    let dir = temp_project("run-active-dirty");
+    let script = dir.join("script.sh");
+    fs::write(&script, "echo old\n").unwrap();
+    let mut app = app_with_file(&script);
+    app.editor
+        .active_document_mut()
+        .unwrap()
+        .insert_text("# new\n");
+
+    app.execute_command(ids::RUN_ACTIVE_FILE);
+    assert!(!app.pending_task, "a dirty file must not start a task");
+    assert!(
+        app.status_message()
+            .is_some_and(|message| message.contains("Save the file")),
+        "the reason should be explicit: {:?}",
+        app.status_message()
+    );
+    fs::remove_dir_all(&dir).ok();
+}
+
 #[test]
 fn task_history_reopens_a_completed_run() {
     use crate::app::panel::TaskRunState;

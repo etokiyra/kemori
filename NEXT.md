@@ -1,7 +1,7 @@
 # NEXT — the working plan for turning Kemori into a full IDE
 
 **Status snapshot:** 2026-11-02, version 3.0.0, commit `c23487a`.
-**Verification at the time of writing:** `cargo check --all-targets`, `cargo clippy --all-targets` clean; `cargo test` green (648 library tests, 51 render tests, plus tooling suites with ignored live tests).
+**Verification at the time of writing:** `cargo check --all-targets`, `cargo clippy --all-targets` clean; `cargo test` green (651 library tests, 51 render tests, plus tooling suites with ignored live tests).
 **Release status:** `kemori` 3.0.0 is on crates.io, docs.rs and the GitHub `v3.0.0` release. The AUR packages are prepared and validated locally; pushing them still needs the maintainer's AUR SSH key.
 
 ### What this session completed
@@ -15,7 +15,8 @@
   stdout/stderr as it arrives, follows the tail until the user scrolls up,
   cancels with `x`, reruns with `r`, reopens a completed run with `h`, and
   replaces the live view with the final stdout/stderr-separated result. Its
-  `file:line` references become Problems.
+  `file:line` references become Problems, and **Run Active File** runs a
+  standalone script through its language's interpreter.
 - **Phase 1's bottom panel is in place.** `Ctrl+J` opens a keyboard-focusable
   panel with **Problems** (diagnostics across open files, grouped by file),
   **Output** (the last task's captured result) and **Debug Console** (adapter
@@ -351,10 +352,9 @@ workspace-wide problems and trust remain.
 - [x] **Live task output.** Stream stdout/stderr into Output, follow the tail
       until the user scrolls, cancel with `x`, rerun with `r`, and show the
       final stdout/stderr-separated batch.
-- [x] **Task depth.** Session output history (`h`) and `file:line` references
-      extracted into Problems.
-- [ ] **Run Active File.** Run a standalone script from the active file without
-      a project task.
+- [x] **Task depth.** Session output history (`h`), `file:line` references
+      extracted into Problems, and `Run Active File` for standalone scripts
+      (refused for a dirty buffer or a language without a single-file runner).
 - [x] **Project search and replace.** Literal/regex, case, whole word,
       include/exclude globs, results grouped by file, replacement preview,
       atomic writes, unsaved-buffer safety and every changed file named.
@@ -465,9 +465,8 @@ so "Complete" means the development loop works.
 ## 5. Suggested next commits
 
 1. `feat(terminal): PTY-backed terminal in the bottom panel`
-2. `feat(tasks): run the active file`
-3. `feat(diagnostics): workspace-wide Problems and pull diagnostics`
-4. `feat(app): workspace trust before running project code`
+2. `feat(diagnostics): workspace-wide Problems and pull diagnostics`
+3. `feat(app): workspace trust before running project code`
 
 Then the real debugger, then language expansion.
 
@@ -571,7 +570,7 @@ Keep this table current so the next session knows where to resume.
 | 1. Problems panel | partial | 3f1083e | Covers open files and groups by file; workspace-wide sweep and pull diagnostics remain |
 | 1. Integrated terminal | not started | — | Needs the PTY dependency decision (open decision 3) |
 | 1. Live tasks | done | 03d5362 | Streaming, follow-tail, cancel and rerun |
-| 1. Task depth | done | c23487a | Session output history and references in Problems; Run Active File remains |
+| 1. Task depth | done | pending | Session history, references in Problems and Run Active File |
 | 1. Project search/replace | done | 9be6382 | Form overlay, literals/regex, globs, preview, atomic replace, unsaved-buffer safety |
 | 1. Workspace trust | not started | — | — |
 | 2. LSP depth | not started | — | — |

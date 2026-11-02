@@ -337,7 +337,11 @@ this file, and add or change a test.
   session (the last ten) so the user can reopen one without rerunning it, and
   `file:line[:col]` references are extracted into Problems using the same
   conservative parser as the output jump; that extraction is a heuristic, and
-  the raw output stays authoritative.
+  the raw output stays authoritative. **Run Active File** is a small
+  language→interpreter table in `project/tasks.rs`, not a build system: only
+  languages with a genuine single-file runner are offered, the command runs
+  with the project root as its working directory, and an unsaved buffer is
+  refused because the child reads the file on disk.
 
 - **Deterministic project scaffolding.** `project/create.rs` writes conventional
   project files directly instead of invoking `cargo`, `go` or `pip`, so

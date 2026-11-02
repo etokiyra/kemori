@@ -78,6 +78,31 @@ impl App {
         }
     }
 
+    /// Run the active file with its language's zero-config runner.
+    pub(super) fn run_active_file(&mut self) {
+        let Some(doc) = self.editor.active_document() else {
+            self.set_status("No file open");
+            return;
+        };
+        if doc.is_dirty() {
+            self.set_error("Save the file before running it");
+            return;
+        }
+        let language = doc.buffer.language;
+        let Some(path) = doc.buffer.path.clone() else {
+            self.set_status("This file has no path on disk");
+            return;
+        };
+        let Some(task) = tasks::active_file_task(language, &path) else {
+            self.set_error(format!(
+                "No zero-config runner for {} files",
+                language.name()
+            ));
+            return;
+        };
+        self.run_task(task);
+    }
+
     /// Cancel the running task.
     pub(super) fn cancel_task(&mut self) {
         if !self.pending_task {
