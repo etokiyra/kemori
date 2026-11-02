@@ -23,11 +23,12 @@
   `file:line` references become Problems, and **Run Active File** runs a
   standalone script through its language's interpreter.
 - **Phase 1's bottom panel is in place.** `Ctrl+J` opens a keyboard-focusable
-  panel with **Problems** (diagnostics across open files, grouped by file),
-  **Output** (the last task's captured result) and **Debug Console** (adapter
-  preview messages). Tabs keep their own state; `Tab` cycles them, `Alt+↑`/`↓`
-  resize, `Enter` jumps to a problem or `file:line` reference, `c` clears, and
-  `Esc` returns to the editor. Task output no longer uses a modal overlay.
+  panel with **Problems** (live document diagnostics plus a built-in scan of
+  unopened project files, grouped by file), **Output** (streaming task output)
+  and **Debug Console** (adapter preview messages). Tabs keep their own state;
+  `Tab` cycles them, `Alt+↑`/`↓` resize, `Enter` jumps to a problem or
+  `file:line` reference, `c` clears, and `Esc` returns to the editor. Task
+  output no longer uses a modal overlay.
 - **The editor's tiny-viewport scroll bug is fixed.** A panel that leaves one or
   two editor rows no longer scrolls to the end of the file while the statusline
   reports the cursor's line. `ui/editor.rs` was split into a directory module
@@ -342,8 +343,9 @@ folding either correct and tested or removed; 2.1 features have tests.
 
 ### Phase 1 — The core IDE loop
 
-**Status:** in progress — bottom panel landed; terminal, live tasks, replace,
-workspace-wide problems and trust remain.
+**Status:** in progress — bottom panel, live tasks, project search/replace and
+workspace problem scanning landed; the integrated terminal, LSP pull diagnostics
+and workspace trust remain.
 
 **Goal:** a user can run, test, search and navigate without leaving Kemori.
 
@@ -574,7 +576,6 @@ Keep this table current so the next session knows where to resume.
 | Release / identity | done | dd64f6b | Renamed to Kemori; 3.0.0 on crates.io, docs.rs and GitHub; old `koda-ide` deprecated |
 | AUR publication | prepared | dd64f6b | Packages built and validated; waiting for the maintainer's AUR SSH key |
 | 1. Bottom panel | done | 3f1083e | Problems, Output and Debug Console; `Ctrl+J`, tab switching, resize, per-tab state |
-| 1. Problems panel | partial | 3f1083e | Covers open files and groups by file; workspace-wide sweep and pull diagnostics remain |
 | 1. Integrated terminal | not started | — | Needs the PTY dependency decision (open decision 3) |
 | 1. Live tasks | done | 03d5362 | Streaming, follow-tail, cancel and rerun |
 | 1. Task depth | done | 04845d4 | Session history, references in Problems and Run Active File |
