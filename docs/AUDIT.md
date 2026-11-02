@@ -1,4 +1,4 @@
-# Koda project health audit
+# Kemori project health audit
 
 > **Point-in-time snapshot (Phase 0).** Phase 2 closed the provisioning gaps
 > recorded here: `jdtls`, `lua-language-server`, `kotlin-language-server` and
@@ -12,7 +12,7 @@ records what the code actually does, with `file:line` evidence, and marks every
 claim `true`, `false` or `unverified`. Nothing in `src/` was changed to produce
 it.
 
-- **Repository:** `/home/etokiyra/koda`
+- **Repository:** `/home/etokiyra/kemori`
 - **Branch / commit:** `master` @ `b4845af` ("small readme fix")
 - **Toolchain:** stable, Rust edition 2024 (`Cargo.toml:4`)
 - **Date:** 2026-10-05
@@ -152,7 +152,7 @@ pinned versions with **no** checksum.
 
 ---
 
-## 3b. System binaries Koda shells out to
+## 3b. System binaries Kemori shells out to
 
 | Binary | Used for | Fallback | Evidence |
 | --- | --- | --- | --- |
@@ -214,7 +214,7 @@ Every `[ ]` in `ROADMAP.md`, classified against the code:
 | Optional theme system (`:330`) | **not started** | `ui/theme.rs` is a fixed Mellow mapping; no theme selection found. |
 | File iconography (`:334`) | **not started** | No `icon` code in `src/ui`. |
 | Interactive diff/merge view (`:335`) | **not started** | A read-only diff overlay exists; no interactive merge (only unrelated history coalescing). |
-| Optional user configuration (`:352`) | **not started** | No config-file reading anywhere (grep for `config.toml`/`koda.toml` empty). |
+| Optional user configuration (`:352`) | **not started** | No config-file reading anywhere (grep for `config.toml`/`kemori.toml` empty). |
 | Plugin/provider API (`:354`) | **not started** | `commands/mod.rs:152` only has a *comment* about a future layer; no loader. |
 | Remote development over SSH (`:355`) | **not started** | Only the OSC-52 "works over SSH" comment (`terminal/mod.rs:47`). |
 | Debug adapter support (`:356`) | **not started** | No DAP code. |
@@ -259,7 +259,7 @@ mostly current but omits `format.rs`, `process.rs` and `symbols.rs`.
    future refactor; not part of Phases 0-2.
 5. **Doc drift:** `AGENTS.md` architecture tree, its "every managed install is
    verified" claim, and `CHANGELOG.md`'s compare link
-   (`https://example.com/koda/compare/main...HEAD`) all need correcting in
+   (`https://example.com/kemori/compare/main...HEAD`) all need correcting in
    Phase 1.
 
 ---

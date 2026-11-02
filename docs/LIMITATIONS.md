@@ -4,6 +4,18 @@ Grouped by subsystem. Each entry is a real, verified limitation, not a wish.
 Open work that would remove one lives in [ROADMAP.md](../ROADMAP.md); this file
 describes the current state.
 
+## Rename migration
+
+- **The old state directory is imported once.** On first launch Kemori copies
+  settings, sessions and recents from `~/.local/state/koda` (or the
+  `XDG_STATE_HOME` equivalent), never overwriting a current Kemori file. The old
+  directory is left untouched, so rolling back is safe, but later changes made
+  in Kemori are not written back to it.
+- **Old environment variables survive for one release.** `KEMORI_REMOTE` and
+  `KEMORI_DEBUG_ADAPTER` are preferred; `KODA_REMOTE` and
+  `KODA_DEBUG_ADAPTER` still work as fallbacks. They will be removed in a later
+  release.
+
 ---
 
 ## Editor
@@ -49,14 +61,14 @@ describes the current state.
 
 ## LSP
 
-- **Document sync follows the server.** Koda sends incremental `didChange`
+- **Document sync follows the server.** Kemori sends incremental `didChange`
   ranges when a server asks for incremental sync and a full-document
   replacement otherwise (which the protocol permits as the safe fallback).
 - **A server is launched per language, not per workspace root.** One server per
   `LanguageId` is tracked; a monorepo with several roots of the same language
   shares one server.
 - **Folding ranges are best-effort.** A server's `textDocument/foldingRange` is
-  used when it advertises folding ranges; otherwise Koda falls back to
+  used when it advertises folding ranges; otherwise Kemori falls back to
   indentation-based folding.
 
 ## Provisioning
@@ -77,7 +89,7 @@ describes the current state.
   file and only renamed into place after verification, and an extraction stages
   into a sibling directory and promotes it with a rename, restoring the previous
   installation if promotion fails. But a plan that installs A and then fails on
-  B can still leave A installed; Koda reports the incomplete plan and the next
+  B can still leave A installed; Kemori reports the incomplete plan and the next
   attempt recovers. There is no whole-plan transaction.
 - **Pre-flight is best-effort.** `install()` keeps only strategies whose every
   step is available and checks the tools directory and disk space before any
@@ -85,22 +97,22 @@ describes the current state.
   a short disk is reported first. Network reachability, proxy behaviour, archive
   contents and permissions below the tools directory remain runtime checks.
 - **`rustup component add` remains a delegation.** Hex is pinned by exact version
-  and rebar3 is a Koda-verified download. The only remaining floating
+  and rebar3 is a Kemori-verified download. The only remaining floating
   provisioning input is rustup's component for the user's active toolchain:
   rustup chooses the component version and verifies toolchain artifacts against
-  its signed manifests, and Koda does not fetch or pin it independently.
+  its signed manifests, and Kemori does not fetch or pin it independently.
 - **Swift's extracted size is not estimated.** The disk check uses the download
   estimate before an install and an archive's own size before extraction, but
   there is no separate estimate of the unpacked size (Swift is ~1.1 GB download
   to ~3.5 GB extracted), so a disk with room for the download but not the
   extraction is caught only during extraction.
 - **Removing a shared managed component removes its siblings.** Update/Remove
-  act on the first directory Koda owns beneath its tools root. Go-installed tools
+  act on the first directory Kemori owns beneath its tools root. Go-installed tools
   share `tools/gopath`, the npm servers share `tools/npm`, and the JDK and .NET
-  runtimes are shared, so removing one tool can also remove another Koda tool.
-  Koda never touches a user's own install.
+  runtimes are shared, so removing one tool can also remove another Kemori tool.
+  Kemori never touches a user's own install.
 - **Managed Swift is limited to swift.org's platforms.** The official Linux
-  toolchains link against the distribution's libraries, so Koda installs one only
+  toolchains link against the distribution's libraries, so Kemori installs one only
   where swift.org builds for the running release (Ubuntu, Debian, Fedora, Amazon
   Linux, RHEL). Elsewhere it uses the portable UBI10 build plus a compatibility
   layer on glibc Linux, and on musl it only discovers an existing toolchain.
@@ -110,16 +122,16 @@ describes the current state.
 - **`Perl::LanguageServer` cannot build on Perl ≥ 5.41.** Its `Coro` dependency
   (latest release 6.57, 2020) does not compile against Perl 5.42's changed
   `Time::HiRes` API. Verified on this host (Perl 5.42.2): the install fails with
-  `Module 'Coro' is not installed`. Koda prefers **PLS**, which has no `Coro`
+  `Module 'Coro' is not installed`. Kemori prefers **PLS**, which has no `Coro`
   dependency and installed successfully. A pre-installed `Perl::LanguageServer`
   is still discovered on any Perl.
-- **PHP and Ruby still need their runtime.** Koda provisions `phpactor.phar` and
+- **PHP and Ruby still need their runtime.** Kemori provisions `phpactor.phar` and
   an isolated `solargraph` gem, but not a PHP or Ruby interpreter: official PHP
   is source-only and the portable static builds publish no checksum, and Ruby has
   no official portable binary. Both runtimes are reused when installed and
   reported as a prerequisite otherwise.
 - **`clangd` and `asm-lsp` prebuilt bundles are glibc-only.** Their prebuilt
-  releases link against glibc and libstdc++, so Koda does not offer them on musl
+  releases link against glibc and libstdc++, so Kemori does not offer them on musl
   (Alpine/Void musl); a system clangd or the `cargo` fallback is used there. The
   official Go toolchain and Go-installed tools are static and work on musl.
 - **Elixir/Erlang provisioning is Linux-only.** `bob_platform` returns `None`
@@ -140,7 +152,7 @@ describes the current state.
 - **Terminal coverage is partial.** Colour support is detected once at startup
   (`NO_COLOR`, `COLORTERM`, `TERM`): a 16-colour terminal gets the bundled
   **Ansi** theme unless the user stored a choice, and `NO_COLOR` suppresses
-  every colour code, with selections falling back to reversed text. Koda asks
+  every colour code, with selections falling back to reversed text. Kemori asks
   for the kitty keyboard protocol at startup so `Ctrl+Shift` chords are reported
   distinctly; on a terminal that ignores the request those commands remain
   reachable through the command palette. Still open: an interactive check on a
@@ -169,14 +181,14 @@ describes the current state.
   native or portable on glibc Linux and discovery-only elsewhere; Assembly has
   no prebuilt aarch64 Linux binary; `clangd` is withheld on musl. See
   [LANGUAGE-SUPPORT.md](LANGUAGE-SUPPORT.md#platform-notes).
-- **PHP and Ruby need their runtime.** Koda provisions `phpactor.phar` and an
+- **PHP and Ruby need their runtime.** Kemori provisions `phpactor.phar` and an
   isolated `solargraph` gem but not a PHP or Ruby interpreter (no verified
   portable upstream distribution), so their servers are Complete-with-a-
   prerequisite rather than zero-config. Built-in editing works offline with no
   runtime. See [Provisioning](#provisioning).
 - **Nix's server needs Nix.** `nil` publishes no prebuilt release assets and is
-  not the crates.io `nil` crate, so Koda installs it (and `nixfmt`) from a pinned
-  nixpkgs commit with `nix profile` into a Koda-private profile. A system `nix`
+  not the crates.io `nil` crate, so Kemori installs it (and `nixfmt`) from a pinned
+  nixpkgs commit with `nix profile` into a Kemori-private profile. A system `nix`
   is therefore a prerequisite; on NixOS it is already present. The install is
   build/unit-verified here, not live-run because this host has no Nix. Nix
   editing, highlighting, diagnostics, symbols, completion and navigation are
@@ -185,7 +197,7 @@ describes the current state.
 ## Debugging
 
 - **There is no debugger yet.** **Debug Adapter Handshake (Preview)** spawns an
-  adapter (`KODA_DEBUG_ADAPTER`, `gdb` by default), sends `initialize`,
+  adapter (`KEMORI_DEBUG_ADAPTER`, `gdb` by default), sends `initialize`,
   `launch` and `setBreakpoints`, then stops the adapter and reports that the
   handshake completed. Execution never stops on a breakpoint; breakpoint
   markers are visual bookmarks only. A real DAP client is a roadmap item.
@@ -195,7 +207,7 @@ describes the current state.
 - **No merge tool and no hunk staging.** The changed-files list stages whole
   files. The diff overlay can apply or revert the hunk under the cursor, but it
   cannot stage or unstage a single hunk, and there is no merge-conflict view.
-- **The SSH command runner is experimental.** `KODA_REMOTE` routes only git
+- **The SSH command runner is experimental.** `KEMORI_REMOTE` routes only git
   status through `ssh`; the file tree, editor, language servers and tasks stay
   local. It is an internal seam, not remote development.
 - **Git operations are not cancellable.** Push, pull, fetch, diff, hunk
@@ -211,12 +223,12 @@ describes the current state.
   compatibility layer is `cfg(unix)`, and `language/format.rs` builds a child
   `PATH` with a hard-coded `:` separator. The code compiles in places but has no
   end-to-end path.
-- **A `sudo` launch has the root account's tool context.** Koda deliberately
+- **A `sudo` launch has the root account's tool context.** Kemori deliberately
   keeps its state in the root account's directory and only discovers tools on
   the system path (including `/run/current-system/sw/bin` and
   `/nix/var/nix/profiles/default/bin`); language servers installed only for the
   invoking user are not executed as root. This is a safety boundary, not a
-  missing feature. System-wide packages make `sudo koda` work, but running the
+  missing feature. System-wide packages make `sudo kemori` work, but running the
   whole IDE as root is still discouraged; see
   [README.md](../README.md#running-with-sudo).
 - **Linux and macOS are supported.** CI builds and tests on Linux (glibc), in
@@ -234,9 +246,9 @@ describes the current state.
   static option for other Linux environments. The distro packages do not
   include language servers or runtimes; those stay optional and are provisioned
   or discovered at runtime.
-- **The AUR `koda` package pins a release tag.** Its checksum must be refreshed
-  for every release with `updpkgsums` and `.SRCINFO` regenerated; `koda-git`
+- **The AUR `kemori` package pins a release tag.** Its checksum must be refreshed
+  for every release with `updpkgsums` and `.SRCINFO` regenerated; `kemori-git`
   follows `master` and uses `git describe` for its version.
-- **Running the whole IDE as root is discouraged**, even though `sudo koda`
+- **Running the whole IDE as root is discouraged**, even though `sudo kemori`
   resolves from `/usr/bin` after a system-wide install. Use it only for files
   that need elevated privileges.

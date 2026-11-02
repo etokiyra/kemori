@@ -1,6 +1,6 @@
-# Contributing to Koda
+# Contributing to Kemori
 
-Thanks for helping. Koda is a zero-configuration terminal IDE; the bar for a
+Thanks for helping. Kemori is a zero-configuration terminal IDE; the bar for a
 change is that it keeps the editor core clean, the UI minimal, and the
 experience configuration-free.
 
@@ -16,10 +16,10 @@ experience configuration-free.
 ## Set up
 
 ```bash
-git clone https://github.com/etokiyra/koda.git
-cd koda
+git clone https://github.com/etokiyra/kemori.git
+cd kemori
 cargo build
-cargo run -- .          # run Koda against this repository
+cargo run -- .          # run Kemori against this repository
 ```
 
 ## The gates
@@ -77,6 +77,6 @@ cargo test --test keymap             # fails if the README drifts
 
 ## Reporting issues
 
-Include your OS and architecture, the Koda version, the exact steps, and what you
+Include your OS and architecture, the Kemori version, the exact steps, and what you
 expected. For anything security-sensitive, follow [`SECURITY.md`](SECURITY.md)
 instead of opening a public issue.

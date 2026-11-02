@@ -1,10 +1,10 @@
 # AGENTS.md
 
-Guidance for humans and AI agents working on Koda, a **terminal-native IDE**.
+Guidance for humans and AI agents working on Kemori, a **terminal-native IDE**.
 It is not a terminal copy of VS Code. Every feature must justify its existence
 against the principles below.
 
-The user installs Koda, opens a project, and codes — without configuring language
+The user installs Kemori, opens a project, and codes — without configuring language
 servers, plugins or keybindings.
 
 ---
@@ -12,8 +12,8 @@ servers, plugins or keybindings.
 ## 1. Core principles (non-negotiable)
 
 1. **Zero configuration.** Supported languages work with no user setup.
-   Complexity belongs inside Koda, never in a config file the user writes.
-2. **Koda owns language intelligence.** Detection and language providers are
+   Complexity belongs inside Kemori, never in a config file the user writes.
+2. **Kemori owns language intelligence.** Detection and language providers are
    first-class. Do not scatter `if rust { … }` through the editor or UI.
 3. **Terminal-native.** Never paint an opaque full-screen background. Use
    `Color::Reset` for plain text and set backgrounds only where meaningful

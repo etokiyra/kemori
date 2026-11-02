@@ -9,12 +9,12 @@ acknowledge and investigate as soon as we can.
 
 ## Supported versions
 
-Koda is pre-1.0. Security fixes are made on `master`; there are no maintained
-release branches yet.
+Kemori does not maintain release branches yet. Security fixes are made on
+`master`; use the latest release.
 
 ## Managed-download trust model
 
-Koda installs language tools for the user. This section states exactly what it
+Kemori installs language tools for the user. This section states exactly what it
 downloads, from where, and how the download is verified, so the trust boundary
 is explicit.
 
@@ -33,7 +33,7 @@ missing check or a mismatch aborts the install and removes the bad file.
 | `lua-language-server` | `github.com/LuaLS/lua-language-server` | SHA-256 asset digest from the GitHub API |
 | OmniSharp | `github.com/OmniSharp/omnisharp-roslyn` | SHA-256 asset digest from the GitHub API |
 | Eclipse JDT (`jdtls`) | `download.eclipse.org` milestones | SHA-256 pinned from the published `.sha256` |
-| `kotlin-language-server` | `github.com/fwcd/kotlin-language-server` | SHA-256 pinned in Koda's source (GitHub publishes no asset digest) |
+| `kotlin-language-server` | `github.com/fwcd/kotlin-language-server` | SHA-256 pinned in Kemori's source (GitHub publishes no asset digest) |
 | Dart SDK | `storage.googleapis.com/dart-archive` | sibling `.sha256sum` |
 | Node.js | `nodejs.org` | `SHASUMS256.txt` |
 | Eclipse Adoptium JDK | `api.adoptium.net` | checksum from the same API response, for a pinned release |
@@ -41,9 +41,9 @@ missing check or a mismatch aborts the install and removes the bad file.
 | Erlang/OTP, Elixir | `builds.hex.pm` | SHA-256 from `builds.txt` |
 | `rustup-init` | `static.rust-lang.org` | SHA-256 beside the versioned binary |
 | Swift toolchain | `download.swift.org` | detached GPG signature, verified against swift.org's published keys in a **private keyring** |
-| `App::cpanminus` | `cpan.metacpan.org` | a SHA-256 pinned in Koda's source |
+| `App::cpanminus` | `cpan.metacpan.org` | a SHA-256 pinned in Kemori's source |
 
-The two Koda-pinned SHA-256 values (`kotlin-language-server` and
+The two Kemori-pinned SHA-256 values (`kotlin-language-server` and
 `App::cpanminus`) are recorded from a reviewed download of the exact immutable
 release asset, because the upstreams publish no digest of their own. A replaced
 asset therefore fails closed rather than installing silently.
@@ -63,15 +63,15 @@ signed archive). See [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md#provisioning).
   every other download step verifies a checksum, signature or upstream digest.
   Verification is fail-closed, and a hash that is not the expected length of hex
   is rejected.
-- **No system writes.** Installations target a user-writable directory Koda
+- **No system writes.** Installations target a user-writable directory Kemori
   manages (or the user's own `~/.cargo`, `~/.local`), so `sudo` is never
   required and a system-owned prefix cannot be corrupted.
-- **Isolated subprocesses.** Installs run from Koda's own data directory, not
+- **Isolated subprocesses.** Installs run from Kemori's own data directory, not
   the user's project, so a project-local `.npmrc` or similar cannot hijack a
   package manager. Commands and downloads are time- and output-bounded.
-- **Safe extraction.** Before unpacking, Koda lists an archive's entries and
+- **Safe extraction.** Before unpacking, Kemori lists an archive's entries and
   refuses absolute paths or `..` components, failing closed if it cannot list.
-- **Disk-space check.** Before a large install Koda refuses to start when the
+- **Disk-space check.** Before a large install Kemori refuses to start when the
   target filesystem cannot hold the estimated download, and before extraction it
   checks the archive's own size.
 - **Proxy-aware.** The selected `HTTPS_PROXY`/`ALL_PROXY`/`HTTP_PROXY` value is
@@ -84,9 +84,9 @@ signed archive). See [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md#provisioning).
 
 ### What this model does not cover
 
-- **Upstream or transport compromise.** Koda trusts HTTPS and the integrity data
+- **Upstream or transport compromise.** Kemori trusts HTTPS and the integrity data
   published by each upstream; a compromised upstream that also publishes a
-  matching checksum is not defended against. For the two Koda-pinned SHA-256
+  matching checksum is not defended against. For the two Kemori-pinned SHA-256
   values, the first download is trust-on-first-use of a reviewed artifact.
 - **Manager-delegated installs.** `rustup component add` and `mix local.hex`
   trust those managers' own trust model.
@@ -95,11 +95,11 @@ signed archive). See [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md#provisioning).
 
 ## Editor and data-handling notes
 
-- Koda does not send project contents anywhere. Language servers run locally and
-  Koda talks to them over stdio; the only network traffic is tool provisioning.
+- Kemori does not send project contents anywhere. Language servers run locally and
+  Kemori talks to them over stdio; the only network traffic is tool provisioning.
 - Saves are atomic: a sibling temporary file is written and renamed over the
   original. Filesystem rename/copy never overwrites an existing destination.
 - Loading refuses binary, non-UTF-8 and oversized files rather than replacing
   bytes and writing them back.
-- The clipboard uses the terminal's OSC 52 sequence; Koda keeps an internal
+- The clipboard uses the terminal's OSC 52 sequence; Kemori keeps an internal
   clipboard as a fallback.

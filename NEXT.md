@@ -1,7 +1,7 @@
-# NEXT — the working plan for turning Koda into a full IDE
+# NEXT — the working plan for turning Kemori into a full IDE
 
-**Status snapshot:** 2026-11-02, version 2.1.0, commit `45d099f`.
-**Verification at the time of writing:** `cargo check --all-targets`, `cargo clippy --all-targets` clean; `cargo test` green (626 library tests, 46 render tests, plus tooling suites with ignored live tests).
+**Status snapshot:** 2026-11-02, version 3.0.0, commit `08f8fa1`.
+**Verification at the time of writing:** `cargo check --all-targets`, `cargo clippy --all-targets` clean; `cargo test` green (627 library tests, 46 render tests, plus tooling suites with ignored live tests).
 
 > Read `AGENTS.md`, `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`,
 > `docs/DECISIONS.md`, `docs/LIMITATIONS.md` and
@@ -18,7 +18,7 @@ touching code.
 
 ## 0. The goal and the definition of done
 
-Koda should be a **general, universal terminal IDE** where the most important
+Kemori should be a **general, universal terminal IDE** where the most important
 languages are *fully* supported and a fresh install can start coding with zero
 configuration.
 
@@ -29,13 +29,13 @@ For this plan, a language counts as fully supported only when it has:
 - a formatter, or a deliberate documented reason there is none;
 - run and test tasks inferred from the project with no config;
 - a debug plan (adapter) or a documented reason debugging is unavailable;
-- a language server that Koda provisions, or an explicit prerequisite/limitation;
+- a language server that Kemori provisions, or an explicit prerequisite/limitation;
 - lifecycle and recovery (restart, fallback, clean shutdown);
 - an honest matrix row and a live test or an explicit "unverified" marker.
 
 The end-to-end acceptance scenario:
 
-> Open a repository in one of the core languages. Koda detects it, offers one
+> Open a repository in one of the core languages. Kemori detects it, offers one
 > setup action, and then the user can edit, format, run, test, debug, search
 > the whole project, use git and open a terminal — without creating a config
 > file, installing a language server by hand, or knowing which distribution
@@ -79,7 +79,7 @@ A real DAP client is Phase 2.
 
 ### 2.2 "Remote" only covers git status
 
-`KODA_REMOTE` is read only in `Request::RefreshGit`
+`KEMORI_REMOTE` is read only in `Request::RefreshGit`
 (`src/background.rs` around line 387). The file tree, editor, LSP, tasks,
 push/pull/fetch and GitHub creation are local. This is not remote development.
 
@@ -236,7 +236,7 @@ workspace switcher. The 2.1.0 commit added no new files under `tests/`.
   LSP `workspaceFolders`.
 - Restore split panes, active pane and a reopen-closed-tab stack.
 - **Workspace trust**: tasks, debug adapters and project-specific language
-  servers execute project code. Koda currently has no trust gate.
+  servers execute project code. Kemori currently has no trust gate.
 - First-run "Set up and start" flow that previews what will be installed.
 
 ### Language breadth
@@ -265,7 +265,7 @@ get lost in a fold.
       `LIMITATIONS.md`, `README.md`, `CHANGELOG.md` and, if direction changes,
       `ROADMAP.md`. Keep `AGENTS.md` rules-only.
 - [x] **Gate or remove fake features.** Hide `Start Debugging` behind an
-      explicit preview, remove `KODA_REMOTE` from claims, and state the real
+      explicit preview, remove `KEMORI_REMOTE` from claims, and state the real
       debugging/remote status in `LIMITATIONS.md`.
 - [x] **Move git work to the worker.** Add background requests for push, pull,
       fetch, diff, apply-patch, GitHub repo creation, and per-document
@@ -290,7 +290,7 @@ folding either correct and tested or removed; 2.1 features have tests.
 
 ### Phase 1 — The core IDE loop
 
-**Goal:** a user can run, test, search and navigate without leaving Koda.
+**Goal:** a user can run, test, search and navigate without leaving Kemori.
 
 - [ ] **Bottom panel** with tabs: Problems, Output, Terminal, Debug Console.
       Focus toggle, resize, scroll, clear, per-panel state.
@@ -305,7 +305,7 @@ folding either correct and tested or removed; 2.1 features have tests.
 - [ ] **Problems panel.** Workspace-wide diagnostics grouped by file/severity;
       LSP pull diagnostics where supported.
 - [ ] **Workspace trust and safe mode.** Ask before running project tasks,
-      debug adapters or project-specific servers. Store the decision in Koda's
+      debug adapters or project-specific servers. Store the decision in Kemori's
       state; never require a user-maintained config file.
 
 **Exit criteria:** open a repo, run a task in the terminal, see output live,
@@ -389,7 +389,7 @@ so "Complete" means the development loop works.
 - [ ] Persist multi-root workspaces; unified tree/search/problems; LSP
       workspace folders.
 - [ ] Restore split panes, pane focus and a reopen-closed-tab stack.
-- [ ] CLI: `koda file:line`, `--help`, `--version`, `--diff`, `--wait`,
+- [ ] CLI: `kemori file:line`, `--help`, `--version`, `--diff`, `--wait`,
       `--no-lsp`.
 - [ ] One-line installer and self-update.
 
@@ -464,7 +464,7 @@ Record the answer in `docs/DECISIONS.md` when decided.
 
 1. **Debugging now or later?** Remove/hide the scaffold immediately, or invest
    in a real DAP client as part of Phase 1?
-2. **Remote:** delete `KODA_REMOTE` until real remote development exists, or
+2. **Remote:** delete `KEMORI_REMOTE` until real remote development exists, or
    keep it as an internal experimental seam?
 3. **Terminal dependency:** `portable-pty` or Unix PTY via `nix`/`libc`?
    Windows is out of scope, so a Unix-first choice is acceptable if documented.
@@ -503,7 +503,7 @@ Keep this table current so the next session knows where to resume.
 | Phase | Status | Last commit | Notes |
 | --- | --- | --- | --- |
 | 0. Docs truth pass | done | 48bf5ec | ARCHITECTURE, DECISIONS, LIMITATIONS, README, ROADMAP, CHANGELOG |
-| 0. Gate/remove DAP + remote | done | e1e7eb5 | Debug command is an explicit preview; `KODA_REMOTE` is internal |
+| 0. Gate/remove DAP + remote | done | e1e7eb5 | Debug command is an explicit preview; `KEMORI_REMOTE` is internal |
 | 0. Git off the UI thread | done | e1e7eb5 | No cancellation yet; documented |
 | 0. Folding correctness | done | e1e7eb5 | Fold-aware movement, edit remapping, `Ctrl+K` chords, LSP ranges |
 | 0. 2.1 regression tests | done | 45d099f | Folding, breakpoints, gutter, hunk patch, non-UTF-8, workspace, incremental sync, mouse, icons |

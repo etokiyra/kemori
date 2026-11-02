@@ -1,45 +1,45 @@
-# Koda's product direction
+# Kemori's product direction
 
-The authoritative statement of what Koda is for and who it is for. `AGENTS.md`
+The authoritative statement of what Kemori is for and who it is for. `AGENTS.md`
 holds the engineering rules; this file holds the product direction;
 [ROADMAP.md](../ROADMAP.md) turns it into prioritised work; the shipped state is
 in [CHANGELOG.md](../CHANGELOG.md).
 
 ## The promise
 
-> Install Koda. Open a project. Start coding.
+> Install Kemori. Open a project. Start coding.
 
-Koda is a terminal-native IDE that detects the languages in a project and sets
+Kemori is a terminal-native IDE that detects the languages in a project and sets
 up the tooling they need — without a configuration file, without asking the user
 to understand language servers, and without taking over tools the user already
 manages.
 
 ## The ideal experience
 
-1. Install or download Koda (a prebuilt binary, or `cargo install`).
+1. Install or download Kemori (a prebuilt binary, or `cargo install`).
 2. Launch it.
 3. Open a file or a project.
-4. Koda recognises the project's languages and offers to provision what is missing.
+4. Kemori recognises the project's languages and offers to provision what is missing.
 5. Completion, diagnostics, hover, navigation, rename, code actions and
    formatting work, backed by a language server when one is available and by
-   Koda's built-in intelligence when it is not.
+   Kemori's built-in intelligence when it is not.
 6. The user never writes a config file and never installs a language server by hand.
 7. The user does not need to know which distribution they run or which package
    manager it uses.
 8. Tools the user already installed are reused and never overwritten.
-9. Koda stays lightweight, keyboard-first and transparent.
-10. The handful of things people want to change can be changed from inside Koda.
+9. Kemori stays lightweight, keyboard-first and transparent.
+10. The handful of things people want to change can be changed from inside Kemori.
 
 ## What "supported" means
 
 A language is **supported** only when the claim matches what the code does; "an
-LSP starts" is not enough. Koda uses four classes, defined in full in
+LSP starts" is not enough. Kemori uses four classes, defined in full in
 [LANGUAGE-SUPPORT.md](LANGUAGE-SUPPORT.md#the-support-contract):
 
-- **Complete** — detection, built-in offline editing, and a language server Koda
+- **Complete** — detection, built-in offline editing, and a language server Kemori
   provisions itself with nothing else required from the system.
 - **Complete (prerequisite)** — the same, but one system runtime or tool must
-  already exist (for example `php`, `ruby`/`gem` or `python3`); Koda names it
+  already exist (for example `php`, `ruby`/`gem` or `python3`); Kemori names it
   and does not replace it.
 - **Offline only** — detection and built-in offline editing; no language server
   (Markdown, JSON, TOML, YAML).
@@ -53,7 +53,7 @@ For a language to count as Complete it must provide:
 - **Offline features** — highlighting and, where meaningful, structural
   diagnostics, symbols, completion, hover and navigation with no server and no
   network.
-- **Provisioning** — Koda can obtain the server on each supported platform, or
+- **Provisioning** — Kemori can obtain the server on each supported platform, or
   states precisely why it cannot.
 - **Lifecycle and recovery** — the server is launched, restarted on failure and
   shut down cleanly; a missing prerequisite or no network leaves editing working
@@ -66,16 +66,16 @@ language and still leave it Complete; the authoritative per-language state is
 ## Product principles
 
 - **Zero configuration by default.** A fresh install needs no file. If
-  customisation exists, it is reachable from inside Koda, and any on-disk
+  customisation exists, it is reachable from inside Kemori, and any on-disk
   settings file is an implementation detail the user never has to maintain.
-- **Koda owns the tooling experience.** Detection, provisioning, launch,
-  recovery and updates are Koda's job, not the user's.
+- **Kemori owns the tooling experience.** Detection, provisioning, launch,
+  recovery and updates are Kemori's job, not the user's.
 - **Reuse, never hijack.** A user's or system's tool is preferred and is never
   modified, moved or deleted.
 - **Fail closed and explain.** Downloads are verified, failures are bounded,
-  partial state is cleaned up or clearly reported, and Koda never silently
+  partial state is cleaned up or clearly reported, and Kemori never silently
   installs something it could not verify.
-- **Distro-independent by construction.** Koda installs into user-local
+- **Distro-independent by construction.** Kemori installs into user-local
   locations and does not depend on a distribution's package manager.
 - **Terminal-native and light.** Transparency, keyboard-first, no opaque
   full-screen surfaces, no panel sprawl, no blocking the UI.
@@ -85,7 +85,7 @@ language and still leave it Complete; the authoritative per-language state is
 
 ## Settings and themes
 
-Koda is fully usable with no settings file. When a user wants to personalise it,
+Kemori is fully usable with no settings file. When a user wants to personalise it,
 they open **Settings** from the command palette; there is no file to find or
 edit.
 
@@ -93,8 +93,8 @@ edit.
   width (Auto or a fixed width), spaces vs tabs, inline diagnostics, and
   automatic completion. Each applies immediately and can be reset to its default.
 - **Storage.** Choices are written on quit, and only once something changed, to
-  `$XDG_STATE_HOME/koda/settings.json` (or
-  `~/.local/state/koda/settings.json`). A missing file loads the defaults; a
+  `$XDG_STATE_HOME/kemori/settings.json` (or
+  `~/.local/state/kemori/settings.json`). A missing file loads the defaults; a
   malformed file is set aside as `settings.json.corrupt` and the defaults load.
   The file is an implementation detail, never a requirement.
 - **Themes.** Four are bundled and selectable at runtime: **Mellow** (the
@@ -108,7 +108,7 @@ stored a theme of their own; a `NO_COLOR` environment suppresses every colour
 code, keeping emphasis through bold and reversed text so menus, the file tree
 and text selections stay usable.
 
-Settings are global. Koda does not create project-level configuration, and the
+Settings are global. Kemori does not create project-level configuration, and the
 zero-configuration project experience is unchanged.
 
 ## Platform strategy
@@ -121,7 +121,7 @@ zero-configuration project experience is unchanged.
 - **Documented per-tool platform support:** glibc-only bundles, Linux-only
   toolchains and required system libraries are stated rather than guessed.
 - **Windows is out of scope.** Nothing in the current architecture makes it
-  free, so Koda does not claim it and does not grow Windows-only paths.
+  free, so Kemori does not claim it and does not grow Windows-only paths.
 
 ## How a language should be added
 
@@ -142,7 +142,7 @@ descriptor-driven is a roadmap item, not a decision already made.
 ## The support strategy in one sentence
 
 Prefer a small, self-contained, checksum-verified download from upstream over a
-system package; reuse a user's existing tool when present; install under Koda's
+system package; reuse a user's existing tool when present; install under Kemori's
 own data directory; and never require the user to know how any of it works.
 
 ## Non-goals

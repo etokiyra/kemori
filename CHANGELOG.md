@@ -1,16 +1,28 @@
 # Changelog
 
-All notable changes to Koda are documented here.
+All notable changes to Kemori are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-New work is collected under **Unreleased**. The released version below is Koda's
-first release; it is written from the code's final state — superseded interim
-entries have been collapsed rather than kept as a blow-by-blow — and is dated
-when it is tagged.
+Kemori was previously published as **Koda** (crate `koda-ide`, binary `koda`).
+Historical entries below retain the old name; 3.0.0 is the rename release.
 
-## [Unreleased]
+## [3.0.0] - 2026-11-02
+
+### Changed
+- **Renamed from Koda to Kemori.** The crate, library and binary are all
+  `kemori`; the repository and documentation move to `etokiyra/kemori`. The
+  rename removes the name collision with unrelated projects called Koda.
+- **State migrates once.** The first Kemori launch copies settings, sessions and
+  recents from the old state directory without modifying or deleting it, then
+  writes a marker so the import is not repeated.
+- **Old environment variables still work for one release.**
+  `KEMORI_REMOTE` and `KEMORI_DEBUG_ADAPTER` are preferred; `KODA_REMOTE` and
+  `KODA_DEBUG_ADAPTER` fall back for compatibility.
+- **The UI, documentation and packaging use the new name.** The welcome
+  wordmark, README, AUR/deb/rpm package names, release artifacts and install
+  instructions are all Kemori.
 
 ### Added
 - **Fold-aware editing.** Cursor movement, selection and jumps stay on visible
@@ -29,9 +41,9 @@ when it is tagged.
   **Toggle Breakpoint** is described as a visual marker. `docs/LIMITATIONS.md`
   states the real state.
 - **The remote runner is no longer presented as remote development.**
-  `KODA_REMOTE` remains an internal, experimental seam for git status only; the
-  file tree, editor, language servers and tasks stay local. The limitation is
-  documented instead of advertised.
+  `KEMORI_REMOTE` remains an internal, experimental seam for git status only;
+  the file tree, editor, language servers and tasks stay local. The limitation
+  is documented instead of advertised.
 
 ## [2.1.0] - 2026-10-31
 
@@ -368,7 +380,8 @@ starts working.
 > tool. See [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md#provisioning). Windows is
 > not supported.
 
-[Unreleased]: https://github.com/etokiyra/koda/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/etokiyra/kemori/compare/v3.0.0...HEAD
+[3.0.0]: https://github.com/etokiyra/kemori/releases/tag/v3.0.0
 [2.1.0]: https://github.com/etokiyra/koda/releases/tag/v2.1.0
 [0.1.2]: https://github.com/etokiyra/koda/releases/tag/v0.1.2
 [0.1.1]: https://github.com/etokiyra/koda/releases/tag/v0.1.1

@@ -1,6 +1,6 @@
 # Language support
 
-The authoritative, honest statement of what Koda supports today. It is the
+The authoritative, honest statement of what Kemori supports today. It is the
 language-level companion to [PRODUCT.md](PRODUCT.md#what-supported-means), and it
 is written from the actual implementation, not from intent. If this file and the
 code disagree, the code is right and this file is a bug.
@@ -8,12 +8,12 @@ code disagree, the code is right and this file is a bug.
 ## The support contract
 
 A language is only called **supported** when the claim matches what the code
-does. Koda uses four classes:
+does. Kemori uses four classes:
 
-- **Complete** — detection, built-in offline editing, and a language server Koda
+- **Complete** — detection, built-in offline editing, and a language server Kemori
   provisions itself with nothing else required from the system.
 - **Complete (prerequisite)** — the same, but one system runtime or tool must
-  already exist; Koda names it and does not replace it.
+  already exist; Kemori names it and does not replace it.
 - **Offline only** — detection and built-in offline editing; no language server.
 - **Platform-limited** — the server or toolchain is unavailable or unverified on
   some first-class platform; the limitation is stated per platform.
@@ -31,14 +31,14 @@ Built-in provider capabilities, verified from each provider's `capabilities()`:
 - `completion` — keywords, types, builtins (merged with buffer words)
 - `hover` — symbol information
 - `navigation` — go-to-definition and references within the file
-- `format` — an external formatter Koda runs (not LSP formatting)
+- `format` — an external formatter Kemori runs (not LSP formatting)
 
 ## User-facing matrix
 
 <!-- languages:start -->
 | Language | Works offline | Language server | Runtime needed | Server platforms | Class |
 | --- | --- | --- | --- | --- | --- |
-| **Rust** | highlight, diagnostics, symbols, completion, hover, navigation, format | `rust-analyzer` (rename, code actions) | none (Koda bootstraps `rustup`) | Linux glibc/musl, macOS x86_64/arm64 | Complete |
+| **Rust** | highlight, diagnostics, symbols, completion, hover, navigation, format | `rust-analyzer` (rename, code actions) | none (Kemori bootstraps `rustup`) | Linux glibc/musl, macOS x86_64/arm64 | Complete |
 | **Go** | highlight, diagnostics, symbols, completion, hover, navigation, format | `gopls` (rename, code actions) | none (managed Go) | Linux glibc/musl, macOS x86_64/arm64 | Complete |
 | **Python** | highlight, diagnostics, symbols, completion, hover, navigation | `pylsp` (rename, code actions) | `python3` | wherever `python3` runs | Complete (prerequisite) |
 | **Shell** | highlight, symbols, completion, hover, navigation, format | `bash-language-server` | none (managed Node.js) | Linux, macOS | Complete |
@@ -60,7 +60,7 @@ Built-in provider capabilities, verified from each provider's `capabilities()`:
 | **Dart** | highlight, diagnostics, symbols, completion, hover, navigation, format | `dart language-server` | none (managed Dart SDK) | Linux, macOS | Complete |
 | **Elixir** | highlight, diagnostics, symbols, completion, hover, navigation, format | `ElixirLS` | none (managed OTP + Elixir) | **Linux only** | Platform-limited |
 | **Swift** | highlight, diagnostics, symbols, completion, hover, navigation, format | `sourcekit-lsp` | none (managed toolchain) | glibc Linux (native or portable UBI10); discovery elsewhere | Platform-limited |
-| **Nix** | highlight, diagnostics, symbols, completion, hover, navigation, format | `nil` (rename, code actions, LSP format) | `nix` (Koda installs from a pinned nixpkgs revision) | Linux glibc/musl, macOS | Complete (prerequisite) |
+| **Nix** | highlight, diagnostics, symbols, completion, hover, navigation, format | `nil` (rename, code actions, LSP format) | `nix` (Kemori installs from a pinned nixpkgs revision) | Linux glibc/musl, macOS | Complete (prerequisite) |
 | **Markdown** | highlight, symbols, format | — | none | all | Offline only |
 | **JSON** | highlight, diagnostics, symbols, completion, format | — | none | all | Offline only |
 | **TOML** | highlight, diagnostics, symbols, completion | — | none | all | Offline only |
@@ -84,7 +84,7 @@ artifact is glibc-only; those are called out explicitly.
 | Java | `jdtls` + Adoptium JDK 25 | `1.61.0` milestone + `jdk-25.0.4.1+1` | published `.sha256`; Adoptium API checksum | managed JDK |
 | C# | `OmniSharp` + .NET SDK | `v2.0.0` + `10.0.401` | GitHub asset SHA-256; `releases.json` SHA-512 | managed .NET |
 | PHP | `phpactor` | `2026.06.23.0` | GitHub asset SHA-256 | system `php` |
-| Kotlin | `kotlin-language-server` + Adoptium JDK 21 | `1.3.13` + `jdk-21.0.12.1+1` | Koda-pinned SHA-256; Adoptium API checksum | managed JDK 21 |
+| Kotlin | `kotlin-language-server` + Adoptium JDK 21 | `1.3.13` + `jdk-21.0.12.1+1` | Kemori-pinned SHA-256; Adoptium API checksum | managed JDK 21 |
 | HTML / CSS | `vscode-langservers-extracted` | `@4.10.0` | npm delegation; managed Node.js | managed Node.js |
 | Lua | `lua-language-server` | `3.19.1` | GitHub asset SHA-256 | — |
 | Ruby | `solargraph` | `0.60.4` | RubyGems delegation into an isolated gem home | system `ruby`/`gem` |
@@ -92,7 +92,7 @@ artifact is glibc-only; those are called out explicitly.
 | Assembly | `asm-lsp` | `0.10.1` | GitHub asset SHA-256; `cargo install --version` fallback | — or `cargo` |
 | Perl | `PLS` (fallback `Perl::LanguageServer` `2.6.2`) | `@0.906` | checksum-verified `cpanm` `1.7049`; isolated `local::lib` | system `perl` |
 | Dart | Dart SDK | `3.13.5` | sibling `.sha256sum` | managed SDK |
-| Elixir | `ElixirLS` + OTP + Elixir | `0.31.1` + `27.3.4` + `1.18.4` | GitHub asset SHA-256; `builds.hex.pm` checksums; Hex `2.5.1` pinned; rebar3 `3.24.0` Koda-verified | managed runtime |
+| Elixir | `ElixirLS` + OTP + Elixir | `0.31.1` + `27.3.4` + `1.18.4` | GitHub asset SHA-256; `builds.hex.pm` checksums; Hex `2.5.1` pinned; rebar3 `3.24.0` Kemori-verified | managed runtime |
 | Swift | `sourcekit-lsp` | `6.4.0` | detached GPG signature | managed toolchain |
 | Nix | `nil`, `nixfmt` | nixpkgs `55bfb4d7437bd4e09ab7cba58a43bd68eb310044` | exact nixpkgs commit; Nix verifies every store path | system `nix` |
 
@@ -126,7 +126,7 @@ as unverified until a live test covers it.
   Linux-only (`bob` publishes no macOS build). Swift is discovery-only off
   swift.org's Linux distributions.
 - **Other architectures.** Only where upstream publishes an artifact; otherwise
-  Koda reuses the user's tool. Linux aarch64 has no prebuilt `asm-lsp`.
+  Kemori reuses the user's tool. Linux aarch64 has no prebuilt `asm-lsp`.
 
 ## The capability gate
 
@@ -145,10 +145,10 @@ about built-in features.
 ## PHP and Ruby
 
 Both have solid built-in offline editing and a managed server package
-(`phpactor.phar`, `solargraph`), but **Koda does not provision their runtime**:
+(`phpactor.phar`, `solargraph`), but **Kemori does not provision their runtime**:
 
 - Official PHP is source-only; the third-party static builds publish no
-  checksum, so Koda cannot verify one.
+  checksum, so Kemori cannot verify one.
 - Ruby has no official portable binary.
 
 Under the zero-configuration principle, their servers are therefore **Complete

@@ -1,6 +1,6 @@
 # Architecture
 
-The single source of truth for Koda's module layout and dependency rules.
+The single source of truth for Kemori's module layout and dependency rules.
 `AGENTS.md` and `README.md` link here instead of keeping their own copies.
 
 ---

@@ -1,6 +1,6 @@
 # Roadmap
 
-Koda is developed incrementally. This roadmap lists **open** work only; what has
+Kemori is developed incrementally. This roadmap lists **open** work only; what has
 shipped is in [CHANGELOG.md](CHANGELOG.md). It is product-oriented: every item
 states the user-facing goal first, then how we will know it is done.
 
@@ -10,7 +10,7 @@ principles win.
 
 The guiding goal:
 
-> Install Koda. Open a project. Start coding.
+> Install Kemori. Open a project. Start coding.
 
 ```
 editor foundation  →  project/language detection  →  language intelligence  →  automatic tooling
@@ -21,7 +21,7 @@ editor foundation  →  project/language detection  →  language intelligence  
 
 ## Now
 
-The work that most directly makes Koda feel like the zero-configuration IDE it
+The work that most directly makes Kemori feel like the zero-configuration IDE it
 claims to be.
 
 ### 1. Trustworthy, unattended provisioning
@@ -35,13 +35,13 @@ never bypasses verification; downloads and extractions are atomic per step and a
 failed replacement restores the previous install; `install()` pre-flights the
 plan and refuses an unrunnable plan or a short disk before downloading; failures
 name the cause and the tool; Hex is pinned and rebar3 is checksum-verified by
-Koda; fake-download tests cover cache hit/miss/corruption, mismatch, failed
+Kemori; fake-download tests cover cache hit/miss/corruption, mismatch, failed
 download, staging cleanup and failed-promotion restore.
 
 **Remaining.**
 - `rustup component add` is kept as the one documented delegation: rustup chooses
   the component for the user's active toolchain and verifies toolchain artifacts
-  against its signed manifests; Koda does not fetch or pin it independently.
+  against its signed manifests; Kemori does not fetch or pin it independently.
   Justified in `docs/DECISIONS.md` and `docs/LIMITATIONS.md`.
 - Rollback is per `Extract` step: a plan that installs A and fails on B may
   leave A. Decide whether a whole-plan transaction is worth it.
@@ -58,7 +58,7 @@ be extended safely.
 
 ### 2. A complete supported-language matrix
 
-**Goal.** Every language Koda knows has an explicit, honest contract, and every
+**Goal.** Every language Kemori knows has an explicit, honest contract, and every
 limitation is deliberate and documented.
 
 **Done (0.1.x).** [docs/LANGUAGE-SUPPORT.md](docs/LANGUAGE-SUPPORT.md) is the
@@ -90,14 +90,14 @@ palette) changes theme, line numbers, animations, soft wrap, indentation width,
 spaces vs tabs, inline diagnostics and automatic completion. Each change applies
 immediately and can be reset to the defaults; a settings file is written on quit
 only once something changed, so a fresh install still needs no file. The store
-lives under Koda's state directory, tolerates a missing or malformed file (the
+lives under Kemori's state directory, tolerates a missing or malformed file (the
 broken file is preserved as `settings.json.corrupt`), and ignores unknown
 fields. Four bundled themes — **Mellow** (the default), a high-contrast dark
 **Midnight**, a light **Daylight** and the 16-colour **Ansi** fallback — are
 data-driven from one role set and selectable at runtime.
 
 **Remaining.**
-- **Keybindings are intentionally not user-configurable.** Koda keeps a
+- **Keybindings are intentionally not user-configurable.** Kemori keeps a
   conventional, keyboard-first keymap; a not-yet-existing arbitrary keybinding
   editor is out of scope by design, not by omission.
 - The light theme has deterministic render coverage but has not been viewed on a
@@ -105,7 +105,7 @@ data-driven from one role set and selectable at runtime.
   `NO_COLOR` fallback belongs with item 4.
 - Users cannot yet add their own themes (by design for now).
 
-**Direction.** A settings store under Koda's state directory, a small set of
+**Direction.** A settings store under Kemori's state directory, a small set of
 typed preferences, and a TUI that writes it. The file is an implementation
 detail, never a requirement.
 
@@ -113,7 +113,7 @@ detail, never a requirement.
 
 ### 4. Terminal compatibility
 
-**Goal.** Koda is readable and fully usable on the terminals and setups people
+**Goal.** Kemori is readable and fully usable on the terminals and setups people
 actually use.
 
 **Done (0.2).** Colour support is detected once at startup from `NO_COLOR`,
@@ -125,11 +125,11 @@ the file tree and text selections stay usable. Theme-level tests cover both
 depths.
 
 **Acceptance, remaining.**
-- `Ctrl+Shift` chords: when the kitty keyboard protocol is unavailable Koda
+- `Ctrl+Shift` chords: when the kitty keyboard protocol is unavailable Kemori
   falls back to the command palette for those commands; the fallback is
   documented in `docs/LIMITATIONS.md`. (Interactive verification under `tmux`
   is still pending.)
-- Koda is legible on a light terminal background: **Daylight** has
+- Kemori is legible on a light terminal background: **Daylight** has
   deterministic render coverage but has not been viewed on a real light
   terminal.
 
@@ -138,7 +138,7 @@ route colour through the theme so a fallback theme can be chosen.
 
 ### 5. First-run and project setup
 
-**Goal.** The first five minutes explain Koda and get a project working in one
+**Goal.** The first five minutes explain Kemori and get a project working in one
 step.
 
 **Done (0.1.x).** Opening a project runs a bounded, `.gitignore`-aware scan for
@@ -152,7 +152,7 @@ the per-language offer is suppressed for languages the project plan covers.
 `Set Up Project…` in the palette opens it on demand.
 
 **Remaining.**
-- The welcome screen does not yet preview that Koda will set up tooling.
+- The welcome screen does not yet preview that Kemori will set up tooling.
 
 **Direction.** Reuse language detection and the provisioning queue; batch the
 offers per project instead of per language.
@@ -161,11 +161,11 @@ offers per project instead of per language.
 
 ### 6. Packaging polish
 
-**Goal.** Install Koda without a Rust toolchain, and update it easily.
+**Goal.** Install Kemori without a Rust toolchain, and update it easily.
 
-**Done (0.1.x).** `cargo install koda-ide` works from crates.io; a `Makefile`
-installs to `/usr/local` (or a staged `PREFIX`/`DESTDIR`); AUR packages (`koda`
-and `koda-git`) install `/usr/bin/koda`; and the release workflow attaches
+**Done (0.1.x).** `cargo install kemori` works from crates.io; a `Makefile`
+installs to `/usr/local` (or a staged `PREFIX`/`DESTDIR`); AUR packages (`kemori`
+and `kemori-git`) install `/usr/bin/kemori`; and the release workflow attaches
 `.deb`/`.rpm` packages plus checksummed prebuilt tarballs. The README install
 section covers every path and the `sudo`/`secure_path` behaviour.
 
@@ -202,7 +202,7 @@ Valuable, but not what defines the first impression.
   preference exists, and Remove never touches a user/system install.
 - **Detection confirmation.** *Goal:* resolve genuinely ambiguous files.
   *Acceptance:* a low-confidence file asks once and remembers the answer.
-- **Performance budgets.** *Goal:* Koda stays fast on real files.
+- **Performance budgets.** *Goal:* Kemori stays fast on real files.
   *Acceptance:* budget tests assert startup time and opening a 50 MB file, and
   regressions fail CI.
 - **Descriptor-driven provisioning.** *Goal:* add a language without new
@@ -216,7 +216,7 @@ Valuable, but not what defines the first impression.
 Real, but deferred; none of them is required for the core promise.
 
 - **Real multi-root workspace.** Persisted roots with one unified tree, search
-  and problems list; today Koda switches between projects and keeps each
+  and problems list; today Kemori switches between projects and keeps each
   session, but does not present several roots at once.
 - **Interactive diff/merge** for conflicting files.
 - **Remote development over SSH.**
@@ -225,7 +225,7 @@ Real, but deferred; none of them is required for the core promise.
 - **Highlighting engine comparison.** Measure the hand-written tokenizers
   against tree-sitter and record a recommendation in
   [docs/DECISIONS.md](docs/DECISIONS.md); do not migrate without an explicit OK.
-- **Plugin/provider API.** Only with a design that cannot bloat Koda; see the
+- **Plugin/provider API.** Only with a design that cannot bloat Kemori; see the
   non-goals.
 
 ---

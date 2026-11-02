@@ -1,15 +1,15 @@
-# Koda
+# Kemori
 
 <p align="center"><em>A modern, lightweight, terminal-native IDE.</em></p>
 
 <p align="center">
   <a href="LICENSE"><img alt="License: MPL 2.0" src="https://img.shields.io/badge/license-MPL--2.0-90b99f?style=flat-square"></a>
-  <a href="https://crates.io/crates/koda-ide"><img alt="crates.io" src="https://img.shields.io/crates/v/koda-ide?style=flat-square&color=e6b99d"></a>
+  <a href="https://crates.io/crates/kemori"><img alt="crates.io" src="https://img.shields.io/crates/v/kemori?style=flat-square&color=e6b99d"></a>
   <img alt="Rust 2024" src="https://img.shields.io/badge/rust-2024-ea83a5?style=flat-square&logo=rust&logoColor=white">
-  <a href="https://github.com/etokiyra/koda/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/etokiyra/koda/actions/workflows/ci.yml/badge.svg?branch=master"></a>
-  <a href="https://github.com/etokiyra/koda/commits/master"><img alt="Last commit" src="https://img.shields.io/github/last-commit/etokiyra/koda?style=flat-square&color=e29eca"></a>
-  <a href="https://github.com/etokiyra/koda/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/etokiyra/koda?style=flat-square&color=aca1cf"></a>
-  <a href="https://github.com/etokiyra/koda/issues"><img alt="Issues" src="https://img.shields.io/github/issues/etokiyra/koda?style=flat-square&color=e6b99d"></a>
+  <a href="https://github.com/etokiyra/kemori/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/etokiyra/kemori/actions/workflows/ci.yml/badge.svg?branch=master"></a>
+  <a href="https://github.com/etokiyra/kemori/commits/master"><img alt="Last commit" src="https://img.shields.io/github/last-commit/etokiyra/kemori?style=flat-square&color=e29eca"></a>
+  <a href="https://github.com/etokiyra/kemori/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/etokiyra/kemori?style=flat-square&color=aca1cf"></a>
+  <a href="https://github.com/etokiyra/kemori/issues"><img alt="Issues" src="https://img.shields.io/github/issues/etokiyra/kemori?style=flat-square&color=e6b99d"></a>
 </p>
 
 <p align="center">
@@ -17,17 +17,17 @@
   <img alt="Terminal native" src="https://img.shields.io/badge/terminal-native-aca1cf?style=flat-square">
   <a href="https://github.com/helix-editor/helix/blob/master/runtime/themes/mellow.toml"><img alt="Theme: Mellow" src="https://img.shields.io/badge/theme-Mellow-e29eca?style=flat-square"></a>
   <img alt="Made with Rust" src="https://img.shields.io/badge/made%20with-Rust-b9aeda?style=flat-square&logo=rust&logoColor=white">
-  <a href="https://github.com/etokiyra/koda/issues"><img alt="PRs welcome" src="https://img.shields.io/badge/PRs-welcome-90b99f?style=flat-square"></a>
+  <a href="https://github.com/etokiyra/kemori/issues"><img alt="PRs welcome" src="https://img.shields.io/badge/PRs-welcome-90b99f?style=flat-square"></a>
 </p>
 
 ```text
     ✦ ───────────────────────────────────────── ☾
 
-     _  _____  ____    _
-    | |/ / _ \|  _ \  / \
-    | ' / | | | | | |/ _ \
-    | . \ |_| | |_| / ___ \
-    |_|\_\___/|____/_/   \_\
+     _  __  _____  __  __   ___    ____    ___
+    | |/ / |  ___| |  \/  |  / _ \  |  _ \  |_ _|
+    | ' /  | |___  | |\/| | | | | | | |_) |  | |
+    | . \  |  ___| | |  | | | |_| | |  _ <   | |
+    |_|\_\ |_____| |_|  |_|  \___/  |_| \_\ |___|
 
     ✦   your cozy little coding space   ✦
 
@@ -39,23 +39,23 @@
     ✦ ───────────────────────────────────────── ☾
 ```
 
-Koda is not another terminal text editor. It is a small development environment
+Kemori is not another terminal text editor. It is a small development environment
 that happens to live in your terminal — fast, minimal, keyboard-first and,
 above all, **zero configuration**.
 
-> Install Koda. Open a project. Start coding.
+> Install Kemori. Open a project. Start coding.
 
-No LSP config. No plugin marketplace. No dotfiles to hand-write. Koda detects the
+No LSP config. No plugin marketplace. No dotfiles to hand-write. Kemori detects the
 language, brings its own intelligence, and lets you get on with the interesting
 part.
 
 ```text
- ✦ koda  ·  Rust  ·  src/main.rs                                    ✧  ·  ✧
+ ✦ kemori  ·  Rust  ·  src/main.rs                                    ✧  ·  ✧
  ✦ files ────────────────────────────│ ▏ main.rs
  ▏ ▸ src                             │ ● 1  use std::io;
    ▸ tests                           │   2
    · Cargo.toml                      │   3  fn main() -> io::Result<()> {
-   · CHANGELOG.md                    │   4      let name = "koda";
+   · CHANGELOG.md                    │   4      let name = "kemori";
    · README.md                       │   5      println!("hello from {name}");
    · ROADMAP.md                      │   6      Ok(())
                                      │   7  }
@@ -64,14 +64,14 @@ part.
 
 ---
 
-## ✦ Why Koda
+## ✦ Why Kemori
 
-- **Zero configuration.** Supported languages work out of the box. Koda writes
+- **Zero configuration.** Supported languages work out of the box. Kemori writes
   no config, asks for none, and needs none.
-- **Koda owns language intelligence.** Detection, providers and the language
+- **Kemori owns language intelligence.** Detection, providers and the language
   server lifecycle are first-class subsystems — including fetching the tools
   you are missing, from trusted package managers, with one keystroke.
-- **Terminal-native.** Koda cooperates with your terminal. It never paints an
+- **Terminal-native.** Kemori cooperates with your terminal. It never paints an
   opaque background, so transparency, blur and wallpaper keep working.
 - **Keyboard-first.** Familiar shortcuts for muscle memory, plus a command
   palette that makes everything discoverable.
@@ -80,7 +80,7 @@ part.
 
 ## ☾ Language intelligence
 
-Koda layers real IDE features on top of a clean provider abstraction. When a
+Kemori layers real IDE features on top of a clean provider abstraction. When a
 language server is available it takes over; when it is not, built-in providers
 keep you productive **offline**.
 
@@ -100,7 +100,7 @@ keep you productive **offline**.
   across files when a server is attached; without one, `F12` falls back to a
   project-wide symbol search so it still works offline.
 - **Symbols** — `Ctrl+Shift+O` for the file, `Ctrl+T` for the whole workspace
-  (from the language server when attached, with Koda's built-in scan as the
+  (from the language server when attached, with Kemori's built-in scan as the
   instant, offline fallback).
 - **Rename** — `F2`, applying a workspace edit across every affected file.
 - **Code actions** — `Ctrl+.` for quick fixes and refactors.
@@ -110,7 +110,7 @@ keep you productive **offline**.
 
 ### Zero-configuration language support
 
-The complexity lives inside Koda:
+The complexity lives inside Kemori:
 
 ```text
    open a file ──▶ detect language ──▶ choose a provider
@@ -124,7 +124,7 @@ The complexity lives inside Koda:
 
 Missing something? Opening a project detects the languages it contains and
 offers a single **Project setup** action that installs every missing language
-tool; Koda also notices when a supported file is open without its server and
+tool; Kemori also notices when a supported file is open without its server and
 offers to install it, once, without blocking startup. Most
 servers are provisioned from a trusted, verified source: the **official Go
 toolchain** (which in turn provides `gopls`, `sqls` and `shfmt`), a
@@ -134,9 +134,9 @@ SDK**, a **GPG-verified Swift toolchain** (native or the portable build with a
 compatibility layer), a coordinated **Erlang/OTP + Elixir + ElixirLS** stack,
 **PLS** (or `Perl::LanguageServer`) in an isolated `local::lib`, the prebuilt
 **asm-lsp** release, the **phpactor.phar** release, and **solargraph** into a
-Koda-private gem home. A system `clangd`, `php`, `ruby`, `perl` or `go` is reused
+Kemori-private gem home. A system `clangd`, `php`, `ruby`, `perl` or `go` is reused
 when present, and each prerequisite that is genuinely required is reported
-plainly. Everything lives under Koda's own data directory.
+plainly. Everything lives under Kemori's own data directory.
 
 Every managed component is checksum- or signature-verified before use, and every
 install input is an exact version. The one remaining package-manager delegation
@@ -145,7 +145,7 @@ is `rustup component add`, which follows the user's toolchain. See
 
 **Set Up Project…** in the command palette (or the offer after opening a
 project) plans and installs a whole project's missing tooling in one step;
-**Language Setup…** lists every tool Koda knows about and installs a missing one
+**Language Setup…** lists every tool Kemori knows about and installs a missing one
 with a single `Enter`. The per-language table below names
 each server and how it is obtained. Formatting runs the language's trusted tool —
 `rustfmt`, `gofmt`, `prettier`, `clang-format`, `shfmt`, `perltidy`, or the
@@ -154,8 +154,8 @@ format in place.
 
 ### Managed toolchains
 
-Where an official, verifiable distribution exists, Koda installs and configures
-the toolchain itself. Each managed component is isolated under Koda's data
+Where an official, verifiable distribution exists, Kemori installs and configures
+the toolchain itself. Each managed component is isolated under Kemori's data
 directory, launched with only the environment it needs, and verified after
 installation by running the real tool — never just because a file exists.
 
@@ -173,47 +173,47 @@ installation by running the real tool — never just because a file exists.
 | Node.js | `nodejs.org` | `SHASUMS256.txt` | Linux/macOS, x86_64/arm64 |
 | Eclipse Adoptium JDK | `api.adoptium.net` | checksum from the API, for a pinned release | Linux/macOS, x86_64/arm64 |
 | Java (jdtls) | Eclipse milestone + managed JDK 25 | SHA-256 from the published `.sha256` | Linux/macOS, with a managed JDK |
-| Kotlin | pinned server + managed JDK 21 | SHA-256 pinned in Koda's source | Linux/macOS, with a managed JDK |
+| Kotlin | pinned server + managed JDK 21 | SHA-256 pinned in Kemori's source | Linux/macOS, with a managed JDK |
 | Lua | `LuaLS` release | SHA-256 asset digest | Linux/macOS |
 | OmniSharp | GitHub release | SHA-256 asset digest | Linux/macOS |
 | .NET SDK | `builds.dotnet.microsoft.com` | SHA-512 from `releases.json` | Linux/macOS |
 | Perl (PLS, and `Perl::LanguageServer`) | CPAN, via a checksum-verified `cpanm` | SHA-256 (`App::cpanminus`), fail-closed | wherever a system `perl` exists |
-| solargraph | RubyGems, into a Koda-private gem home | RubyGems signatures/HTTPS | wherever a system `gem` exists |
+| solargraph | RubyGems, into a Kemori-private gem home | RubyGems signatures/HTTPS | wherever a system `gem` exists |
 
 Every managed download is checksum- or signature-verified. A few package-manager
 installs (`rustup component add`, `mix local.hex`/`local.rebar`) are pinned only
 to the package manager's own trust model; see
 [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md#provisioning).
 
-On a glibc distribution swift.org does not build for, Koda uses its **UBI10**
+On a glibc distribution swift.org does not build for, Kemori uses its **UBI10**
 toolchain and a **managed compatibility layer**: a `libncurses.so.6` alias to the
 system's `libncursesw.so.6` (the same library) and a link to the system's
 `libxml2.so.2`. Nothing in the system is copied or modified — the links live
-under Koda's data directory and are used through a scoped `LD_LIBRARY_PATH`. If
-the distribution's `libxml2.so.2` is missing, Koda names the package to install
+under Kemori's data directory and are used through a scoped `LD_LIBRARY_PATH`. If
+the distribution's `libxml2.so.2` is missing, Kemori names the package to install
 (on Arch: `libxml2-legacy`) and keeps built-in editing until it is present.
 
 A large managed download (the Swift toolchain, the Dart SDK) is described with an
-approximate size before it starts, and a platform Koda cannot build for is
+approximate size before it starts, and a platform Kemori cannot build for is
 reported as such rather than attempted.
 
 Servers start lazily, recover automatically if they exit, and fall back to the
 built-in providers whenever one is unavailable, so editing never depends on
-them. Koda asks each server for `utf-8` character offsets when it offers them,
+them. Kemori asks each server for `utf-8` character offsets when it offers them,
 so positions stay accurate in non-ASCII files, and only uses features the server
 advertises — built-in intelligence fills any gap.
 
 Every install targets a directory you can write to — `rustup` under
 `~/.cargo`, `go install` under `~/go`, a Python virtualenv, npm prefix, .NET SDK
-and JDK that Koda manages under its own data directory, and
-`pip --user`/`pipx` under `~/.local` — so Koda never needs `sudo` and a
+and JDK that Kemori manages under its own data directory, and
+`pip --user`/`pipx` under `~/.local` — so Kemori never needs `sudo` and a
 system-owned prefix can never make provisioning fail. The Python virtualenv
 seeds its own `pip`, so a Python without the `pip` module (or one that is
 externally managed) still works. Managed servers are launched with those
 runtimes on their `PATH` and a private, scoped environment (`DOTNET_ROOT`,
 `JAVA_HOME`, `PERL5LIB`, `MIX_HOME`/`HEX_HOME`), so the user's system
 environment is left untouched. Installation is serialised with an advisory lock
-(with stale-lock recovery), so two Koda instances cannot corrupt the same
+(with stale-lock recovery), so two Kemori instances cannot corrupt the same
 managed prefix.
 
 ### Supported languages
@@ -224,7 +224,7 @@ built-in provider as the fallback. The **authoritative per-language contract** �
 offline capabilities, runtime prerequisites, platform limits and verification
 status — is [docs/LANGUAGE-SUPPORT.md](docs/LANGUAGE-SUPPORT.md).
 
-| Language | Syntax | Format | Diagnostics | Symbols | Completion | Hover | Navigation | Rename | Language server | Koda's setup |
+| Language | Syntax | Format | Diagnostics | Symbols | Completion | Hover | Navigation | Rename | Language server | Kemori's setup |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Rust | built-in | `rustfmt` | built-in + LSP | built-in | built-in + LSP | built-in + LSP | built-in + LSP | LSP | `rust-analyzer` | `rustup`, bootstrapped if missing |
 | Go | built-in | `gofmt` | built-in + LSP | built-in | built-in + LSP | built-in + LSP | built-in + LSP | LSP | `gopls` | `go install` via managed Go |
@@ -267,7 +267,7 @@ changes to the editor or the UI.
 
 ## ❯ Editing & workflow
 
-The editor is the heart of Koda, and it is built for real projects.
+The editor is the heart of Kemori, and it is built for real projects.
 
 - Multiple files in tabs, a lazy `.gitignore`-aware project tree, file
   create/rename/delete/duplicate/copy, git branch and per-file status, a
@@ -319,9 +319,9 @@ The editor is the heart of Koda, and it is built for real projects.
 
 ## ✧ Look & feel
 
-Koda has a personality, but the code always comes first.
+Kemori has a personality, but the code always comes first.
 
-- **The Mellow colours — the default.** Koda speaks the palette and semantic
+- **The Mellow colours — the default.** Kemori speaks the palette and semantic
   mappings of [Mellow][mellow], the separate named colorscheme shipped with
   Helix — not Helix's default theme. Blue keywords, bright-blue types, green
   strings, magenta numbers, grey italic comments.
@@ -332,7 +332,7 @@ Koda has a personality, but the code always comes first.
   indentation width, spaces vs tabs, inline diagnostics and automatic
   completion. Everything applies immediately, nothing needs a config file, and
   a fresh install is fully usable untouched.
-- **Honest about the terminal.** Koda detects colour support once at startup:
+- **Honest about the terminal.** Kemori detects colour support once at startup:
   a 16-colour terminal gets the **Ansi** theme unless you chose one, and
   `NO_COLOR` suppresses every colour code — emphasis survives as text
   attributes, and selections fall back to reversed text so menus stay usable.
@@ -347,7 +347,7 @@ Koda has a personality, but the code always comes first.
   Empty, loading and error states are all written in the same voice.
 - **Quiet feedback.** Background results — a language server installing or
   recovering, a commit, a format — surface as short-lived toasts above the
-  statusline, coloured by outcome, so you always know what Koda just did.
+  statusline, coloured by outcome, so you always know what Kemori just did.
 
 [mellow]: https://github.com/helix-editor/helix/blob/master/runtime/themes/mellow.toml
 
@@ -358,31 +358,32 @@ Koda has a personality, but the code always comes first.
 If you have a Rust toolchain (1.88 or newer), the quickest install is:
 
 ```bash
-cargo install koda-ide
-koda .
+cargo install kemori
+kemori .
 ```
 
-The crate is called `koda-ide` because `koda` was already taken on crates.io;
-the command it installs is still **`koda`**.
+Kemori was previously published as the `koda-ide` crate (binary `koda`). The
+binary and crate are now both `kemori`; the first launch imports the old state
+directory once, so sessions and settings are not lost.
 
 `cargo install` writes to `~/.cargo/bin`, which is usually **not** in `sudo`'s
 `secure_path`. To edit a system file with that install, use the absolute path:
 
 ```bash
-sudo "$(command -v koda)" /etc/nixos/configuration.nix
+sudo "$(command -v kemori)" /etc/nixos/configuration.nix
 ```
 
-For an ordinary `sudo koda`, use the AUR package, a `.deb`/`.rpm`, or
+For an ordinary `sudo kemori`, use the AUR package, a `.deb`/`.rpm`, or
 `make install` below.
 
 ### Arch Linux (AUR)
 
-The AUR packages install `/usr/bin/koda`, so `sudo koda` resolves through the
+The AUR packages install `/usr/bin/kemori`, so `sudo kemori` resolves through the
 default `secure_path`:
 
 ```bash
-yay -S koda        # tagged release
-yay -S koda-git    # latest master
+yay -S kemori        # tagged release
+yay -S kemori-git    # latest master
 ```
 
 or use `paru` in place of `yay`. The packaging sources are in
@@ -390,28 +391,28 @@ or use `paru` in place of `yay`. The packaging sources are in
 
 ### Debian and Ubuntu (.deb)
 
-Download `koda_<version>-1_amd64.deb` from the
-[Releases page](https://github.com/etokiyra/koda/releases), then:
+Download `kemori_<version>-1_amd64.deb` from the
+[Releases page](https://github.com/etokiyra/kemori/releases), then:
 
 ```bash
-sudo apt install ./koda_<version>-1_amd64.deb
-koda .
+sudo apt install ./kemori_<version>-1_amd64.deb
+kemori .
 ```
 
 The package needs glibc 2.35 or newer (Debian 12, Ubuntu 22.04 and later) and
-installs `/usr/bin/koda`.
+installs `/usr/bin/kemori`.
 
 ### Fedora and RHEL-family (.rpm)
 
-Download `koda-<version>-1.x86_64.rpm` from the same Releases page, then:
+Download `kemori-<version>-1.x86_64.rpm` from the same Releases page, then:
 
 ```bash
-sudo dnf install ./koda-<version>-1.x86_64.rpm
-koda .
+sudo dnf install ./kemori-<version>-1.x86_64.rpm
+kemori .
 ```
 
 On systems without `dnf`, `sudo rpm -i` works as well. The package installs
-`/usr/bin/koda`.
+`/usr/bin/kemori`.
 
 ### system-wide from source (make)
 
@@ -422,7 +423,7 @@ outside the build tree:
 ```bash
 make
 sudo make install
-# /usr/local/bin/koda
+# /usr/local/bin/kemori
 ```
 
 Packagers can stage the install:
@@ -439,29 +440,29 @@ use the prebuilt archive or `cargo install`.
 ### Prebuilt binaries
 
 Every tagged release publishes prebuilt archives on the
-[Releases page](https://github.com/etokiyra/koda/releases). Pick your platform:
+[Releases page](https://github.com/etokiyra/kemori/releases). Pick your platform:
 
 | Platform | Archive |
 | --- | --- |
-| Linux x86_64 (glibc) | `koda-<version>-linux-x86_64-gnu.tar.gz` |
-| Linux x86_64 (musl) | `koda-<version>-linux-x86_64-musl.tar.gz` |
-| macOS x86_64 (Intel) | `koda-<version>-macos-x86_64.tar.gz` |
-| macOS arm64 (Apple silicon) | `koda-<version>-macos-arm64.tar.gz` |
+| Linux x86_64 (glibc) | `kemori-<version>-linux-x86_64-gnu.tar.gz` |
+| Linux x86_64 (musl) | `kemori-<version>-linux-x86_64-musl.tar.gz` |
+| macOS x86_64 (Intel) | `kemori-<version>-macos-x86_64.tar.gz` |
+| macOS arm64 (Apple silicon) | `kemori-<version>-macos-arm64.tar.gz` |
 
-Each archive contains the `koda` binary and the licence. Unpack it and put the
+Each archive contains the `kemori` binary and the licence. Unpack it and put the
 binary on your `PATH`:
 
 ```bash
-tar -xzf koda-<version>-linux-x86_64-gnu.tar.gz
-install -m 755 koda ~/.local/bin/koda   # or any directory on your PATH
-koda .
+tar -xzf kemori-<version>-linux-x86_64-gnu.tar.gz
+install -m 755 kemori ~/.local/bin/kemori   # or any directory on your PATH
+kemori .
 ```
 
 SHA-256 checksums are published beside every archive (`<archive>.sha256`) and as
 a combined `SHA256SUMS` file, so you can verify a download before running it:
 
 ```bash
-sha256sum -c koda-<version>-linux-x86_64-gnu.tar.gz.sha256   # macOS: shasum -a 256 -c
+sha256sum -c kemori-<version>-linux-x86_64-gnu.tar.gz.sha256   # macOS: shasum -a 256 -c
 ```
 
 Choose the archive that matches both your OS and your architecture; on Apple
@@ -470,13 +471,13 @@ silicon use `macos-arm64`, on Intel use `macos-x86_64`. Windows is not supported
 
 ### Build from source
 
-Koda is a standard Cargo project (Rust edition 2024).
+Kemori is a standard Cargo project (Rust edition 2024).
 
 ```bash
-git clone https://github.com/etokiyra/koda.git
-cd koda
+git clone https://github.com/etokiyra/kemori.git
+cd kemori
 cargo build --release
-# binary: target/release/koda
+# binary: target/release/kemori
 ```
 
 Or install it onto your `PATH`:
@@ -494,18 +495,18 @@ cargo run -- src/main.rs       # open a file inside its detected project
 
 ### Platforms
 
-**Linux and macOS are supported. Windows is not yet supported** — Koda has no
+**Linux and macOS are supported. Windows is not yet supported** — Kemori has no
 Windows CI, several provisioning plans require a Unix `sh`, and the code has not
 been made correct for Windows path and launcher conventions. Do not expect a
 working build on Windows.
 
-Koda works on both glibc and musl Linux; the managed prebuilt bundles (clangd,
+Kemori works on both glibc and musl Linux; the managed prebuilt bundles (clangd,
 asm-lsp) are glibc-only and are withheld on musl, where a system toolchain or the
 `cargo` fallback is used instead.
 
 ### System requirements
 
-Koda itself needs only a terminal. Provisioning and git features shell out to a
+Kemori itself needs only a terminal. Provisioning and git features shell out to a
 small set of tools; each is used only when the feature needs it:
 
 | Tool | Needed for | Optional? |
@@ -562,18 +563,18 @@ the workflow log, but no CI run was observed for this audit, so the macOS cells
 remain unverified until that log is checked. Provisioning on musl is deliberately
 limited — the glibc-only clangd and asm-lsp bundles are withheld there — and is
 covered by the Alpine library-test job, not a live server. Swift was skipped
-because this host lacks `libxml2.so.2` (Arch: `libxml2-legacy`); Koda reports that
+because this host lacks `libxml2.so.2` (Arch: `libxml2-legacy`); Kemori reports that
 package rather than downloading a toolchain that cannot run.
 
 ## ❯ Usage
 
 ```bash
-koda              # start Koda in the current directory
-koda .            # same, explicitly
-koda src/main.rs  # start beside the file's project
+kemori              # start Kemori in the current directory
+kemori .            # same, explicitly
+kemori src/main.rs  # start beside the file's project
 ```
 
-Koda finds the nearest project root by walking up from the target through its
+Kemori finds the nearest project root by walking up from the target through its
 project markers (`Cargo.toml`, `go.mod`, `pyproject.toml`, `pom.xml`,
 `Package.swift`, `mix.exs`, `flake.nix`, …) or a `.git` directory, establishes
 the language context, and opens its welcome screen. A path you pass is offered
@@ -581,36 +582,36 @@ there as an **Open <path>** action rather than being opened for you.
 
 ### Running with sudo
 
-Koda can edit system files, for example on NixOS:
+Kemori can edit system files, for example on NixOS:
 
 ```bash
-sudo koda /etc/nixos/configuration.nix
+sudo kemori /etc/nixos/configuration.nix
 ```
 
-That works out of the box when Koda came from the AUR, a `.deb`/`.rpm`, or
-`make install`, because `/usr/bin/koda` or `/usr/local/bin/koda` is in the
+That works out of the box when Kemori came from the AUR, a `.deb`/`.rpm`, or
+`make install`, because `/usr/bin/kemori` or `/usr/local/bin/kemori` is in the
 normal `sudo` `secure_path`.
 
 With `cargo install`, use the absolute path because `sudo`'s `secure_path`
 usually omits `~/.cargo/bin`:
 
 ```bash
-sudo "$(command -v koda)" /etc/nixos/configuration.nix
+sudo "$(command -v kemori)" /etc/nixos/configuration.nix
 ```
 
-Koda keeps its own state under the root account (never root-owned files in your
+Kemori keeps its own state under the root account (never root-owned files in your
 home), still searches the system-wide Nix profile for language tools, and
 preserves the original owner and mode when it saves a file you own.
 
-**Running the whole IDE as root is discouraged.** Use `sudo koda` only for the
+**Running the whole IDE as root is discouraged.** Use `sudo kemori` only for the
 system files that genuinely need elevated privileges; keep normal project work
 in an unprivileged session. Root sessions are inherently more dangerous, and a
 mistake there can affect the whole machine.
 
 ## ✦ The welcome screen
 
-Koda always opens on its home screen. It is a small, atmospheric scene — the
-Koda familiar on a moonlit hill, at a cozy desk, by a rainy window, or in a
+Kemori always opens on its home screen. It is a small, atmospheric scene — the
+Kemori familiar on a moonlit hill, at a cozy desk, by a rainy window, or in a
 drift of blossom — above a keyboard-navigable menu. No file is opened
 automatically, and nothing you passed on the command line is thrown away.
 
@@ -622,7 +623,7 @@ automatically, and nothing you passed on the command line is thrown away.
                           > ω <
            ·  ·  ·  ~~~~~~~~~~~~~~  ·  ·
 
-                     ✦  K O D A  ✦
+                     ✦  KEMORI  ✦
              your cozy little coding space
 
     ❯ Open a file…                          Ctrl+O
@@ -658,10 +659,10 @@ the home screen back.
    the chosen folder so an existing project is never overwritten.
 3. **Pick a language** — Rust, Go, Python, TypeScript, JavaScript, Java, C#,
    PHP, Kotlin, Lua, Ruby, Elixir, Dart, Swift, Perl, SQL, Assembly, HTML,
-   Shell, Nix, C or C++, each shown with what Koda will generate. `Esc` steps back
+   Shell, Nix, C or C++, each shown with what Kemori will generate. `Esc` steps back
    at any point.
 
-Koda then scaffolds the project without a network connection or a toolchain and
+Kemori then scaffolds the project without a network connection or a toolchain and
 opens it, ready to edit:
 
 | Language | Generated |
@@ -690,7 +691,7 @@ opens it, ready to edit:
 | **C++** | `CMakeLists.txt`, `src/main.cpp`, `.gitignore` |
 
 If generation fails partway through, the partial folder is left untouched and
-Koda reports what happened rather than deleting anything.
+Kemori reports what happened rather than deleting anything.
 
 
 ## ☾ Keyboard shortcuts
@@ -758,6 +759,11 @@ Koda reports what happened rather than deleting anything.
 | View | `Ctrl+E` | Focus File Tree / Editor |
 | View | `Alt+I` | Toggle Inline Diagnostics |
 | View | `Alt+Z` | Toggle Soft Wrap |
+| View | `Ctrl+K z` | Toggle Fold |
+| View | `Ctrl+K c` | Fold at Cursor |
+| View | `Ctrl+K o` | Unfold at Cursor |
+| View | `Ctrl+K 0` | Fold All |
+| View | `Ctrl+K j` | Unfold All |
 | View | `F5` | Refresh File Tree |
 | View | `Alt+V` | Split Editor |
 | View | `Alt+O` | Focus Other Pane |
@@ -834,9 +840,9 @@ tested. See [`docs/PRODUCT.md`](docs/PRODUCT.md) for the product direction,
 ## ✦ Credits & license
 
 - Colour language: **[Mellow][mellow]**, the named colorscheme shipped with
-  [Helix](https://helix-editor.com), by Rohit K Viswanath. Koda translates its
+  [Helix](https://helix-editor.com), by Rohit K Viswanath. Kemori translates its
   palette and semantic mappings into its own interface; the layout, components
-  and ASCII art are Koda's.
+  and ASCII art are Kemori's.
 - Built on the shoulders of [`ratatui`](https://ratatui.rs),
   [`crossterm`](https://github.com/crossterm-rs/crossterm),
   [`ropey`](https://github.com/cessen/ropey) and

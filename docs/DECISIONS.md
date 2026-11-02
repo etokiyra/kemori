@@ -1,6 +1,6 @@
 # Design decisions
 
-The *why* behind Koda's implementation. `AGENTS.md` states the rules; this file
+The *why* behind Kemori's implementation. `AGENTS.md` states the rules; this file
 keeps the rationale that would otherwise bloat it. Read the section for the
 subsystem you are about to touch — for example, read
 [Provisioning](#provisioning) before changing `language/tools.rs`, and
@@ -79,7 +79,7 @@ this file, and add or change a test.
   at exactly three, and the project-context bonus applies only to a language
   with a file-level signal (name, shebang or extension) — a project marker never
   overrides a file's own nature.
-- **Highlighting engine.** Koda uses hand-written, line-based tokenizers that
+- **Highlighting engine.** Kemori uses hand-written, line-based tokenizers that
   carry a small state. They have not been benchmarked against tree-sitter in this
   repository; a migration would require an explicit OK and is not planned. This
   stays a documented non-decision until measurement exists.
@@ -135,7 +135,7 @@ this file, and add or change a test.
   budget is only forgiven after a stable uptime (so a crash-after-initialize
   loop is bounded), and one malformed message does not tear down a live
   connection. Results are still matched to their request id and document.
-- **The LSP encoding boundary is centralized.** Koda's internal positions count
+- **The LSP encoding boundary is centralized.** Kemori's internal positions count
   Unicode scalar values. Everything crossing the LSP boundary is converted in
   `language/lsp/convert.rs` (`char_to_lsp`/`lsp_to_char`, and `edits_to_chars`)
   using the actual line text and the negotiated `PositionEncoding` (UTF-8,
@@ -169,9 +169,9 @@ this file, and add or change a test.
 
 - **User-local tool installs.** Provisioning never writes to a system-owned
   location: `rustup`/`go install` place tools in the user's home, Python uses a
-  virtualenv Koda manages under its data directory (which seeds its own `pip`,
+  virtualenv Kemori manages under its data directory (which seeds its own `pip`,
   so a Python without `pip` or one marked externally managed still works), with
-  `--user`/`pipx`/`uv` as fallbacks, and npm-based tools use a prefix Koda
+  `--user`/`pipx`/`uv` as fallbacks, and npm-based tools use a prefix Kemori
   manages under its data directory (with a matching cache). A missing
   permission therefore cannot make an install fail, and every resulting bin
   directory is searched when locating tools, alongside the usual user bin
@@ -181,14 +181,14 @@ this file, and add or change a test.
   verifying a published SHA-256), fetch and verify an Adoptium JDK, or extract.
   Extraction lists the archive first and refuses absolute or `..` paths, failing
   closed if it cannot list it, and unpacks a zip with `unzip`, `bsdtar` or a
-  Python interpreter so it does not depend on one distribution's tooling. Koda
+  Python interpreter so it does not depend on one distribution's tooling. Kemori
   re-probes the tool after every attempt rather than trusting a package
   manager's exit code, and reports a missing prerequisite (a whole absent
   toolchain) instead of offering an install that cannot run.
   Installs into the shared managed directory are guarded by an advisory lock
-  (with stale-lock recovery) so concurrent Koda instances cannot corrupt the same
+  (with stale-lock recovery) so concurrent Kemori instances cannot corrupt the same
   npm prefix or virtualenv.
-- **Managed toolchains.** Some language servers need a whole toolchain, so Koda
+- **Managed toolchains.** Some language servers need a whole toolchain, so Kemori
   provisions one under its own data directory and launches the server with it:
   the .NET SDK for OmniSharp (`DOTNET_ROOT`), a checksum-verified Eclipse Adoptium
   JDK for Eclipse JDT (`JAVA_HOME`), a dedicated JDK 21 for Kotlin (kept separate
@@ -226,7 +226,7 @@ this file, and add or change a test.
 - **Platform support is resolved, never guessed.** `swift_platform` and
   `bob_platform` map the running distribution from `/etc/os-release` (including
   `ID_LIKE` derivatives) to the exact upstream artifact. A distribution upstream
-  does not build for is reported as unsupported — Koda does not download a
+  does not build for is reported as unsupported — Kemori does not download a
   toolchain that cannot run there — while a glibc system with no explicit `bob`
   build uses a best-effort target and still verifies the result. Perl bootstraps a
   checksum-verified `cpanm` so an interactive, unconfigured `cpan` is never run,
@@ -235,15 +235,15 @@ this file, and add or change a test.
   for gets the portable **UBI10** toolchain plus a managed compatibility layer:
   `libncurses.so.6` is aliased to the system's `libncursesw.so.6` (the same
   library, a different soname) and `libxml2.so.2` is linked from the system, both
-  from a directory under Koda's data directory and used through a scoped
+  from a directory under Kemori's data directory and used through a scoped
   `LD_LIBRARY_PATH`. The system is never modified and no library is bundled; if
-  the distribution cannot provide `libxml2.so.2`, Koda names the package instead
+  the distribution cannot provide `libxml2.so.2`, Kemori names the package instead
   of downloading a toolchain that cannot run. `libc_is_musl` keeps the glibc
   build off musl systems.
 - **A managed toolchain can provision the tool that installs another tool.** The
   official Go toolchain is one managed component that unlocks `gopls`, `sqls` and
   `shfmt`: `go_attempts` first tries the user's `go`, then a managed Go archive,
-  and every `go install` writes to a Koda-private `GOPATH`/`GOBIN`, so nothing
+  and every `go install` writes to a Kemori-private `GOPATH`/`GOBIN`, so nothing
   lands in `~/go`. `gofmt` has no `go install` step — it ships with Go — so its
   plan is the toolchain archive alone. The same "try the ambient tool, then
   provision a self-contained one" shape covers `cargo`/`rustup` for `asm-lsp`.
@@ -256,13 +256,13 @@ this file, and add or change a test.
   gated behind `libc_is_musl` where they link glibc. Native dependencies are
   checked, not assumed: only a build whose libraries are present is offered, and
   a missing one is named.
-- **A runtime Koda cannot verify is a prerequisite, not a download.** PHP and
+- **A runtime Kemori cannot verify is a prerequisite, not a download.** PHP and
   Ruby interpreters are discovered and reused, never fetched: official PHP is
   source-only and the third-party static builds publish no checksum, and Ruby has
-  no official portable binary. Koda still isolates what it can — `solargraph`
+  no official portable binary. Kemori still isolates what it can — `solargraph`
   installs into a private gem home with `GEM_HOME`/`GEM_PATH` scoped to the
   process — and reports the missing runtime precisely.
-- **Provisioning is isolated and bounded.** Install subprocesses run from Koda's
+- **Provisioning is isolated and bounded.** Install subprocesses run from Kemori's
   own tools directory (never the user's project, so a local `.npmrc` cannot
   hijack `npm`), downloads and commands have time and output limits, checksum
   verification fails closed, and the install lock records a nonce so a reclaimed
@@ -282,7 +282,7 @@ this file, and add or change a test.
   directory and promotes it with a same-filesystem rename, renaming the previous
   installation aside first and restoring it if promotion fails. This is per
   `Extract` step, not a whole-plan transaction: a plan that installs A then
-  fails on B may leave A installed, and Koda reports the incomplete plan rather
+  fails on B may leave A installed, and Kemori reports the incomplete plan rather
   than a false success.
 - **Install plans are pre-flighted.** `install()` keeps only strategies whose
   every step is available and validates the tools directory and disk space
@@ -344,7 +344,7 @@ this file, and add or change a test.
   default), **Midnight**, **Daylight** and **Ansi** — and the active `ThemeId`
   is a thread-local so a swap reaches every widget without threading a `Theme`
   through the whole render tree or churning call sites. Adding a theme means
-  adding one `Theme` value and one `ThemeId`, nothing else. This keeps Koda
+  adding one `Theme` value and one `ThemeId`, nothing else. This keeps Kemori
   recognisable and easy to evolve.
 - **Scenes are drawn on a canvas.** `ui/art.rs` composes each welcome scene by
   placing glyphs at coordinates on a small `Canvas`, then turning runs of equal
@@ -358,7 +358,7 @@ this file, and add or change a test.
 - **Overlays are centered and cleared** with `Clear` before drawing so they are
   readable over the editor.
 - **Transient status messages** expire so the language/git summary returns.
-- **Welcome-first startup.** Koda opens on the welcome home screen. A path from
+- **Welcome-first startup.** Kemori opens on the welcome home screen. A path from
   the command line is offered as an action, a saved session as a resume action,
   and recent projects/files are loaded from the state directory; nothing is
   opened until the user chooses. Session saving is gated on the user engaging
@@ -378,29 +378,29 @@ this file, and add or change a test.
 
 ## Product and configuration
 
-- **Zero configuration by default; customisation is in-app.** Koda must work
-  with no file to write. Customisation is reached from inside Koda (a
-  **Settings** screen in the palette); the on-disk settings store under Koda's
+- **Zero configuration by default; customisation is in-app.** Kemori must work
+  with no file to write. Customisation is reached from inside Kemori (a
+  **Settings** screen in the palette); the on-disk settings store under Kemori's
   state directory is an implementation detail the user never has to maintain. A
   missing settings file must change nothing. This is a deliberate boundary
   against becoming a config-file-first tool.
 - **Settings are global, small and write-on-change-verified.** There is exactly
-  one settings store (`$XDG_STATE_HOME/koda/settings.json`), never a
+  one settings store (`$XDG_STATE_HOME/kemori/settings.json`), never a
   project-level file, and the surface is a fixed list of typed preferences — no
   generic preferences framework, no config DSL. A malformed file is renamed to
   `settings.json.corrupt` and the defaults load; unknown fields are ignored so a
-  file written by a newer Koda still loads. The store is written on quit and
+  file written by a newer Kemori still loads. The store is written on quit and
   only when something actually changed, matching the session and recent stores,
-  so Koda never creates a settings file for a user who changed nothing; this
+  so Kemori never creates a settings file for a user who changed nothing; this
   also keeps the test suite from touching a real user store. A preference that
   affects a subsystem is applied through the smallest interface (the editor
   gains one indentation preference; the theme a thread-local; automatic
   completion a single guard), not by passing a `Settings` object through every
   call.
-- **Arbitrary keybindings and user themes are deliberately out.** Koda keeps a
+- **Arbitrary keybindings and user themes are deliberately out.** Kemori keeps a
   conventional, keyboard-first keymap and a curated, bundled theme set. A
   keybinding editor and a theme language/marketplace are recurring "obvious next
-  features" that would trade Koda's zero-configuration identity for a
+  features" that would trade Kemori's zero-configuration identity for a
   configuration surface; they are excluded on purpose, not pending.
 - **"Supported" means complete, not "an LSP starts".** A language is supported
   only when detection, offline built-in features, provisioning, server launch,
