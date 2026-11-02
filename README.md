@@ -45,6 +45,12 @@ above all, **zero configuration**.
 
 > Install Kemori. Open a project. Start coding.
 
+> **Koda is the former name of Kemori.** The project was renamed in 3.0 because
+> “Koda” is used by several unrelated terminal and AI coding projects, which
+> made Kemori hard to find and easy to confuse with them. The old `koda-ide`
+> crate and `koda` binary are deprecated; install `kemori` instead. Existing
+> Koda settings and sessions are imported automatically on first launch.
+
 No LSP config. No plugin marketplace. No dotfiles to hand-write. Kemori detects the
 language, brings its own intelligence, and lets you get on with the interesting
 part.
