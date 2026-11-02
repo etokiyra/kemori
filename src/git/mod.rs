@@ -1,6 +1,6 @@
 //! Lightweight git integration.
 //!
-//! Koda shells out to the `git` binary rather than linking a large library. This
+//! Kemori shells out to the `git` binary rather than linking a large library. This
 //! keeps the dependency graph small and matches the user's real repositories.
 //! If git is missing or the directory is not a repository, everything degrades
 //! gracefully.
@@ -205,7 +205,7 @@ pub fn stage_all(root: &Path) -> Result<(), String> {
 
 /// Stage every change under `root` and commit it with `message`.
 ///
-/// Koda never rewrites history; this is a plain `git add -A` followed by a
+/// Kemori never rewrites history; this is a plain `git add -A` followed by a
 /// `git commit`, run only when the user explicitly asks for it.
 pub fn commit_all(root: &Path, message: &str) -> Result<String, String> {
     stage_all(root)?;
@@ -620,12 +620,12 @@ mod tests {
         {
             return None;
         }
-        let dir = std::env::temp_dir().join(format!("koda-git-{name}-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-git-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         run_git(&dir, &["init", "-q"]);
-        run_git(&dir, &["config", "user.email", "koda@example.com"]);
-        run_git(&dir, &["config", "user.name", "Koda Test"]);
+        run_git(&dir, &["config", "user.email", "kemori@example.com"]);
+        run_git(&dir, &["config", "user.name", "Kemori Test"]);
         // Resolve symlinks (macOS exposes the temp dir as `/var` → `/private/var`)
         // so the paths a test builds match the repository root git reports.
         Some(std::fs::canonicalize(&dir).unwrap())
@@ -694,7 +694,7 @@ mod tests {
         {
             return; // Skip when git is unavailable.
         }
-        let dir = std::env::temp_dir().join(format!("koda-git-commit-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-git-commit-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
 
@@ -708,13 +708,13 @@ mod tests {
         // A fresh repository with a deterministic identity.
         assert!(git(&["init", "-q"]).unwrap().status.success());
         assert!(
-            git(&["config", "user.email", "koda@example.com"])
+            git(&["config", "user.email", "kemori@example.com"])
                 .unwrap()
                 .status
                 .success()
         );
         assert!(
-            git(&["config", "user.name", "Koda Test"])
+            git(&["config", "user.name", "Kemori Test"])
                 .unwrap()
                 .status
                 .success()
@@ -740,7 +740,7 @@ mod tests {
         {
             return; // Skip when git is unavailable.
         }
-        let dir = std::env::temp_dir().join(format!("koda-git-diff-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-git-diff-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let git = |args: &[&str]| {
@@ -752,13 +752,13 @@ mod tests {
         };
         assert!(git(&["init", "-q"]).unwrap().status.success());
         assert!(
-            git(&["config", "user.email", "koda@example.com"])
+            git(&["config", "user.email", "kemori@example.com"])
                 .unwrap()
                 .status
                 .success()
         );
         assert!(
-            git(&["config", "user.name", "Koda Test"])
+            git(&["config", "user.name", "Kemori Test"])
                 .unwrap()
                 .status
                 .success()
@@ -797,7 +797,7 @@ mod tests {
         {
             return; // Skip when git is unavailable.
         }
-        let dir = std::env::temp_dir().join(format!("koda-git-stage-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-git-stage-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         // Resolve symlinks (macOS exposes the temp dir as `/var` → `/private/var`)
@@ -836,7 +836,7 @@ mod tests {
         {
             return;
         }
-        let dir = std::env::temp_dir().join(format!("koda-git-lines-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-git-lines-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let dir = std::fs::canonicalize(&dir).unwrap();
@@ -849,13 +849,13 @@ mod tests {
         };
         assert!(git(&["init", "-q"]).unwrap().status.success());
         assert!(
-            git(&["config", "user.email", "koda@example.com"])
+            git(&["config", "user.email", "kemori@example.com"])
                 .unwrap()
                 .status
                 .success()
         );
         assert!(
-            git(&["config", "user.name", "Koda Test"])
+            git(&["config", "user.name", "Kemori Test"])
                 .unwrap()
                 .status
                 .success()
@@ -893,7 +893,7 @@ mod tests {
         {
             return;
         }
-        let dir = std::env::temp_dir().join(format!("koda-git-patch-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-git-patch-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let dir = std::fs::canonicalize(&dir).unwrap();
@@ -906,13 +906,13 @@ mod tests {
         };
         assert!(git(&["init", "-q"]).unwrap().status.success());
         assert!(
-            git(&["config", "user.email", "koda@example.com"])
+            git(&["config", "user.email", "kemori@example.com"])
                 .unwrap()
                 .status
                 .success()
         );
         assert!(
-            git(&["config", "user.name", "Koda Test"])
+            git(&["config", "user.name", "Kemori Test"])
                 .unwrap()
                 .status
                 .success()
@@ -947,7 +947,7 @@ mod tests {
         {
             return;
         }
-        let dir = std::env::temp_dir().join(format!("koda-git-untracked-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-git-untracked-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let dir = std::fs::canonicalize(&dir).unwrap();

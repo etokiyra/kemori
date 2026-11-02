@@ -41,7 +41,7 @@ jobs:
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "Releasing Koda $version"
+          echo "Releasing Kemori $version"
       - name: Formatting
         run: cargo fmt --check
       - name: Lints
@@ -88,17 +88,17 @@ jobs:
           CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
         run: cargo build --release --locked --target ${{ matrix.target }}
       - name: Verify the binary architecture
-        run: scripts/check-binary.sh "${{ matrix.name }}" "target/${{ matrix.target }}/release/koda"
+        run: scripts/check-binary.sh "${{ matrix.name }}" "target/${{ matrix.target }}/release/kemori"
       - name: Package the artifact
         env:
           VERSION: ${{ needs.verify.outputs.version }}
         run: |
           set -euo pipefail
           staging="$(mktemp -d)"
-          cp "target/${{ matrix.target }}/release/koda" "$staging/koda"
+          cp "target/${{ matrix.target }}/release/kemori" "$staging/kemori"
           cp LICENSE "$staging/LICENSE"
-          archive="koda-$VERSION-${{ matrix.name }}.tar.gz"
-          tar -czf "$archive" -C "$staging" koda LICENSE
+          archive="kemori-$VERSION-${{ matrix.name }}.tar.gz"
+          tar -czf "$archive" -C "$staging" kemori LICENSE
           if command -v sha256sum >/dev/null 2>&1; then
             sha256sum "$archive" > "$archive.sha256"
           else
@@ -108,10 +108,10 @@ jobs:
       - name: Upload the artifact
         uses: actions/upload-artifact@v4
         with:
-          name: koda-${{ matrix.name }}
+          name: kemori-${{ matrix.name }}
           path: |
-            koda-*.tar.gz
-            koda-*.tar.gz.sha256
+            kemori-*.tar.gz
+            kemori-*.tar.gz.sha256
           if-no-files-found: error
 
   # Linux packages are built on Ubuntu 22.04 (glibc 2.35) so the .deb remains
@@ -143,12 +143,12 @@ jobs:
           VERSION: ${{ needs.verify.outputs.version }}
         run: |
           set -euo pipefail
-          deb="target/debian/koda_${VERSION}-1_amd64.deb"
-          rpm="target/generate-rpm/koda-${VERSION}-1.x86_64.rpm"
+          deb="target/debian/kemori_${VERSION}-1_amd64.deb"
+          rpm="target/generate-rpm/kemori-${VERSION}-1.x86_64.rpm"
           test -f "$deb"
           test -f "$rpm"
-          dpkg-deb --contents "$deb" | grep -qE '\./usr/bin/koda$'
-          rpm -qpl "$rpm" | grep -qx '/usr/bin/koda'
+          dpkg-deb --contents "$deb" | grep -qE '\./usr/bin/kemori$'
+          rpm -qpl "$rpm" | grep -qx '/usr/bin/kemori'
           dpkg-deb --field "$deb" Package Version Depends
           rpm -qp --qf '%{NAME} %{VERSION}-%{RELEASE} %{ARCH}\n' "$rpm"
           mkdir -p dist
@@ -157,8 +157,8 @@ jobs:
       - name: Upload the packages
         uses: actions/upload-artifact@v4
         with:
-          name: koda-linux-packages
-          path: dist/koda*
+          name: kemori-linux-packages
+          path: dist/kemori*
           if-no-files-found: error
 
   publish:
@@ -186,9 +186,9 @@ jobs:
           set -euo pipefail
           (
             cd dist
-            sha256sum koda-"$VERSION"-*.tar.gz \
-              koda_"$VERSION"-*_amd64.deb \
-              koda-"$VERSION"-*.x86_64.rpm > SHA256SUMS
+            sha256sum kemori-"$VERSION"-*.tar.gz \
+              kemori_"$VERSION"-*_amd64.deb \
+              kemori-"$VERSION"-*.x86_64.rpm > SHA256SUMS
           )
           cat dist/SHA256SUMS
       - name: Create or refresh the release
@@ -199,17 +199,17 @@ jobs:
           set -euo pipefail
           tag="v$VERSION"
           assets=(
-            dist/koda-"$VERSION"-*.tar.gz
-            dist/koda-"$VERSION"-*.tar.gz.sha256
-            dist/koda_"$VERSION"-*_amd64.deb
-            dist/koda-"$VERSION"-*.x86_64.rpm
+            dist/kemori-"$VERSION"-*.tar.gz
+            dist/kemori-"$VERSION"-*.tar.gz.sha256
+            dist/kemori_"$VERSION"-*_amd64.deb
+            dist/kemori-"$VERSION"-*.x86_64.rpm
             dist/SHA256SUMS
           )
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" "${assets[@]}" --clobber
           else
             gh release create "$tag" \
-              --title "Koda $VERSION" \
+              --title "Kemori $VERSION" \
               --generate-notes \
               "${assets[@]}"
           fi
@@ -239,9 +239,9 @@ jobs:
         id: published
         run: |
           version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n1)"
-          if cargo info --registry crates-io "koda-ide@$version" >/dev/null 2>&1; then
+          if cargo info --registry crates-io "kemori@$version" >/dev/null 2>&1; then
             echo "published=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::koda-ide $version is already on crates.io; skipping."
+            echo "::notice::kemori $version is already on crates.io; skipping."
           else
             echo "published=false" >> "$GITHUB_OUTPUT"
           fi

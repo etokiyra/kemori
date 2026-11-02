@@ -70,7 +70,10 @@ impl App {
             .active_document()
             .map(|doc| doc.breakpoints.iter().copied().collect())
             .unwrap_or_default();
-        let adapter = std::env::var("KODA_DEBUG_ADAPTER").unwrap_or_else(|_| "gdb".to_string());
+        // The pre-rename KODA_DEBUG_ADAPTER spelling still works for one release.
+        let adapter = std::env::var("KEMORI_DEBUG_ADAPTER")
+            .or_else(|_| std::env::var("KODA_DEBUG_ADAPTER"))
+            .unwrap_or_else(|_| "gdb".to_string());
         match crate::debug::launch(&adapter, &[], &breakpoints) {
             Ok(message) => self.set_status(format!(
                 "{message} — preview only; execution will not stop on breakpoints"

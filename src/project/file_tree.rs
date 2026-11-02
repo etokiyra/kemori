@@ -208,7 +208,7 @@ mod tests {
     use std::fs;
 
     fn temp_project(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("koda-tree-{name}-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-tree-{name}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(dir.join("src")).unwrap();
         fs::create_dir_all(dir.join("generated")).unwrap();

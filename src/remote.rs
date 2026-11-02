@@ -1,11 +1,11 @@
 //! Pluggable command execution.
 //!
-//! Koda runs a handful of external programs (`git`, formatters, language
+//! Kemori runs a handful of external programs (`git`, formatters, language
 //! servers' helper commands). Today they all run on the local machine. This
 //! module abstracts *how* a command is run behind a trait so a future
 //! remote (SSH) backend can reuse the same call sites without rewriting them.
 //!
-//! **Experimental.** `KODA_REMOTE` is consulted only by the git-status
+//! **Experimental.** `KEMORI_REMOTE` is consulted only by the git-status
 //! refresh; the file tree, editor, language servers and tasks remain local.
 //! It is an internal seam, not remote development, and must not be advertised
 //! as a user-facing feature until the rest of the IDE can follow it.

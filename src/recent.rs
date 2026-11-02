@@ -2,7 +2,7 @@
 //!
 //! A small global store — not per project — so the welcome screen can offer
 //! where you were last. It lives alongside the per-project sessions in the
-//! user's state directory and is written when Koda quits.
+//! user's state directory and is written when Kemori quits.
 //!
 //! The format is a tiny JSON object parsed without derive macros, matching the
 //! session store's approach.
@@ -94,12 +94,56 @@ fn string_list(value: Option<&Value>) -> Vec<PathBuf> {
         .unwrap_or_default()
 }
 
-/// The Koda state directory, if a home directory is available.
+/// The Kemori state directory, if a home directory is available.
 ///
-/// Shared with [`crate::settings`] and [`crate::session`] so all Koda state
+/// Shared with [`crate::settings`] and [`crate::session`] so all Kemori state
 /// follows the same rule under `sudo` (see [`crate::privileges`]).
 pub fn state_dir() -> Option<PathBuf> {
+    crate::privileges::current_state_base().map(|base| base.join("kemori"))
+}
+
+/// The state directory used before the Kemori rename.
+fn legacy_state_dir() -> Option<PathBuf> {
     crate::privileges::current_state_base().map(|base| base.join("koda"))
+}
+
+/// Import settings, sessions and recents from the pre-rename state directory.
+///
+/// This is a best-effort, one-time copy: existing Kemori files always win, the
+/// old directory is never modified or removed, and a marker keeps a later launch
+/// from repeating the work.
+pub fn migrate_legacy_state() {
+    let (Some(old), Some(new)) = (legacy_state_dir(), state_dir()) else {
+        return;
+    };
+    let _ = migrate_state_dirs(&old, &new);
+}
+
+fn migrate_state_dirs(old: &Path, new: &Path) -> std::io::Result<bool> {
+    let marker = new.join(".migrated-from-koda");
+    if marker.exists() || !old.is_dir() {
+        return Ok(false);
+    }
+    std::fs::create_dir_all(new)?;
+    for entry in std::fs::read_dir(old)? {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(_) => continue,
+        };
+        let Ok(kind) = entry.file_type() else {
+            continue;
+        };
+        if !kind.is_file() {
+            continue;
+        }
+        let destination = new.join(entry.file_name());
+        if destination.exists() {
+            continue;
+        }
+        let _ = std::fs::copy(entry.path(), destination);
+    }
+    std::fs::write(marker, "Imported from the old Koda state directory.\n")?;
+    Ok(true)
 }
 
 fn state_path(name: &str) -> Option<PathBuf> {
@@ -111,10 +155,37 @@ mod tests {
     use super::*;
 
     fn scratch(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("koda-recent-{name}-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-recent-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         dir
+    }
+
+    #[test]
+    fn legacy_state_is_imported_once_without_overwriting() {
+        let old = scratch("legacy-old");
+        let new = scratch("legacy-new");
+        std::fs::write(old.join("settings.json"), "old").unwrap();
+        std::fs::write(old.join("session-1.json"), "session").unwrap();
+        std::fs::write(new.join("settings.json"), "new").unwrap();
+
+        assert!(migrate_state_dirs(&old, &new).unwrap());
+        assert_eq!(
+            std::fs::read_to_string(new.join("settings.json")).unwrap(),
+            "new",
+            "a current file wins over the legacy copy"
+        );
+        assert_eq!(
+            std::fs::read_to_string(new.join("session-1.json")).unwrap(),
+            "session"
+        );
+        assert!(new.join(".migrated-from-koda").is_file());
+
+        // A second launch does not import again.
+        assert!(!migrate_state_dirs(&old, &new).unwrap());
+
+        let _ = std::fs::remove_dir_all(&old);
+        let _ = std::fs::remove_dir_all(&new);
     }
 
     #[test]

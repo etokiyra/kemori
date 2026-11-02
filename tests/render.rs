@@ -5,18 +5,18 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use koda::app::App;
-use koda::app::ToastKind;
-use koda::app::overlay::{DiffState, Overlay};
-use koda::commands::ids;
-use koda::language::diagnostics::{Diagnostic, Severity, TextPos};
-use koda::ui::theme;
+use kemori::app::App;
+use kemori::app::ToastKind;
+use kemori::app::overlay::{DiffState, Overlay};
+use kemori::commands::ids;
+use kemori::language::diagnostics::{Diagnostic, Severity, TextPos};
+use kemori::ui::theme;
 use ratatui::Terminal;
 use ratatui::backend::TestBackend;
 use ratatui::style::{Color, Modifier};
 
 fn temp_project(name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("koda-render-{name}-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("kemori-render-{name}-{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(dir.join("src")).unwrap();
     fs::write(dir.join("Cargo.toml"), "[package]\nname = \"demo\"\n").unwrap();
@@ -47,7 +47,7 @@ fn app_with_file(file: &Path) -> App {
         while app
             .editor
             .active_document()
-            .is_some_and(|doc| doc.buffer.language == koda::language::LanguageId::Unknown)
+            .is_some_and(|doc| doc.buffer.language == kemori::language::LanguageId::Unknown)
             && std::time::Instant::now() < deadline
         {
             app.pump_background(std::time::Duration::from_millis(20));
@@ -65,7 +65,9 @@ fn draw(app: &mut App) -> String {
 fn draw_at(app: &mut App, width: u16, height: u16) -> String {
     let backend = TestBackend::new(width, height);
     let mut terminal = Terminal::new(backend).unwrap();
-    terminal.draw(|frame| koda::ui::render(frame, app)).unwrap();
+    terminal
+        .draw(|frame| kemori::ui::render(frame, app))
+        .unwrap();
 
     let buffer = terminal.backend().buffer();
     let mut out = String::new();
@@ -90,7 +92,7 @@ fn renders_project_tree_and_rust_file() {
     let mut app = app_with_file(&file);
 
     let screen = draw(&mut app);
-    assert!(screen.contains("koda"), "header missing:\n{screen}");
+    assert!(screen.contains("kemori"), "header missing:\n{screen}");
     assert!(screen.contains("files"), "sidebar missing:\n{screen}");
     assert!(screen.contains("main.rs"), "file name missing:\n{screen}");
     assert!(screen.contains("fn main"), "code missing:\n{screen}");
@@ -147,8 +149,8 @@ fn breakpoint_marker_is_rendered_in_the_gutter() {
 
 #[test]
 fn renders_the_signature_help_popup() {
-    use koda::app::overlay::SignatureState;
-    use koda::language::lsp::convert::{Signature, SignatureHelp};
+    use kemori::app::overlay::SignatureState;
+    use kemori::language::lsp::convert::{Signature, SignatureHelp};
 
     let dir = temp_project("signature-popup");
     let file = dir.join("src/main.rs");
@@ -228,7 +230,7 @@ fn renders_welcome_when_no_file_open() {
     let mut app = App::new(Some(&dir)).unwrap();
 
     let screen = draw(&mut app);
-    assert!(screen.contains("K O D A"), "welcome missing:\n{screen}");
+    assert!(screen.contains("KEMORI"), "welcome missing:\n{screen}");
     assert!(
         screen.contains("Create a new project"),
         "welcome menu missing:\n{screen}"
@@ -241,11 +243,11 @@ fn renders_welcome_when_no_file_open() {
 fn renders_a_welcome_scene() {
     let dir = temp_project("scene");
     let mut app = App::new(Some(&dir)).unwrap();
-    app.welcome_scene = koda::ui::art::WelcomeScene::Cozy;
+    app.welcome_scene = kemori::ui::art::WelcomeScene::Cozy;
 
     let screen = draw(&mut app);
     assert!(screen.contains('ω'), "familiar missing:\n{screen}");
-    assert!(screen.contains("K O D A"), "wordmark missing:\n{screen}");
+    assert!(screen.contains("KEMORI"), "wordmark missing:\n{screen}");
 
     cleanup(&dir);
 }
@@ -253,7 +255,7 @@ fn renders_a_welcome_scene() {
 #[test]
 fn renders_every_welcome_scene() {
     let dir = temp_project("all-scenes");
-    for scene in koda::ui::art::WelcomeScene::ALL {
+    for scene in kemori::ui::art::WelcomeScene::ALL {
         let mut app = App::new(Some(&dir)).unwrap();
         app.welcome_scene = scene;
         let screen = draw(&mut app);
@@ -262,7 +264,7 @@ fn renders_every_welcome_scene() {
             "{scene:?} should show the familiar:\n{screen}"
         );
         assert!(
-            screen.contains("K O D A"),
+            screen.contains("KEMORI"),
             "{scene:?} should show the wordmark"
         );
     }
@@ -274,12 +276,12 @@ fn welcome_degrades_on_a_small_terminal() {
     let dir = temp_project("small-welcome");
     let mut app = App::new(Some(&dir)).unwrap();
     app.tree_visible = false;
-    app.welcome_scene = koda::ui::art::WelcomeScene::Study;
+    app.welcome_scene = kemori::ui::art::WelcomeScene::Study;
 
     // Too short for the scene, so it falls back to the wordmark and menu.
     let screen = draw_at(&mut app, 44, 14);
     assert!(
-        screen.contains("K O D A"),
+        screen.contains("KEMORI"),
         "the welcome should stay usable when small:\n{screen}"
     );
     cleanup(&dir);
@@ -292,7 +294,7 @@ fn frozen_motion_still_renders_the_welcome() {
     app.motion = false;
 
     let screen = draw(&mut app);
-    assert!(screen.contains("K O D A"), "welcome missing:\n{screen}");
+    assert!(screen.contains("KEMORI"), "welcome missing:\n{screen}");
 
     cleanup(&dir);
 }
@@ -361,7 +363,7 @@ fn split_renders_both_documents() {
     let a = dir.join("src/main.rs");
     let b = dir.join("src/lib.rs");
     fs::write(&a, "fn main() {}\n").unwrap();
-    fs::write(&b, "pub fn koda_split() {}\n").unwrap();
+    fs::write(&b, "pub fn kemori_split() {}\n").unwrap();
     let mut app = app_with_file(&a);
     app.open_path(b.clone());
     app.execute_command(ids::SPLIT);
@@ -369,7 +371,7 @@ fn split_renders_both_documents() {
     let screen = draw(&mut app);
     assert!(screen.contains("fn main"), "left pane missing:\n{screen}");
     assert!(
-        screen.contains("koda_split"),
+        screen.contains("kemori_split"),
         "right pane missing:\n{screen}"
     );
     assert!(screen.contains("│"), "separator missing:\n{screen}");
@@ -418,7 +420,7 @@ fn welcome_renders_on_a_small_terminal() {
     let mut app = App::new(Some(&dir)).unwrap();
 
     let screen = draw_at(&mut app, 40, 10);
-    assert!(screen.contains("K O D A"), "wordmark missing:\n{screen}");
+    assert!(screen.contains("KEMORI"), "wordmark missing:\n{screen}");
 
     cleanup(&dir);
 }
@@ -447,7 +449,7 @@ fn statusline_uses_mellow_panel_background() {
     let backend = TestBackend::new(100, 24);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal
-        .draw(|frame| koda::ui::render(frame, &mut app))
+        .draw(|frame| kemori::ui::render(frame, &mut app))
         .unwrap();
 
     let buffer = terminal.backend().buffer();
@@ -524,14 +526,14 @@ fn soft_wrap_renders_secondary_cursors() {
     app.editor
         .active_document_mut()
         .unwrap()
-        .move_to(koda::editor::Position::new(0, 8));
+        .move_to(kemori::editor::Position::new(0, 8));
     app.execute_command(ids::SELECT_ALL_OCCURRENCES);
     assert!(app.editor.active_document().unwrap().has_multiple_cursors());
 
     let backend = TestBackend::new(40, 14);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal
-        .draw(|frame| koda::ui::render(frame, &mut app))
+        .draw(|frame| kemori::ui::render(frame, &mut app))
         .unwrap();
     let buffer = terminal.backend().buffer();
     let has_secondary = (0..buffer.area.height).any(|y| {
@@ -570,14 +572,14 @@ fn multi_cursor_carets_are_visible() {
     app.editor
         .active_document_mut()
         .unwrap()
-        .move_to(koda::editor::Position::new(0, 4));
+        .move_to(kemori::editor::Position::new(0, 4));
     app.execute_command(ids::SELECT_ALL_OCCURRENCES);
     assert!(app.editor.active_document().unwrap().has_multiple_cursors());
 
     let backend = TestBackend::new(100, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal
-        .draw(|frame| koda::ui::render(frame, &mut app))
+        .draw(|frame| kemori::ui::render(frame, &mut app))
         .unwrap();
 
     let buffer = terminal.backend().buffer();
@@ -604,12 +606,12 @@ fn bracket_match_is_highlighted() {
     app.editor
         .active_document_mut()
         .unwrap()
-        .move_to(koda::editor::Position::new(1, 13));
+        .move_to(kemori::editor::Position::new(1, 13));
 
     let backend = TestBackend::new(100, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal
-        .draw(|frame| koda::ui::render(frame, &mut app))
+        .draw(|frame| kemori::ui::render(frame, &mut app))
         .unwrap();
 
     let buffer = terminal.backend().buffer();
@@ -627,7 +629,7 @@ fn bracket_match_is_highlighted() {
 
 #[test]
 fn renders_nix_syntax_highlighting() {
-    let dir = std::env::temp_dir().join(format!("koda-render-nix-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("kemori-render-nix-{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
     let file = dir.join("flake.nix");
@@ -640,7 +642,7 @@ fn renders_nix_syntax_highlighting() {
     let mut app = app_with_file(&file);
     assert_eq!(
         app.editor.active_document().unwrap().buffer.language,
-        koda::language::LanguageId::Nix
+        kemori::language::LanguageId::Nix
     );
     let screen = draw(&mut app);
     assert!(screen.contains("builtins"), "the buffer should be visible");
@@ -648,7 +650,7 @@ fn renders_nix_syntax_highlighting() {
     let backend = TestBackend::new(120, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal
-        .draw(|frame| koda::ui::render(frame, &mut app))
+        .draw(|frame| kemori::ui::render(frame, &mut app))
         .unwrap();
     let buffer = terminal.backend().buffer();
     let has_color = |color: Color| {
@@ -658,7 +660,7 @@ fn renders_nix_syntax_highlighting() {
     };
     assert!(
         has_color(
-            theme::token_style(koda::language::TokenKind::Keyword)
+            theme::token_style(kemori::language::TokenKind::Keyword)
                 .fg
                 .unwrap()
         ),
@@ -666,7 +668,7 @@ fn renders_nix_syntax_highlighting() {
     );
     assert!(
         has_color(
-            theme::token_style(koda::language::TokenKind::String)
+            theme::token_style(kemori::language::TokenKind::String)
                 .fg
                 .unwrap()
         ),
@@ -683,7 +685,7 @@ fn editor_background_stays_transparent() {
     let backend = TestBackend::new(100, 24);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal
-        .draw(|frame| koda::ui::render(frame, &mut app))
+        .draw(|frame| kemori::ui::render(frame, &mut app))
         .unwrap();
 
     let buffer = terminal.backend().buffer();
@@ -771,10 +773,10 @@ fn statusline_shows_selection_size() {
     let mut app = app_with_file(&file);
     {
         let doc = app.editor.active_document_mut().unwrap();
-        doc.selection = Some(koda::editor::Selection::new(koda::editor::Position::new(
-            0, 0,
-        )));
-        doc.cursor = koda::editor::Position::new(0, 5);
+        doc.selection = Some(kemori::editor::Selection::new(
+            kemori::editor::Position::new(0, 0),
+        ));
+        doc.cursor = kemori::editor::Position::new(0, 5);
     }
 
     let screen = draw_at(&mut app, 100, 20);
@@ -802,7 +804,7 @@ fn gutter_and_statusline_show_diagnostics() {
                 "unclosed `{`; expected `}`",
             )],
         );
-        doc.move_to(koda::editor::Position::new(0, 10));
+        doc.move_to(kemori::editor::Position::new(0, 10));
     }
     // Let the diagnostic message show instead of the transient "Opened" status.
     app.clear_status();
@@ -845,7 +847,7 @@ fn diagnostics_underline_the_affected_characters() {
     let backend = TestBackend::new(80, 12);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal
-        .draw(|frame| koda::ui::render(frame, &mut app))
+        .draw(|frame| kemori::ui::render(frame, &mut app))
         .unwrap();
 
     // Collect every underlined grapheme; the diagnostic covers `fn`.
@@ -891,7 +893,7 @@ fn hover_popup_is_drawn() {
     app.editor
         .active_document_mut()
         .unwrap()
-        .move_to(koda::editor::Position::new(0, 3));
+        .move_to(kemori::editor::Position::new(0, 3));
     app.execute_command(ids::HOVER);
 
     let screen = draw_at(&mut app, 100, 24);
@@ -913,7 +915,7 @@ fn editor_keeps_context_below_the_cursor() {
     app.editor
         .active_document_mut()
         .unwrap()
-        .move_to(koda::editor::Position::new(30, 0));
+        .move_to(kemori::editor::Position::new(30, 0));
 
     let screen = draw_at(&mut app, 100, 20);
     assert!(
@@ -1004,7 +1006,9 @@ fn command_palette_shows_a_no_matches_state() {
 fn render_colors(app: &mut App) -> Vec<(Color, Color)> {
     let backend = TestBackend::new(100, 24);
     let mut terminal = Terminal::new(backend).unwrap();
-    terminal.draw(|frame| koda::ui::render(frame, app)).unwrap();
+    terminal
+        .draw(|frame| kemori::ui::render(frame, app))
+        .unwrap();
     let buffer = terminal.backend().buffer();
     let mut colors = Vec::new();
     for y in 0..buffer.area.height {
@@ -1019,7 +1023,7 @@ fn render_colors(app: &mut App) -> Vec<(Color, Color)> {
 
 #[test]
 fn switching_themes_changes_rendered_colours() {
-    use koda::settings::ThemeId;
+    use kemori::settings::ThemeId;
     let dir = temp_project("theme-switch");
     let file = dir.join("src/main.rs");
     let mut app = app_with_file(&file);
@@ -1043,7 +1047,7 @@ fn switching_themes_changes_rendered_colours() {
 
 #[test]
 fn every_bundled_theme_renders_without_panicking() {
-    use koda::settings::ThemeId;
+    use kemori::settings::ThemeId;
     let dir = temp_project("theme-render");
     let file = dir.join("src/main.rs");
     let mut app = app_with_file(&file);
@@ -1084,7 +1088,7 @@ fn renders_the_settings_screen() {
 
 #[test]
 fn the_settings_screen_renders_under_every_theme() {
-    use koda::settings::ThemeId;
+    use kemori::settings::ThemeId;
     let dir = temp_project("settings-themes");
     let file = dir.join("src/main.rs");
     let mut app = app_with_file(&file);

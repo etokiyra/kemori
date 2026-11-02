@@ -1,6 +1,6 @@
 //! Python language provider.
 //!
-//! Koda's Python support is entirely built-in and works offline: syntax
+//! Kemori's Python support is entirely built-in and works offline: syntax
 //! highlighting, structural diagnostics, symbols, completion, hover and
 //! within-file navigation. A Python language server is not provisioned yet, so
 //! the palette honestly reports that rename and code actions need one.

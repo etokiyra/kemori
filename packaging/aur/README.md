@@ -1,13 +1,13 @@
-# AUR packaging for Koda
+# AUR packaging for Kemori
 
 This directory contains two ready-to-push AUR packages:
 
 | Directory | AUR package | Source |
 | --- | --- | --- |
-| `koda/` | stable release | GitHub tag `v2.1.0` |
-| `koda-git/` | VCS package | `master` from GitHub |
+| `kemori/` | stable release | GitHub tag `v2.1.0` |
+| `kemori-git/` | VCS package | `master` from GitHub |
 
-Both install `/usr/bin/koda`, so a normal Arch/Artix `sudo koda` resolves the
+Both install `/usr/bin/kemori`, so a normal Arch/Artix `sudo kemori` resolves the
 binary through the default `secure_path`. Both also install the licence under
 `/usr/share/licenses/` and the documentation under `/usr/share/doc/`.
 
@@ -21,36 +21,36 @@ namcap PKGBUILD
 namcap <built-package>.pkg.tar.zst
 ```
 
-- `koda 0.1.2-1` built successfully; its package contains `/usr/bin/koda`.
-- `koda-git` built successfully; its `pkgver()` derives the version from
-  `git describe`, and the package provides and conflicts with `koda`.
+- `kemori 0.1.2-1` built successfully; its package contains `/usr/bin/kemori`.
+- `kemori-git` built successfully; its `pkgver()` derives the version from
+  `git describe`, and the package provides and conflicts with `kemori`.
 - `namcap` reported no findings for either PKGBUILD or package.
 - Runtime dependencies are `glibc` and `libgcc`; language runtimes and servers
-  are `optdepends`, because Koda itself provisions or discovers them.
+  are `optdepends`, because Kemori itself provisions or discovers them.
 
 ## Push the stable package
 
-Replace `~/Projects/koda` with this checkout if it lives elsewhere.
+Replace `~/Projects/kemori` with this checkout if it lives elsewhere.
 
 ```bash
-git clone ssh://aur@aur.archlinux.org/koda.git /tmp/aur-koda
-cp ~/Projects/koda/packaging/aur/koda/PKGBUILD /tmp/aur-koda/
-cp ~/Projects/koda/packaging/aur/koda/.SRCINFO /tmp/aur-koda/
-cd /tmp/aur-koda
+git clone ssh://aur@aur.archlinux.org/kemori.git /tmp/aur-kemori
+cp ~/Projects/kemori/packaging/aur/kemori/PKGBUILD /tmp/aur-kemori/
+cp ~/Projects/kemori/packaging/aur/kemori/.SRCINFO /tmp/aur-kemori/
+cd /tmp/aur-kemori
 git add PKGBUILD .SRCINFO
-git commit -m "Initial import: koda 0.1.2"
+git commit -m "Initial import: kemori 0.1.2"
 git push
 ```
 
 ## Push the VCS package
 
 ```bash
-git clone ssh://aur@aur.archlinux.org/koda-git.git /tmp/aur-koda-git
-cp ~/Projects/koda/packaging/aur/koda-git/PKGBUILD /tmp/aur-koda-git/
-cp ~/Projects/koda/packaging/aur/koda-git/.SRCINFO /tmp/aur-koda-git/
-cd /tmp/aur-koda-git
+git clone ssh://aur@aur.archlinux.org/kemori-git.git /tmp/aur-kemori-git
+cp ~/Projects/kemori/packaging/aur/kemori-git/PKGBUILD /tmp/aur-kemori-git/
+cp ~/Projects/kemori/packaging/aur/kemori-git/.SRCINFO /tmp/aur-kemori-git/
+cd /tmp/aur-kemori-git
 git add PKGBUILD .SRCINFO
-git commit -m "Initial import: koda-git"
+git commit -m "Initial import: kemori-git"
 git push
 ```
 
@@ -59,16 +59,16 @@ the meantime, rename the `pkgname`/directory consistently before pushing.
 
 ## Updating the stable package for a later release
 
-1. Change `pkgver` in `packaging/aur/koda/PKGBUILD`.
+1. Change `pkgver` in `packaging/aur/kemori/PKGBUILD`.
 2. Refresh the checksum:
 
    ```bash
-   cd packaging/aur/koda
+   cd packaging/aur/kemori
    updpkgsums          # or: makepkg -g >> PKGBUILD after deleting the old sum
    makepkg --printsrcinfo > .SRCINFO
    ```
 
 3. Rebuild and re-run `namcap`, then commit and push the AUR repository.
 
-`koda-git` needs no version edit: `pkgver()` derives the version from
+`kemori-git` needs no version edit: `pkgver()` derives the version from
 `git describe`. Its `.SRCINFO` is regenerated whenever the PKGBUILD changes.

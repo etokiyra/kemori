@@ -19,7 +19,7 @@ fn readme_keymap_matches_the_command_registry() {
         .expect("README has a keymap end marker")
         + start;
     let actual = readme[start..end].trim();
-    let expected = koda::commands::keymap_markdown();
+    let expected = kemori::commands::keymap_markdown();
     assert_eq!(
         actual,
         expected.trim(),

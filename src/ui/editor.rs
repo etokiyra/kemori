@@ -1,6 +1,6 @@
 //! The editor pane: gutter, syntax, cursorline, indent guides and cursor.
 //!
-//! Koda's editor is intentionally bare — no box, no chrome. Code dominates.
+//! Kemori's editor is intentionally bare — no box, no chrome. Code dominates.
 //! A subtle cursorline (`ui.cursorline.primary`) and faint indent guides add
 //! warmth without fighting the code.
 //!

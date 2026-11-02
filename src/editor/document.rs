@@ -2207,8 +2207,8 @@ fn leading_outdent(line: &str, width: usize) -> usize {
 ///
 /// The smallest increase in indentation between consecutive non-blank lines is
 /// taken as one level, which matches 2-space JavaScript and 4-space Rust alike.
-/// A file indented with tabs keeps Koda's default width for any spaces it
-/// inserts, since Koda does not convert tabs.
+/// A file indented with tabs keeps Kemori's default width for any spaces it
+/// inserts, since Kemori does not convert tabs.
 fn detect_indent_width(text: &str) -> usize {
     let mut tabs = 0usize;
     let mut spaces = 0usize;
@@ -2961,7 +2961,7 @@ mod tests {
 
     #[test]
     fn reload_from_disk_replaces_contents_and_cleans() {
-        let dir = std::env::temp_dir().join(format!("koda-reload-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-reload-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("main.rs");

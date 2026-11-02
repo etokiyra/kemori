@@ -533,8 +533,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "koda-ide"
-version = "2.1.0"
+name = "kemori"
+version = "3.0.0"
 dependencies = [
  "crossterm",
  "ratatui",

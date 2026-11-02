@@ -624,7 +624,7 @@ mod tests {
                 .map(|span| span.kind)
         };
         let (spans, _) = JavaProvider.highlight(
-            "@Override public String name() { return \"koda\"; }",
+            "@Override public String name() { return \"kemori\"; }",
             HighlightState::default(),
         );
         assert_eq!(kind_at(&spans, 0), Some(TokenKind::Attribute));

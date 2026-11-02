@@ -302,7 +302,7 @@ mod tests {
 
     #[test]
     fn highlights_keys_and_scalar_values() {
-        let s = kinds("name: koda");
+        let s = kinds("name: kemori");
         assert_eq!(s[0], TokenKind::Function);
 
         let s = kinds("enabled: true");

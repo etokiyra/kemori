@@ -949,7 +949,7 @@ mod tests {
     fn highlights_comments_strings_and_keywords() {
         let provider = WebProvider::typescript();
         let (spans, state) =
-            provider.highlight("const name = \"koda\"; // hi", HighlightState::default());
+            provider.highlight("const name = \"kemori\"; // hi", HighlightState::default());
         assert!(!state.in_block_comment);
         let kind_at = |col: usize| {
             spans
@@ -958,8 +958,8 @@ mod tests {
                 .map(|span| span.kind)
         };
         assert_eq!(kind_at(0), Some(TokenKind::Keyword)); // const
-        assert_eq!(kind_at(13), Some(TokenKind::String)); // "koda"
-        assert_eq!(kind_at(21), Some(TokenKind::Comment)); // // hi
+        assert_eq!(kind_at(14), Some(TokenKind::String)); // "kemori"
+        assert_eq!(kind_at(23), Some(TokenKind::Comment)); // // hi
     }
 
     #[test]

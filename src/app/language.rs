@@ -275,7 +275,7 @@ impl App {
     /// Apply a workspace edit produced by the server for `language`, returning
     /// the number of edits applied.
     ///
-    /// Every range is converted from the connection's position encoding to Koda
+    /// Every range is converted from the connection's position encoding to Kemori
     /// character offsets using the document's current text, so an edit can never
     /// land in the middle of a multi-byte character.
     pub(super) fn apply_workspace_edit(

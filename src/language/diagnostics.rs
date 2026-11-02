@@ -1,6 +1,6 @@
 //! Lightweight, provider-driven diagnostics.
 //!
-//! Koda's built-in providers are lexical scanners, not full compilers, so they
+//! Kemori's built-in providers are lexical scanners, not full compilers, so they
 //! cannot type-check. They *can* reliably catch structural mistakes — an
 //! unbalanced bracket — without a language server. Those diagnostics flow
 //! through the same background channel a future LSP backend will use, so the UI
@@ -100,7 +100,7 @@ impl Diagnostic {
 /// Find unbalanced brackets, ignoring anything inside strings and comments.
 ///
 /// The provider's own highlighter supplies the string/comment mask, so this
-/// works for any language that tokenises those constructs — Koda never needs a
+/// works for any language that tokenises those constructs — Kemori never needs a
 /// per-language copy of the scan.
 pub fn check_delimiters(provider: &dyn LanguageProvider, text: &str) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();

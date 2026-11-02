@@ -5,19 +5,19 @@ use super::overlay::{SETTINGS_ROWS, SettingsRow};
 use crate::settings::{Settings, ThemeId};
 
 fn temp_project(name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("koda-app-{name}-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("kemori-app-{name}-{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(dir.join("src")).unwrap();
     fs::write(dir.join("Cargo.toml"), "[package]\nname = \"demo\"\n").unwrap();
     fs::write(dir.join("src/main.rs"), "fn main() {\n    let x = 1;\n}\n").unwrap();
     // Resolve symlinks (macOS exposes the temp dir as `/var` → `/private/var`)
-    // so the paths a test builds match what Koda stores after canonicalising
+    // so the paths a test builds match what Kemori stores after canonicalising
     // the workspace root.
     fs::canonicalize(&dir).unwrap()
 }
 
 /// Build an app and open `file`, settling detection, as tests expect a
-/// document to be active. Koda itself launches into the welcome screen.
+/// document to be active. Kemori itself launches into the welcome screen.
 ///
 /// Detection runs on the background worker behind any queued git/tool
 /// probes, so wait for the result rather than assuming a fixed delay. Only
@@ -448,7 +448,7 @@ fn a_run_task_executes_and_shows_its_output() {
     // A Makefile is the one marker whose "task" requires no ecosystem tool
     // beyond `make`, so the whole rail runs without cargo or npm.
     let dir = temp_project("run-task");
-    fs::write(dir.join("Makefile"), "all:\n\t@echo KODA_TASK_RAN\n").unwrap();
+    fs::write(dir.join("Makefile"), "all:\n\t@echo KEMORI_TASK_RAN\n").unwrap();
     let file = dir.join("notes.txt");
     fs::write(&file, "hello\n").unwrap();
 
@@ -484,7 +484,9 @@ fn a_run_task_executes_and_shows_its_output() {
             assert!(run.success, "the task should have exited cleanly");
             assert_eq!(run.command, "make");
             assert!(
-                run.lines.iter().any(|line| line.contains("KODA_TASK_RAN")),
+                run.lines
+                    .iter()
+                    .any(|line| line.contains("KEMORI_TASK_RAN")),
                 "the output should contain the make script's echo"
             );
         }
@@ -1804,13 +1806,13 @@ fn diff_active_file_shows_working_tree_changes() {
     };
     assert!(git(&["init", "-q"]).unwrap().status.success());
     assert!(
-        git(&["config", "user.email", "koda@example.com"])
+        git(&["config", "user.email", "kemori@example.com"])
             .unwrap()
             .status
             .success()
     );
     assert!(
-        git(&["config", "user.name", "Koda Test"])
+        git(&["config", "user.name", "Kemori Test"])
             .unwrap()
             .status
             .success()
@@ -2457,12 +2459,12 @@ while read -r header; do
   case "$method" in
     initialize) result='{"capabilities":{"completionProvider":true,"hoverProvider":true,"definitionProvider":true,"referencesProvider":true,"renameProvider":true,"codeActionProvider":true,"workspaceSymbolProvider":true}}' ;;
     textDocument/hover) result='{"contents":{"kind":"plaintext","value":"LSP HOVER TEXT"}}' ;;
-    textDocument/completion) result='{"items":[{"label":"koda_lsp_item","kind":3}]}' ;;
+    textDocument/completion) result='{"items":[{"label":"kemori_lsp_item","kind":3}]}' ;;
     textDocument/definition) result="[{\"uri\":\"file://$target\",\"range\":{\"start\":{\"line\":2,\"character\":0},\"end\":{\"line\":2,\"character\":5}}}]" ;;
     textDocument/references) result="[{\"uri\":\"file://$target\",\"range\":{\"start\":{\"line\":1,\"character\":4},\"end\":{\"line\":1,\"character\":9}}}]" ;;
     textDocument/rename) result="{\"changes\":{\"file://$target\":[{\"range\":{\"start\":{\"line\":1,\"character\":8},\"end\":{\"line\":1,\"character\":13}},\"newText\":\"renamed\"}]}}" ;;
     textDocument/codeAction) result="[{\"title\":\"Apply fix\",\"edit\":{\"changes\":{\"file://$target\":[{\"range\":{\"start\":{\"line\":0,\"character\":0},\"end\":{\"line\":0,\"character\":0}},\"newText\":\"FIX \"}]}}}]" ;;
-    workspace/symbol) result="[{\"name\":\"koda_ws_symbol\",\"kind\":12,\"location\":{\"uri\":\"file://$target\",\"range\":{\"start\":{\"line\":3,\"character\":0},\"end\":{\"line\":3,\"character\":3}}}}]" ;;
+    workspace/symbol) result="[{\"name\":\"kemori_ws_symbol\",\"kind\":12,\"location\":{\"uri\":\"file://$target\",\"range\":{\"start\":{\"line\":3,\"character\":0},\"end\":{\"line\":3,\"character\":3}}}}]" ;;
     *) result='null' ;;
   esac
   resp=$(printf '{"jsonrpc":"2.0","id":%s,"result":%s}' "$id" "$result")
@@ -2533,7 +2535,10 @@ done
     app.open_completion();
     assert!(
         wait(&mut app, &|app| app.completion.as_ref().is_some_and(
-            |state| state.items.iter().any(|item| item.label == "koda_lsp_item")
+            |state| state
+                .items
+                .iter()
+                .any(|item| item.label == "kemori_lsp_item")
         )),
         "expected the server's completion"
     );
@@ -2597,7 +2602,7 @@ done
         wait(&mut app, &|app| match &app.overlay {
             Overlay::Picker(picker) => (0..picker.filtered.len())
                 .filter_map(|index| picker.item(index))
-                .any(|item| item.label == "koda_ws_symbol"),
+                .any(|item| item.label == "kemori_ws_symbol"),
             _ => false,
         }),
         "expected the server's workspace symbol"
@@ -3373,7 +3378,7 @@ fn the_setup_overlay_lists_languages_and_offers_set_up() {
             LanguageSetup {
                 language: LanguageId::Go,
                 state: SetupState::NeedsInstall(Tool::Gopls),
-                detail: "Koda installs gopls".to_string(),
+                detail: "Kemori installs gopls".to_string(),
             },
             LanguageSetup {
                 language: LanguageId::Php,

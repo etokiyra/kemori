@@ -6,9 +6,9 @@
 //! combining marks, emoji, lone delimiters and pathological lengths — through
 //! each provider entry point.
 
-use koda::language::LanguageService;
-use koda::language::id::LanguageId;
-use koda::language::provider::HighlightState;
+use kemori::language::LanguageService;
+use kemori::language::id::LanguageId;
+use kemori::language::provider::HighlightState;
 
 fn cases() -> Vec<String> {
     let fixed = [

@@ -1,6 +1,6 @@
 //! Completion candidates.
 //!
-//! Koda's built-in completion is intentionally simple and always available: it
+//! Kemori's built-in completion is intentionally simple and always available: it
 //! merges language keywords/types supplied by the provider with identifiers
 //! already present in the buffer. The popup, filtering and acceptance are
 //! language-agnostic, so a language server can supply richer candidates later

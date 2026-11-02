@@ -4,7 +4,7 @@
 //! heredocs, sigils, atoms, module attributes, aliases, keywords, numbers and
 //! operators. Structural diagnostics reuse the shared delimiter checker. A
 //! language server (ElixirLS or Lexical, via Erlang/Elixir) is discovered when
-//! installed; Koda does not replace a system Erlang/Elixir installation.
+//! installed; Kemori does not replace a system Erlang/Elixir installation.
 
 use crate::language::completion::{Completion, CompletionKind};
 use crate::language::data::{push_merged, scan_number, scan_quoted};

@@ -1,9 +1,9 @@
-//! Koda's visual identity: bundled themes and the semantic roles built on them.
+//! Kemori's visual identity: bundled themes and the semantic roles built on them.
 //!
 //! **Mellow** is the default, and its palette is the separately named colorscheme
-//! shipped with Helix — *not* Helix's default theme. Koda reads Mellow's palette
+//! shipped with Helix — *not* Helix's default theme. Kemori reads Mellow's palette
 //! and semantic mappings and translates them into its own UI roles; the layout,
-//! components, ASCII art and overall design remain Koda's own. Two further
+//! components, ASCII art and overall design remain Kemori's own. Two further
 //! bundled themes (a high-contrast dark and a light theme) share the same roles.
 //!
 //! Transparency is a first-class concern: we never paint a full-screen
@@ -106,7 +106,7 @@ pub struct Theme {
     pub syntax: Syntax,
 }
 
-/// Mellow — Koda's default. The semantics are the existing Mellow mappings.
+/// Mellow — Kemori's default. The semantics are the existing Mellow mappings.
 const MELLOW: Theme = Theme {
     bg_dark: mellow::BG_DARK,
     accent: mellow::BLUE,

@@ -1,8 +1,8 @@
-pkgbase = koda-git
+pkgbase = kemori-git
 	pkgdesc = A modern, lightweight, terminal-native IDE (git checkout)
 	pkgver = 0.1.2.r0.g0000000
 	pkgrel = 1
-	url = https://github.com/etokiyra/koda
+	url = https://github.com/etokiyra/kemori
 	arch = x86_64
 	license = MPL-2.0
 	makedepends = cargo
@@ -28,9 +28,9 @@ pkgbase = koda-git
 	optdepends = dart: Dart language server
 	optdepends = elixir: Elixir language server runtime
 	optdepends = nix: Nix language server and formatter
-	provides = koda
-	conflicts = koda
-	source = git+https://github.com/etokiyra/koda.git
+	provides = kemori
+	conflicts = kemori
+	source = git+https://github.com/etokiyra/kemori.git
 	sha256sums = SKIP
 
-pkgname = koda-git
+pkgname = kemori-git

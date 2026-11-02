@@ -67,7 +67,7 @@ use overlay::{
 /// feel immediate, long enough not to reanalyse on every keystroke.
 const DIAGNOSTICS_DEBOUNCE: Duration = Duration::from_millis(150);
 
-/// How long typing must pause before Koda offers completions automatically.
+/// How long typing must pause before Kemori offers completions automatically.
 /// Short enough to feel instant, long enough that a burst of typing does not
 /// build a candidate pool for every intermediate prefix.
 const AUTOCOMPLETE_DELAY: Duration = Duration::from_millis(120);
@@ -92,7 +92,7 @@ pub enum Pane {
 /// server is never spawned for the brief use of a throwaway process.
 const LSP_START_DELAY: Duration = Duration::from_millis(600);
 
-/// If a server does not finish its handshake within this window, Koda gives up,
+/// If a server does not finish its handshake within this window, Kemori gives up,
 /// falls back to its built-in providers and (bounded by [`MAX_LSP_RESTARTS`])
 /// tries once more.
 const LSP_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(25);
@@ -100,7 +100,7 @@ const LSP_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(25);
 /// How long to wait before an automatic restart after a server failure.
 const LSP_RESTART_DELAY: Duration = Duration::from_secs(2);
 
-/// How many automatic restarts Koda attempts before settling on the built-in
+/// How many automatic restarts Kemori attempts before settling on the built-in
 /// providers. The counter resets whenever a server connects successfully.
 const MAX_LSP_RESTARTS: u32 = 2;
 
@@ -124,7 +124,7 @@ pub enum LspStatus {
 }
 
 /// How to launch a language server: the program, its arguments and any extra
-/// environment (used to point managed servers at Koda-provisioned runtimes).
+/// environment (used to point managed servers at Kemori-provisioned runtimes).
 struct LspLaunch {
     program: String,
     args: &'static [&'static str],
@@ -133,7 +133,7 @@ struct LspLaunch {
 
 /// One language's language-server job.
 ///
-/// Koda keeps a server per language rather than one per session, so a workspace
+/// Kemori keeps a server per language rather than one per session, so a workspace
 /// that mixes languages — or a split pane showing two — gets tooling for each
 /// instead of only the first language it happened to detect.
 #[derive(Default)]
@@ -269,7 +269,7 @@ pub struct App {
     /// Selected row on the welcome screen.
     pub welcome_selected: usize,
     /// Whether the user engaged with a project this session. Gates session
-    /// saving so starting Koda and quitting does not wipe an untouched session.
+    /// saving so starting Kemori and quitting does not wipe an untouched session.
     engaged: bool,
     /// Whether a project creation is running on the worker.
     pending_project: bool,
@@ -364,7 +364,7 @@ pub struct App {
     pub motion: bool,
     /// The active welcome scene.
     pub welcome_scene: crate::ui::art::WelcomeScene,
-    /// External tools Koda has probed for, once discovery completes.
+    /// External tools Kemori has probed for, once discovery completes.
     pub tools: Option<ToolRegistry>,
     /// One language server per language.
     lsp: HashMap<(PathBuf, LanguageId), LspJob>,
@@ -397,7 +397,7 @@ pub struct App {
     pub editor_body_rect: Option<ratatui::layout::Rect>,
     /// Anchor for an in-progress mouse drag selection.
     pub mouse_drag_anchor: Option<Position>,
-    /// Languages for which Koda has already offered to install a missing
+    /// Languages for which Kemori has already offered to install a missing
     /// language server this session.
     setup_offered: std::collections::HashSet<LanguageId>,
     /// The languages detected in the current project, once scanned.
@@ -411,16 +411,18 @@ pub struct App {
     /// The user's global preferences.
     pub settings: crate::settings::Settings,
     /// Whether the preferences changed this session and should be written on
-    /// quit. Koda only writes a settings file once the user changes something.
+    /// quit. Kemori only writes a settings file once the user changes something.
     settings_dirty: bool,
     /// Whether the editor gutter shows line numbers.
     pub show_line_numbers: bool,
 }
 
 impl App {
-    /// Run Koda. `target` is the optional CLI path argument.
+    /// Run Kemori. `target` is the optional CLI path argument.
     pub fn start(target: Option<String>) -> io::Result<()> {
         let target = target.map(PathBuf::from);
+        // Import the pre-rename state once, before settings and sessions load.
+        crate::recent::migrate_legacy_state();
         // Colour support is a terminal capability, detected once: everything
         // rendered afterwards consults the recorded depth.
         let mut settings = crate::settings::Settings::load();

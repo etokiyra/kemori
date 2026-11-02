@@ -38,7 +38,7 @@ impl App {
 
     /// Persist the session for the active project. Errors are non-fatal.
     ///
-    /// Only writes once the user has engaged with a project, so starting Koda
+    /// Only writes once the user has engaged with a project, so starting Kemori
     /// and quitting without opening anything does not overwrite an untouched
     /// session.
     pub fn save_session(&self) {

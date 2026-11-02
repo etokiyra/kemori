@@ -6,7 +6,7 @@
 //! diagnostics, symbols, completion, hover and within-file navigation.
 //!
 //! `clangd` is not provisioned — there is no portable, user-local installer —
-//! but Koda uses it when it is already on the system, so a compiler installation
+//! but Kemori uses it when it is already on the system, so a compiler installation
 //! brings richer, type-aware intelligence with no setup.
 
 use crate::language::completion::{Completion, CompletionKind};

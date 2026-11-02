@@ -1,6 +1,6 @@
 //! Per-project session persistence.
 //!
-//! Koda remembers which files were open, where the cursor was and which
+//! Kemori remembers which files were open, where the cursor was and which
 //! directories were expanded, so reopening a project resumes where you left
 //! off. State lives in the user's state directory — never inside the project —
 //! keyed by the canonical project root, and is written on quit.
@@ -121,7 +121,8 @@ mod tests {
     use super::*;
 
     fn scratch(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("koda-session-{name}-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("kemori-session-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         dir
@@ -146,7 +147,7 @@ mod tests {
     #[test]
     fn missing_file_is_none() {
         assert_eq!(
-            Session::load_from(Path::new("/nonexistent/koda/session.json")),
+            Session::load_from(Path::new("/nonexistent/kemori/session.json")),
             None
         );
     }

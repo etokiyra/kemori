@@ -1,11 +1,11 @@
-//! Original ASCII art for Koda.
+//! Original ASCII art for Kemori.
 //!
 //! Art is deliberate, not decorative spam. Pieces are small, symmetric and
-//! reused consistently so they become part of Koda's visual vocabulary:
+//! reused consistently so they become part of Kemori's visual vocabulary:
 //!
-//! * the four-pointed star `✦` — Koda's mark
+//! * the four-pointed star `✦` — Kemori's mark
 //! * a crescent moon `☾`
-//! * the Koda familiar, a little star-cat
+//! * the Kemori familiar, a little star-cat
 //!
 //! Art is used where there is room for personality — welcome screens and empty
 //! states — never behind someone's code.
@@ -15,7 +15,7 @@ use ratatui::text::{Line, Span};
 
 use crate::ui::theme;
 
-/// Koda's mark.
+/// Kemori's mark.
 pub const STAR: &str = "✦";
 /// A softer sparkle.
 pub const SPARK: &str = "✧";
@@ -28,34 +28,34 @@ pub const POINTER: &str = "❯";
 /// Selection bar.
 pub const BAR: &str = "▏";
 
-/// The base Koda familiar, sitting and content. Every line is 7 columns wide.
+/// The base Kemori familiar, sitting and content. Every line is 7 columns wide.
 pub const CAT: &[&str] = &["/\\___/\\", "( ･ω･ )", " > ω < ", "/|   |\\"];
 
-/// The Koda familiar, fast asleep.
+/// The Kemori familiar, fast asleep.
 pub const CAT_ASLEEP: &[&str] = &["/\\___/\\", "( -ω- )", " > ω < ", " ~~~~~ "];
 
-/// The Koda familiar, a little surprised.
+/// The Kemori familiar, a little surprised.
 pub const CAT_AWAKE: &[&str] = &["/\\___/\\", "( o.o )", " > ω < ", "/|   |\\"];
 
-/// The Koda familiar, mid-blink.
+/// The Kemori familiar, mid-blink.
 pub const CAT_BLINK: &[&str] = &["/\\___/\\", "( -ω- )", " > ω < ", "/|   |\\"];
 
-/// The Koda familiar, celebrating.
+/// The Kemori familiar, celebrating.
 pub const CAT_HAPPY: &[&str] = &["/\\___/\\", "( ^ω^ )", "\\|   |/"];
 
-/// The Koda familiar, drowsy.
+/// The Kemori familiar, drowsy.
 pub const CAT_SLEEPY: &[&str] = &["/\\___/\\", "( ˘ω˘ )", " > ω < ", " ~~~~~ "];
 
-/// The Koda familiar, wide-eyed and curious.
+/// The Kemori familiar, wide-eyed and curious.
 pub const CAT_CURIOUS: &[&str] = &["/\\___/\\", "( ⊙ω⊙ )", " > ω < ", "/|   |\\"];
 
-/// The Koda familiar, concentrating on the code.
+/// The Kemori familiar, concentrating on the code.
 pub const CAT_FOCUS: &[&str] = &["/\\___/\\", "( ◉ω◉ )", " > ω < ", "/|   |\\"];
 
-/// The Koda familiar, giving a wink.
+/// The Kemori familiar, giving a wink.
 pub const CAT_WINK: &[&str] = &["/\\___/\\", "( ^ω- )", " > ω < ", "/|   |\\"];
 
-/// The Koda familiar, purring.
+/// The Kemori familiar, purring.
 pub const CAT_PURR: &[&str] = &["/\\___/\\", "( ≧ω≦ )", " > ω < ", "/|   |\\"];
 
 /// Every pose, for the animation cycle.
@@ -117,20 +117,15 @@ pub fn busy_line(phase: usize, message: &str) -> Line<'static> {
     ])
 }
 
-/// The `K O D A` wordmark.
+/// The `KEMORI` wordmark.
 pub fn wordmark() -> Line<'static> {
-    Line::from(vec![
-        Span::styled("✦  ", theme::star()),
-        Span::styled("K", theme::accent_bold()),
-        Span::raw(" "),
-        Span::styled("O", theme::accent_bold()),
-        Span::raw(" "),
-        Span::styled("D", theme::accent_bold()),
-        Span::raw(" "),
-        Span::styled("A", theme::accent_bold()),
-        Span::styled("  ✦", theme::star()),
-    ])
-    .centered()
+    let letters = ["K", "E", "M", "O", "R", "I"];
+    let mut spans = vec![Span::styled("✦  ", theme::star())];
+    for letter in letters {
+        spans.push(Span::styled(letter, theme::accent_bold()));
+    }
+    spans.push(Span::styled("  ✦", theme::star()));
+    Line::from(spans).centered()
 }
 
 // ---------------------------------------------------------------------------
@@ -348,7 +343,7 @@ fn cozy(phase: usize) -> Canvas {
     );
     canvas.put(4, 10, "│", theme::border(false));
     canvas.put(6, 10, ">_", theme::star());
-    canvas.put(9, 10, "koda", theme::accent_bold());
+    canvas.put(9, 10, "kemori", theme::accent_bold());
     canvas.put(35, 10, "│", theme::border(false));
     canvas.put(
         4,

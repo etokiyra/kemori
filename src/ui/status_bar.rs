@@ -1,7 +1,7 @@
-//! The Koda statusline.
+//! The Kemori statusline.
 //!
 //! A solid panel strip with a language pill, git state and cursor position —
-//! Koda's most recognisable band of colour.
+//! Kemori's most recognisable band of colour.
 
 use ratatui::Frame;
 use ratatui::layout::Rect;
@@ -108,7 +108,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         }
     } else {
         spans.push(Span::styled(
-            " ✦ koda ready ",
+            " ✦ kemori ready ",
             theme::pill(theme::muted_color(), theme::panel_bg()),
         ));
     }

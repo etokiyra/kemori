@@ -15,7 +15,7 @@ use crate::language::tools::{Tool, ToolPurpose, ToolRegistry};
 pub trait ToolState {
     /// Whether the tool is installed and usable.
     fn available(&self, tool: Tool) -> bool;
-    /// Whether Koda could install the tool here.
+    /// Whether Kemori could install the tool here.
     fn installable(&self, tool: Tool) -> bool;
     /// The system prerequisites the tool needs that are missing.
     fn missing_prerequisites(&self, tool: Tool) -> Vec<String>;
@@ -49,9 +49,9 @@ impl ToolState for ToolRegistry {
 pub enum SetupState {
     /// The server is available, or the language needs none.
     Ready,
-    /// Koda can install this managed server.
+    /// Kemori can install this managed server.
     NeedsInstall(Tool),
-    /// A system prerequisite is missing, so Koda will not install anything.
+    /// A system prerequisite is missing, so Kemori will not install anything.
     Prerequisite(String),
     /// No supported install path on this platform.
     Unavailable(String),

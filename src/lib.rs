@@ -1,11 +1,11 @@
-//! # Koda
+//! # Kemori
 //!
 //! A modern, lightweight, terminal-native IDE.
 //!
-//! Koda is built around a few core ideas:
+//! Kemori is built around a few core ideas:
 //!
 //! * **Zero configuration** — supported languages work out of the box.
-//! * **Koda owns language intelligence** — detection and providers are first-class.
+//! * **Kemori owns language intelligence** — detection and providers are first-class.
 //! * **Terminal-native** — the UI cooperates with the terminal instead of fighting it.
 //!
 //! The crate is split into clear subsystems so that language-specific behaviour never

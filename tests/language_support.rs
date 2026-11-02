@@ -4,8 +4,8 @@
 //! detection signal, and every known language has a row in
 //! `docs/LANGUAGE-SUPPORT.md`. Regenerate the row when adding a language.
 
-use koda::language::id::LanguageId;
-use koda::language::provider::ProviderRegistry;
+use kemori::language::id::LanguageId;
+use kemori::language::provider::ProviderRegistry;
 
 const START: &str = "<!-- languages:start -->";
 const END: &str = "<!-- languages:end -->";

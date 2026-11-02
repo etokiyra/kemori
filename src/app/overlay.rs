@@ -16,7 +16,7 @@ pub enum PickerAction {
         path: PathBuf,
         position: Position,
     },
-    /// Open a file and reveal an LSP-encoded position, converting it to a Koda
+    /// Open a file and reveal an LSP-encoded position, converting it to a Kemori
     /// character position using the target line's text.
     RevealLsp {
         path: PathBuf,
@@ -28,11 +28,11 @@ pub enum PickerAction {
     InstallTool(crate::language::tools::Tool),
     /// Provision every missing tool the current project needs.
     ProjectSetup,
-    /// Open the update/remove choices for a Koda-managed tool.
+    /// Open the update/remove choices for a Kemori-managed tool.
     ToolActions(crate::language::tools::Tool),
-    /// Reinstall a Koda-managed tool at Koda's pinned version.
+    /// Reinstall a Kemori-managed tool at Kemori's pinned version.
     UpdateTool(crate::language::tools::Tool),
-    /// Remove a Koda-managed tool's files (never a user/system install).
+    /// Remove a Kemori-managed tool's files (never a user/system install).
     RemoveTool(crate::language::tools::Tool),
     /// Apply the code action at an index in the last response.
     ApplyCodeAction(usize),
@@ -146,7 +146,7 @@ impl Picker {
     /// Append items that are not already present, preserving the selection.
     ///
     /// Used to merge language-server workspace symbols into a picker that was
-    /// already populated by Koda's built-in scan.
+    /// already populated by Kemori's built-in scan.
     pub fn extend_items(&mut self, items: Vec<PickerItem>) {
         let selected = self
             .selected_item()
@@ -398,7 +398,7 @@ fn classify_diff_line(line: &str) -> DiffLine {
 /// The captured output of a run task: plain text with a known exit result.
 ///
 /// Output arrives in one bounded batch from the background worker, so the view
-/// is a read-only panel — the task is abstracted by Koda, not streamed live.
+/// is a read-only panel — the task is abstracted by Kemori, not streamed live.
 /// `Up`/`Down` move a row cursor instead of scrolling freely, because the row
 /// the user is on is what `Enter` can turn into a source jump.
 pub struct TaskRunState {
@@ -462,7 +462,7 @@ impl TaskRunState {
         } else {
             self.root.join(path)
         };
-        // A compiler points at 1-based lines and 1-based columns; Koda stores
+        // A compiler points at 1-based lines and 1-based columns; Kemori stores
         // 0-based characters.
         let column = col.as_ref().map_or(0, |col| col.saturating_sub(1));
         let row = row.saturating_sub(1);

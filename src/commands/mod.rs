@@ -1,6 +1,6 @@
 //! The extensible command system.
 //!
-//! Commands are the single source of truth for what Koda can do. They power the
+//! Commands are the single source of truth for what Kemori can do. They power the
 //! command palette and give the keymap something stable to target. Actions are
 //! dispatched by id in the app layer, which keeps commands free of UI details.
 
@@ -181,13 +181,13 @@ impl Command {
     }
 }
 
-/// The registry of everything Koda can currently do.
+/// The registry of everything Kemori can currently do.
 pub struct CommandRegistry {
     commands: Vec<Command>,
 }
 
 impl CommandRegistry {
-    /// Commands built into Koda. A plugin/extensibility layer will append to this.
+    /// Commands built into Kemori. A plugin/extensibility layer will append to this.
     pub fn builtin() -> Self {
         use ids::*;
         let commands = vec![
@@ -225,7 +225,7 @@ impl CommandRegistry {
                 .describes("Create a copy of the selected file and open it"),
             Command::new(COPY_FILE, "Copy File…", "File", None)
                 .describes("Copy the selected file to a chosen path"),
-            Command::new(QUIT, "Quit", "File", Some("Ctrl+Q")).describes("Leave Koda"),
+            Command::new(QUIT, "Quit", "File", Some("Ctrl+Q")).describes("Leave Kemori"),
             Command::new(HOME, "Welcome Screen", "File", None)
                 .describes("Close all tabs and return to the home screen"),
             Command::new(WELCOME_SCENE, "Change Welcome Scene", "View", None)
@@ -354,12 +354,12 @@ impl CommandRegistry {
                 .needs_doc()
                 .capability(Capability::Hover),
             Command::new(SETUP, "Language Setup…", "Language", None)
-                .describes("See which language tools Koda found"),
+                .describes("See which language tools Kemori found"),
             Command::new(SET_LANGUAGE, "Set Language…", "Language", None)
                 .describes("Override the detected language for the active file")
                 .needs_doc(),
             Command::new(LANGUAGE_SUPPORT, "Language Support…", "Language", None)
-                .describes("See what Koda supports for each language"),
+                .describes("See what Kemori supports for each language"),
             Command::new(RESTART_SERVER, "Restart Language Server", "Language", None)
                 .describes("Reconnect the language server for the active file")
                 .needs_doc(),
@@ -524,11 +524,11 @@ impl CommandRegistry {
             Command::new(PREV_TAB, "Previous Tab", "View", Some("Ctrl+Shift+Tab"))
                 .describes("Switch to the previous open tab"),
             Command::new(PALETTE, "Command Palette", "View", Some("Ctrl+Shift+P"))
-                .describes("Search every command Koda offers"),
+                .describes("Search every command Kemori offers"),
             Command::new(HELP, "Keyboard Shortcuts", "Help", Some("F1"))
                 .describes("Show every shortcut at a glance"),
             Command::new(SETTINGS, "Settings", "General", None)
-                .describes("Adjust Koda's appearance, editor and completion preferences"),
+                .describes("Adjust Kemori's appearance, editor and completion preferences"),
         ];
         CommandRegistry { commands }
     }

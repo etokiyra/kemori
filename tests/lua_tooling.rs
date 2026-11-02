@@ -1,19 +1,19 @@
 //! Live smoke test for the managed Lua language server.
 //!
-//! `lua-language-server` is self-contained and provisioned by Koda, so this is
+//! `lua-language-server` is self-contained and provisioned by Kemori, so this is
 //! the closest automated check to the real workflow. It is `#[ignore]`d because
 //! it needs the tool installed:
 //!
 //! ```sh
-//! XDG_DATA_HOME=/tmp/koda-tools cargo run --example install_check -- lua
-//! XDG_DATA_HOME=/tmp/koda-tools cargo test --test lua_tooling -- --ignored
+//! XDG_DATA_HOME=/tmp/kemori-tools cargo run --example install_check -- lua
+//! XDG_DATA_HOME=/tmp/kemori-tools cargo test --test lua_tooling -- --ignored
 //! ```
 
 use std::time::{Duration, Instant};
 
-use koda::language::id::LanguageId;
-use koda::language::lsp::Server;
-use koda::language::tools::{Tool, ToolRegistry};
+use kemori::language::id::LanguageId;
+use kemori::language::lsp::Server;
+use kemori::language::tools::{Tool, ToolRegistry};
 
 #[test]
 #[ignore = "requires the Lua language server to be installed"]
@@ -22,7 +22,7 @@ fn lua_server_completes_the_handshake() {
     let Some(path) = registry.program_path(Tool::LuaLs).map(|p| p.to_path_buf()) else {
         panic!("lua-language-server is not installed; run the install_check example first");
     };
-    let root = std::env::temp_dir().join("koda-live-lua");
+    let root = std::env::temp_dir().join("kemori-live-lua");
     std::fs::create_dir_all(&root).expect("temp root");
 
     let mut server = Server::start(

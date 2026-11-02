@@ -67,7 +67,7 @@ pub enum LanguageId {
 }
 
 impl LanguageId {
-    /// Every language Koda understands today. Keep this in sync with [`crate::language::provider`].
+    /// Every language Kemori understands today. Keep this in sync with [`crate::language::provider`].
     pub const ALL: [LanguageId; 27] = [
         LanguageId::Rust,
         LanguageId::Go,

@@ -341,7 +341,7 @@ impl App {
     /// Offer project setup once per workspace, when there is something to say.
     ///
     /// Called from the interactive event loop, so it never blocks the first
-    /// frame and never appears when Koda is embedded (tests, previews). If the
+    /// frame and never appears when Kemori is embedded (tests, previews). If the
     /// project needs nothing the flag is still set, so the offer is not repeated
     /// on every iteration.
     pub(super) fn maybe_offer_project_setup(&mut self) -> bool {
@@ -531,9 +531,9 @@ impl App {
     /// Offer, once per language, to install a missing language server.
     ///
     /// This is called from the interactive event loop rather than at startup, so
-    /// the prompt never blocks the first frame and never appears when Koda is
+    /// the prompt never blocks the first frame and never appears when Kemori is
     /// embedded (tests, previews). The user always chooses; dismissing it keeps
-    /// Koda's built-in intelligence, and **Language Setup…** stays available.
+    /// Kemori's built-in intelligence, and **Language Setup…** stays available.
     pub(super) fn maybe_offer_tool_setup(&mut self) -> bool {
         if !self.overlay.is_none()
             || self.pending_install.is_some()
@@ -586,7 +586,7 @@ impl App {
         .shortcut("Enter");
         let later = PickerItem::new(
             "Not now",
-            "Keep Koda's built-in intelligence — install later from Language Setup…",
+            "Keep Kemori's built-in intelligence — install later from Language Setup…",
             PickerAction::Info("Install language tools any time from Language Setup…".to_string()),
         );
         let mut picker = Picker::new(
@@ -599,7 +599,7 @@ impl App {
         true
     }
 
-    /// Offer Update and Remove for a Koda-managed tool.
+    /// Offer Update and Remove for a Kemori-managed tool.
     pub(super) fn tool_actions(&mut self, tool: Tool) {
         let Some(status) = self
             .tools
@@ -611,7 +611,7 @@ impl App {
             return;
         };
         if !status.is_managed() {
-            self.set_status(format!("{} is not managed by Koda", tool.label()));
+            self.set_status(format!("{} is not managed by Kemori", tool.label()));
             return;
         }
         let size = status
@@ -620,13 +620,13 @@ impl App {
             .unwrap_or_default();
         let update = PickerItem::new(
             format!("Update {}", tool.label()),
-            format!("Reinstall Koda's pinned version{size}"),
+            format!("Reinstall Kemori's pinned version{size}"),
             PickerAction::UpdateTool(tool),
         )
         .shortcut("Enter");
         let remove = PickerItem::new(
             format!("Remove {}", tool.label()),
-            format!("Delete Koda's managed files{size}"),
+            format!("Delete Kemori's managed files{size}"),
             PickerAction::RemoveTool(tool),
         );
         let cancel = PickerItem::new(
@@ -635,7 +635,7 @@ impl App {
             PickerAction::Info("Nothing changed".to_string()),
         );
         let mut picker = Picker::new(
-            format!("{} (Koda-managed)", tool.label()),
+            format!("{} (Kemori-managed)", tool.label()),
             "Choose…",
             vec![update, remove, cancel],
         );
@@ -643,9 +643,9 @@ impl App {
         self.overlay = Overlay::Picker(picker);
     }
 
-    /// Remove a Koda-managed tool's files.
+    /// Remove a Kemori-managed tool's files.
     ///
-    /// Refuses to touch anything Koda does not own, and never removes the shared
+    /// Refuses to touch anything Kemori does not own, and never removes the shared
     /// tools root itself. A `discover` afterwards refreshes the setup view.
     pub(super) fn remove_tool(&mut self, tool: Tool) {
         if self.pending_install.is_some() {
@@ -663,7 +663,7 @@ impl App {
         };
         if !status.is_managed() {
             self.set_error(format!(
-                "{} is not managed by Koda — not removing it",
+                "{} is not managed by Kemori — not removing it",
                 tool.label()
             ));
             return;
@@ -817,7 +817,7 @@ impl App {
         }
     }
 
-    /// Show which language tools Koda found, and how to install the rest.
+    /// Show which language tools Kemori found, and how to install the rest.
     pub(super) fn language_setup(&mut self) {
         let Some(tools) = self.tools.clone() else {
             // Discovery is still running; ask again and tell the user.
@@ -843,7 +843,7 @@ impl App {
                         status.summary(),
                         crate::language::tools::human_bytes(bytes),
                         if status.is_managed() {
-                            " · Koda-managed"
+                            " · Kemori-managed"
                         } else {
                             ""
                         }
@@ -860,7 +860,7 @@ impl App {
                 let hint = tool.setup_reason();
                 PickerItem::new(label, hint, PickerAction::InstallTool(tool)).shortcut("Enter")
             } else {
-                // Explain exactly why Koda cannot install it, and what the user
+                // Explain exactly why Kemori cannot install it, and what the user
                 // can do instead, rather than repeating the generic install hint.
                 let reason = tool.setup_reason();
                 PickerItem::new(label, reason.clone(), PickerAction::Info(reason.clone()))

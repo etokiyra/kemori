@@ -1,6 +1,6 @@
 //! A tiny regular-expression engine for search.
 //!
-//! Koda keeps its dependency surface small, so this implements the subset of
+//! Kemori keeps its dependency surface small, so this implements the subset of
 //! regular-expression syntax that is genuinely useful when searching code,
 //! rather than pulling in a full engine:
 //!

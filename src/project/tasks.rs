@@ -1,6 +1,6 @@
 //! Task detection: the project's own commands, found with no configuration.
 //!
-//! Koda detects the project kind from its markers and offers the commands that
+//! Kemori detects the project kind from its markers and offers the commands that
 //! kind implies — `cargo test` for a Rust project, the scripts in
 //! `package.json`, a plain `make` where a Makefile drives the build. A task is
 //! plain data (a program and its arguments); nothing in the editor or the UI
@@ -111,7 +111,7 @@ fn detect_scripts(path: &Path) -> Vec<Task> {
         return Vec::new();
     };
     let Ok(value) = serde_json::from_str::<Value>(&text) else {
-        // A malformed package.json is the project author's bug; Koda offers the
+        // A malformed package.json is the project author's bug; Kemori offers the
         // other tasks it found and says nothing here.
         return Vec::new();
     };
@@ -140,7 +140,7 @@ mod tests {
     use std::fs;
 
     fn scratch(name: &str) -> std::path::PathBuf {
-        let dir = std::env::temp_dir().join(format!("koda-tasks-{name}-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-tasks-{name}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir

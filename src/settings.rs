@@ -1,6 +1,6 @@
 //! Global user settings.
 //!
-//! A tiny JSON store under Koda's state directory. Koda is fully usable with no
+//! A tiny JSON store under Kemori's state directory. Kemori is fully usable with no
 //! settings file: a missing file loads the defaults, and a malformed file is
 //! quarantined (renamed aside) rather than silently overwritten, so the defaults
 //! load and the broken file is preserved for recovery. Writes are atomic, so an
@@ -8,13 +8,13 @@
 //!
 //! The format is parsed without derive macros, matching the session and recent
 //! stores, so no new dependency is needed. Unknown fields are ignored, which
-//! keeps a settings file written by a newer Koda loadable.
+//! keeps a settings file written by a newer Kemori loadable.
 
 use std::path::{Path, PathBuf};
 
 use serde_json::{Value, json};
 
-/// The bundled themes. Mellow is Koda's default.
+/// The bundled themes. Mellow is Kemori's default.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ThemeId {
     Mellow,
@@ -67,7 +67,7 @@ impl ThemeId {
 /// The indent widths Settings offers; `None` means "infer from the file".
 pub const INDENT_CHOICES: [Option<u8>; 4] = [None, Some(2), Some(4), Some(8)];
 
-/// Koda's global preferences, with their zero-config defaults.
+/// Kemori's global preferences, with their zero-config defaults.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Settings {
     pub theme: ThemeId,
@@ -200,14 +200,14 @@ fn quarantine(path: &Path) -> std::io::Result<()> {
     std::fs::rename(path, &backup)
 }
 
-/// The settings file under Koda's state directory, if a home directory exists.
+/// The settings file under Kemori's state directory, if a home directory exists.
 pub fn settings_path() -> Option<PathBuf> {
     crate::recent::state_dir().map(|dir| dir.join("settings.json"))
 }
 
 /// Whether the user stored an explicit theme choice.
 ///
-/// A fresh install has no settings file at all, so Koda may pick a theme for
+/// A fresh install has no settings file at all, so Kemori may pick a theme for
 /// the terminal it found (the 16-colour fallback) without ever overruling a
 /// deliberate choice from the Settings screen.
 pub fn theme_is_stored() -> bool {
@@ -229,7 +229,8 @@ mod tests {
     use super::*;
 
     fn scratch(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("koda-settings-{name}-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("kemori-settings-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         dir

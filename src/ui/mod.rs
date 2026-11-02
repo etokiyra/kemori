@@ -1,4 +1,4 @@
-//! Rendering for every Koda surface.
+//! Rendering for every Kemori surface.
 
 pub mod art;
 pub mod editor;

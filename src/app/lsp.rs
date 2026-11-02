@@ -81,7 +81,7 @@ impl App {
 
     /// Give up on any handshake that has taken too long, falling back cleanly.
     ///
-    /// A server that never answers `initialize` would otherwise leave Koda
+    /// A server that never answers `initialize` would otherwise leave Kemori
     /// "connecting" forever; this turns that hang into the same graceful
     /// fallback as a crash.
     pub(super) fn poll_lsp_health(&mut self) -> bool {
@@ -127,13 +127,13 @@ impl App {
     pub(super) fn lsp_launch(&self, language: LanguageId) -> Option<LspLaunch> {
         let tools = self.tools.as_ref()?;
         let tool = Tool::available_server(language, tools)?;
-        // Prefer the executable Koda discovered, which may live in a user bin
+        // Prefer the executable Kemori discovered, which may live in a user bin
         // directory outside the process PATH.
         let program = tools
             .program_path(tool)
             .map(|path| path.to_string_lossy().into_owned())
             .unwrap_or_else(|| tool.program().to_string());
-        // Managed servers are launched with the runtimes Koda provisioned.
+        // Managed servers are launched with the runtimes Kemori provisioned.
         Some(LspLaunch {
             program,
             args: tool.server_args(),
@@ -549,7 +549,7 @@ impl App {
         })
     }
 
-    /// Convert a Koda character column to the LSP `character` offset the
+    /// Convert a Kemori character column to the LSP `character` offset the
     /// document's server expects, using the line's actual text.
     pub(super) fn lsp_col(
         &self,
@@ -586,7 +586,7 @@ impl App {
         Some((path, cursor.row, cursor.col))
     }
 
-    /// Convert an LSP-encoded position from a server into a Koda character
+    /// Convert an LSP-encoded position from a server into a Kemori character
     /// position, using the open document's line text.
     pub(super) fn lsp_position_to_char(&self, position: Position) -> Position {
         let Some(doc) = self.editor.active_document() else {

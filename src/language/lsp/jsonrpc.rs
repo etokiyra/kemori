@@ -8,7 +8,7 @@ use std::io::{self, BufRead, Read, Write};
 
 use serde_json::Value;
 
-/// The most header bytes Koda reads before a message body. A corrupt or
+/// The most header bytes Kemori reads before a message body. A corrupt or
 /// non-LSP stream must not be able to grow a header line without bound.
 const MAX_HEADER_BYTES: usize = 16 * 1024;
 

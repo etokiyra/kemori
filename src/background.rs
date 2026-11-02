@@ -1,6 +1,6 @@
 //! A small background worker pool.
 //!
-//! Koda must never block the UI on work that is not the user's keystroke. A few
+//! Kemori must never block the UI on work that is not the user's keystroke. A few
 //! worker threads share a request channel; the app sends requests and drains
 //! results as they arrive, so expensive operations stay off the render path and
 //! one slow formatter or installer cannot stall unrelated editor services.
@@ -49,7 +49,7 @@ enum Request {
         query: String,
         revision: u64,
     },
-    /// Probe for the external tools Koda can drive.
+    /// Probe for the external tools Kemori can drive.
     DiscoverTools,
     /// Install a tool through its trusted package manager.
     InstallTool(Tool),
@@ -188,7 +188,7 @@ pub struct TaskRunOutcome {
     pub task: Task,
     /// Success when the process exited cleanly; `None` means killed or lost.
     pub exit_code: Option<i32>,
-    /// True when the task ran past Koda's deadline and was killed.
+    /// True when the task ran past Kemori's deadline and was killed.
     pub timed_out: bool,
     /// True when the child could not be spawned at all.
     pub spawn_error: Option<String>,
@@ -238,7 +238,7 @@ impl Background {
             let events = event_tx.clone();
             let language = Arc::clone(&language);
             let _ = thread::Builder::new()
-                .name(format!("koda-background-{index}"))
+                .name(format!("kemori-background-{index}"))
                 .spawn(move || {
                     loop {
                         // Hold the lock only while waiting, so the other workers
@@ -491,8 +491,11 @@ fn handle_request(request: Request, language: &LanguageService, events: &Sender<
         }
         Request::RefreshGit { root } => {
             // Routed through the pluggable command runner: local unless
-            // KODA_REMOTE names an SSH host (an experimental, git-only seam).
-            let remote = std::env::var("KODA_REMOTE").ok();
+            // KEMORI_REMOTE names an SSH host (an experimental, git-only seam).
+            // The pre-rename KODA_REMOTE spelling still works for one release.
+            let remote = std::env::var("KEMORI_REMOTE")
+                .or_else(|_| std::env::var("KODA_REMOTE"))
+                .ok();
             let runner = crate::remote::runner_for(remote.as_deref());
             let _ = events.send(Event::Git(GitInfo::detect_with(runner.as_ref(), &root)));
         }

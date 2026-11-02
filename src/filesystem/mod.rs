@@ -1,6 +1,6 @@
 //! Thin, well-behaved filesystem helpers.
 //!
-//! All reads and writes funnel through here so the rest of Koda does not sprinkle
+//! All reads and writes funnel through here so the rest of Kemori does not sprinkle
 //! `std::fs` calls around. Errors are surfaced rather than swallowed.
 
 pub mod gitignore;
@@ -108,7 +108,7 @@ pub fn write_string(path: &Path, contents: &str) -> std::io::Result<()> {
 /// Writes a sibling temporary file, flushes it, preserves the destination's
 /// permissions and owner when it already exists, and renames it into place.
 ///
-/// Preserving the owner matters when Koda is launched through `sudo`: editing a
+/// Preserving the owner matters when Kemori is launched through `sudo`: editing a
 /// user's file as root must not leave it root-owned, or the user could no longer
 /// write to it afterwards. The call is best-effort; on a normal launch it is a
 /// no-op because the owner already matches.
@@ -123,8 +123,8 @@ pub fn write_atomic(path: &Path, contents: &str) -> std::io::Result<()> {
     let name = path
         .file_name()
         .and_then(|name| name.to_str())
-        .unwrap_or("koda");
-    let temp = path.with_file_name(format!(".{name}.koda-{}.tmp", std::process::id()));
+        .unwrap_or("kemori");
+    let temp = path.with_file_name(format!(".{name}.kemori-{}.tmp", std::process::id()));
     let existing = std::fs::metadata(path).ok();
 
     let write = (|| {
@@ -272,7 +272,7 @@ mod tests {
 
     #[test]
     fn collect_files_respects_gitignore() {
-        let dir = std::env::temp_dir().join(format!("koda-fs-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-fs-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(dir.join("src")).unwrap();
         fs::create_dir_all(dir.join("build_out")).unwrap();
@@ -294,7 +294,7 @@ mod tests {
 
     #[test]
     fn rename_and_copy_refuse_to_overwrite() {
-        let dir = std::env::temp_dir().join(format!("koda-fs-overwrite-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-fs-overwrite-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         let source = dir.join("a.txt");
@@ -316,7 +316,7 @@ mod tests {
     fn atomic_write_preserves_mode_and_owner() {
         use std::os::unix::fs::{MetadataExt, PermissionsExt};
 
-        let dir = std::env::temp_dir().join(format!("koda-fs-write-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-fs-write-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         let path = dir.join("config.nix");
@@ -334,7 +334,7 @@ mod tests {
         assert_eq!(after.gid(), before.gid());
         // The temp file was renamed, not left behind.
         assert!(
-            !dir.join(format!(".config.nix.koda-{}.tmp", std::process::id()))
+            !dir.join(format!(".config.nix.kemori-{}.tmp", std::process::id()))
                 .exists()
         );
 
@@ -352,7 +352,7 @@ mod tests {
         if !crate::privileges::is_root() {
             return;
         }
-        let dir = std::env::temp_dir().join(format!("koda-fs-owner-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-fs-owner-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         let path = dir.join("configuration.nix");
@@ -375,7 +375,7 @@ mod tests {
     #[test]
     fn symlinked_directories_are_reported_as_directories() {
         use std::os::unix::fs::symlink;
-        let dir = std::env::temp_dir().join(format!("koda-fs-symlink-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-fs-symlink-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(dir.join("real")).unwrap();
         symlink(dir.join("real"), dir.join("link")).unwrap();
@@ -391,7 +391,7 @@ mod tests {
     #[test]
     fn collect_files_does_not_follow_directory_cycles() {
         use std::os::unix::fs::symlink;
-        let dir = std::env::temp_dir().join(format!("koda-fs-cycle-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-fs-cycle-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(dir.join("sub")).unwrap();
         // `sub/loop` points back at the root.

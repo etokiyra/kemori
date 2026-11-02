@@ -1,20 +1,20 @@
-//! Live smoke tests for language servers Koda discovers or installs.
+//! Live smoke tests for language servers Kemori discovers or installs.
 //!
 //! Every test is `#[ignore]`d and **skips silently when its tool is not
 //! available**, so it only asserts on a machine that actually has the server.
-//! This lets Koda's CI stay offline while still documenting and exercising the
+//! This lets Kemori's CI stay offline while still documenting and exercising the
 //! real handshake where a toolchain exists:
 //!
 //! ```sh
-//! XDG_DATA_HOME=/tmp/koda-tools cargo run --example install_check -- sql
+//! XDG_DATA_HOME=/tmp/kemori-tools cargo run --example install_check -- sql
 //! cargo test --test optional_servers -- --ignored --test-threads=1 --nocapture
 //! ```
 
 use std::time::{Duration, Instant};
 
-use koda::language::id::LanguageId;
-use koda::language::lsp::{RequestKind, Server, ServerEvent};
-use koda::language::tools::{Tool, ToolRegistry, launch_env};
+use kemori::language::id::LanguageId;
+use kemori::language::lsp::{RequestKind, Server, ServerEvent};
+use kemori::language::tools::{Tool, ToolRegistry, launch_env};
 
 fn handshake(tool: Tool, language: LanguageId) {
     handshake_with(tool, language, |_| {});
@@ -32,7 +32,7 @@ fn handshake_with(tool: Tool, language: LanguageId, prepare: impl FnOnce(&std::p
         eprintln!("skipping {tool:?}: no executable path");
         return;
     };
-    let root = std::env::temp_dir().join("koda-live-optional");
+    let root = std::env::temp_dir().join("kemori-live-optional");
     std::fs::create_dir_all(&root).expect("temp root");
     prepare(&root);
     let env = launch_env(tool);
@@ -155,7 +155,7 @@ fn serve_text(
     // A unique root per call: tests may run in parallel and must not delete
     // each other's directory.
     let unique = format!(
-        "koda-live-roundtrip-{}-{}-{}",
+        "kemori-live-roundtrip-{}-{}-{}",
         file.replace(['/', '.'], "_"),
         std::process::id(),
         std::time::SystemTime::now()

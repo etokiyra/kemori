@@ -1,6 +1,6 @@
 //! A tiny preview harness.
 //!
-//! Renders Koda into an in-memory terminal and prints it as text, so the layout
+//! Renders Kemori into an in-memory terminal and prints it as text, so the layout
 //! and ASCII art can be inspected from any environment.
 //!
 //! ```text
@@ -8,8 +8,8 @@
 //! mode: welcome | file | empty | palette | quick | find | filter | tabs | diagnostics | symbols | completion | hover | help | setup | split | toast | newproject | newproject-name | newproject-lang
 //! ```
 
-use koda::app::App;
-use koda::commands::ids;
+use kemori::app::App;
+use kemori::commands::ids;
 use ratatui::Terminal;
 use ratatui::backend::TestBackend;
 
@@ -23,7 +23,7 @@ fn file_app(path: &std::path::Path) -> App {
     while app
         .editor
         .active_document()
-        .is_some_and(|doc| doc.buffer.language == koda::language::LanguageId::Unknown)
+        .is_some_and(|doc| doc.buffer.language == kemori::language::LanguageId::Unknown)
         && std::time::Instant::now() < deadline
     {
         app.pump_background(std::time::Duration::from_millis(20));
@@ -43,7 +43,7 @@ fn main() {
         "empty-picker" => {
             let mut app = file_app(&root.join("src/main.rs"));
             app.execute_command(ids::QUICK_OPEN);
-            if let koda::app::overlay::Overlay::Picker(picker) = &mut app.overlay {
+            if let kemori::app::overlay::Overlay::Picker(picker) = &mut app.overlay {
                 picker.query = "zzzz".to_string();
                 picker.refilter();
             }
@@ -52,25 +52,25 @@ fn main() {
         "scene-starry" | "scene-cozy" | "scene-rainy" | "scene-sakura" | "scene-study" => {
             let mut app = App::new(Some(&root)).expect("app");
             app.welcome_scene = match mode {
-                "scene-cozy" => koda::ui::art::WelcomeScene::Cozy,
-                "scene-rainy" => koda::ui::art::WelcomeScene::Rainy,
-                "scene-sakura" => koda::ui::art::WelcomeScene::Sakura,
-                "scene-study" => koda::ui::art::WelcomeScene::Study,
-                _ => koda::ui::art::WelcomeScene::Starry,
+                "scene-cozy" => kemori::ui::art::WelcomeScene::Cozy,
+                "scene-rainy" => kemori::ui::art::WelcomeScene::Rainy,
+                "scene-sakura" => kemori::ui::art::WelcomeScene::Sakura,
+                "scene-study" => kemori::ui::art::WelcomeScene::Study,
+                _ => kemori::ui::art::WelcomeScene::Starry,
             };
             app
         }
         "html" => {
-            let path = std::env::temp_dir().join("koda-preview.html");
+            let path = std::env::temp_dir().join("kemori-preview.html");
             std::fs::write(
                 &path,
-                "<!DOCTYPE html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <title>Koda</title>\n  </head>\n  <body>\n    <main id=\"app\" class=\"card\">\n      <h1>Hello</h1>\n    </main>\n  </body>\n</html>\n",
+                "<!DOCTYPE html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <title>Kemori</title>\n  </head>\n  <body>\n    <main id=\"app\" class=\"card\">\n      <h1>Hello</h1>\n    </main>\n  </body>\n</html>\n",
             )
             .unwrap();
             file_app(&path)
         }
         "css" => {
-            let path = std::env::temp_dir().join("koda-preview.css");
+            let path = std::env::temp_dir().join("kemori-preview.css");
             std::fs::write(
                 &path,
                 ":root {\n  color-scheme: light dark;\n}\n\n.card {\n  color: #ffcc00;\n  padding: 2rem;\n  display: flex;\n}\n",
@@ -79,7 +79,7 @@ fn main() {
             file_app(&path)
         }
         "cfile" => {
-            let path = std::env::temp_dir().join("koda-preview.c");
+            let path = std::env::temp_dir().join("kemori-preview.c");
             std::fs::write(
                 &path,
                 "#include <stdio.h>\n\nstruct Point { int x; int y; };\n\nint add(int a, int b) {\n    // sum the pair\n    return a + b;\n}\n\nint main(void) {\n    printf(\"%d\\n\", add(1, 2));\n    return 0;\n}\n",
@@ -106,9 +106,9 @@ fn main() {
         }
         "toast" => {
             let mut app = file_app(&root.join("src/main.rs"));
-            app.push_toast(koda::app::ToastKind::Success, "Formatted src/main.rs");
+            app.push_toast(kemori::app::ToastKind::Success, "Formatted src/main.rs");
             app.push_toast(
-                koda::app::ToastKind::Error,
+                kemori::app::ToastKind::Error,
                 "Language server stopped; using built-in intelligence",
             );
             app
@@ -124,7 +124,7 @@ fn main() {
             app
         }
         "bare" => {
-            let dir = std::env::temp_dir().join("koda-preview-bare");
+            let dir = std::env::temp_dir().join("kemori-preview-bare");
             let _ = std::fs::remove_dir_all(&dir);
             std::fs::create_dir_all(&dir).unwrap();
             App::new(Some(&dir)).expect("app")
@@ -137,8 +137,8 @@ fn main() {
         "newproject-name" => {
             let mut app = App::new(Some(&root)).expect("app");
             app.execute_command(ids::NEW_PROJECT);
-            if let koda::app::overlay::Overlay::NewProject(flow) = &mut app.overlay {
-                flow.step = koda::app::overlay::NewProjectStep::Name;
+            if let kemori::app::overlay::Overlay::NewProject(flow) = &mut app.overlay {
+                flow.step = kemori::app::overlay::NewProjectStep::Name;
                 flow.name = "my-app".to_string();
             }
             app
@@ -146,21 +146,21 @@ fn main() {
         "newproject-lang" => {
             let mut app = App::new(Some(&root)).expect("app");
             app.execute_command(ids::NEW_PROJECT);
-            if let koda::app::overlay::Overlay::NewProject(flow) = &mut app.overlay {
-                flow.step = koda::app::overlay::NewProjectStep::Language;
+            if let kemori::app::overlay::Overlay::NewProject(flow) = &mut app.overlay {
+                flow.step = kemori::app::overlay::NewProjectStep::Language;
                 flow.name = "my-app".to_string();
                 flow.parent = root.clone();
             }
             app
         }
         "bracket" => {
-            let path = std::env::temp_dir().join("koda-preview-bracket.rs");
+            let path = std::env::temp_dir().join("kemori-preview-bracket.rs");
             std::fs::write(&path, "fn main() {\n    let x = (1 + 2);\n}\n").unwrap();
             let mut app = file_app(&path);
             app.editor
                 .active_document_mut()
                 .unwrap()
-                .move_to(koda::editor::Position::new(1, 13));
+                .move_to(kemori::editor::Position::new(1, 13));
             app
         }
         "tabs" => {
@@ -189,12 +189,12 @@ fn main() {
             app
         }
         "empty" => {
-            let path = std::env::temp_dir().join("koda-preview-empty.rs");
+            let path = std::env::temp_dir().join("kemori-preview-empty.rs");
             std::fs::write(&path, "").unwrap();
             file_app(&path)
         }
         "diagnostics" => {
-            let path = std::env::temp_dir().join("koda-preview-diagnostics.rs");
+            let path = std::env::temp_dir().join("kemori-preview-diagnostics.rs");
             std::fs::write(
                 &path,
                 "fn main() {\n    let values = [1, 2, 3;\n    println!(\"hi\");\n}\n",
@@ -207,7 +207,7 @@ fn main() {
             if let Some(doc) = app.editor.active_document_mut() {
                 doc.set_diagnostics_revision(1);
                 doc.apply_diagnostics(1, diagnostics);
-                doc.move_to(koda::editor::Position::new(1, 17));
+                doc.move_to(kemori::editor::Position::new(1, 17));
             }
             app.clear_status();
             app
@@ -226,7 +226,7 @@ fn main() {
             app
         }
         "hover" => {
-            let path = std::env::temp_dir().join("koda-preview-hover.rs");
+            let path = std::env::temp_dir().join("kemori-preview-hover.rs");
             std::fs::write(
                 &path,
                 "fn main() {\n    helper();\n    helper();\n}\n\nfn helper() {}\n",
@@ -236,7 +236,7 @@ fn main() {
             app.editor
                 .active_document_mut()
                 .unwrap()
-                .move_to(koda::editor::Position::new(1, 4));
+                .move_to(kemori::editor::Position::new(1, 4));
             app.execute_command(ids::HOVER);
             app
         }
@@ -256,7 +256,7 @@ fn main() {
     let backend = TestBackend::new(width, height);
     let mut terminal = Terminal::new(backend).expect("terminal");
     terminal
-        .draw(|frame| koda::ui::render(frame, &mut app))
+        .draw(|frame| kemori::ui::render(frame, &mut app))
         .expect("draw");
 
     let buffer = terminal.backend().buffer();

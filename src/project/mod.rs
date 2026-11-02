@@ -1,6 +1,6 @@
 //! Workspaces and projects.
 //!
-//! Koda treats files as living inside projects. A [`Project`] is the directory
+//! Kemori treats files as living inside projects. A [`Project`] is the directory
 //! that establishes language context, discovered by walking up from the file or
 //! directory the user opened.
 
@@ -34,7 +34,7 @@ pub enum ProjectKind {
     Generic,
 }
 
-/// Every marker Koda knows about, paired with the project kind it implies.
+/// Every marker Kemori knows about, paired with the project kind it implies.
 pub const KNOWN_MARKERS: &[(&str, ProjectKind)] = &[
     ("Cargo.toml", ProjectKind::Rust),
     ("Cargo.lock", ProjectKind::Rust),
@@ -183,7 +183,7 @@ impl Workspace {
             None => std::env::current_dir()?,
         };
         // Work with absolute paths so ancestor walking and git detection behave
-        // consistently regardless of how the user invoked Koda.
+        // consistently regardless of how the user invoked Kemori.
         let start = if start.is_absolute() {
             start
         } else {
@@ -292,7 +292,7 @@ mod tests {
 
     #[test]
     fn detects_rust_project_from_nested_file() {
-        let dir = std::env::temp_dir().join(format!("koda-proj-test-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-proj-test-{}", std::process::id()));
         let src = dir.join("src");
         fs::create_dir_all(&src).unwrap();
         fs::write(dir.join("Cargo.toml"), "[package]").unwrap();
@@ -311,7 +311,7 @@ mod tests {
 
     #[test]
     fn detects_java_and_csharp_projects() {
-        let dir = std::env::temp_dir().join(format!("koda-proj-jvm-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-proj-jvm-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
 
@@ -330,7 +330,7 @@ mod tests {
 
     #[test]
     fn detects_php_project_from_composer_json() {
-        let dir = std::env::temp_dir().join(format!("koda-proj-php-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-proj-php-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         fs::write(dir.join("composer.json"), "{}").unwrap();
@@ -343,7 +343,7 @@ mod tests {
 
     #[test]
     fn detects_kotlin_project_from_gradle_kts() {
-        let dir = std::env::temp_dir().join(format!("koda-proj-kt-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-proj-kt-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         fs::write(dir.join("build.gradle.kts"), "plugins {}\n").unwrap();
@@ -371,7 +371,7 @@ mod tests {
             ("default.nix", ProjectKind::Nix),
         ] {
             let dir = std::env::temp_dir().join(format!(
-                "koda-proj-{}-{}",
+                "kemori-proj-{}-{}",
                 marker.replace('.', "-"),
                 std::process::id()
             ));
@@ -385,7 +385,7 @@ mod tests {
 
     #[test]
     fn nearest_markers_finds_nested_subprojects() {
-        let dir = std::env::temp_dir().join(format!("koda-mono-test-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-mono-test-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         let sub = dir.join("crates/a/src");
         fs::create_dir_all(&sub).unwrap();

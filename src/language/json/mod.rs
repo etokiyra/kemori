@@ -269,7 +269,8 @@ mod tests {
 
     #[test]
     fn distinguishes_keys_from_string_values() {
-        let (spans, _) = JsonProvider.highlight("  \"name\": \"koda\",", HighlightState::default());
+        let (spans, _) =
+            JsonProvider.highlight("  \"name\": \"kemori\",", HighlightState::default());
         let kinds: Vec<TokenKind> = spans.iter().map(|s| s.kind).collect();
         assert_eq!(kinds[0], TokenKind::Attribute);
         assert_eq!(kinds[1], TokenKind::Operator);
@@ -306,7 +307,7 @@ mod tests {
 
     #[test]
     fn finds_top_level_keys() {
-        let text = "{\n  \"name\": \"koda\",\n  \"nested\": {\n    \"deep\": 1\n  }\n}\n";
+        let text = "{\n  \"name\": \"kemori\",\n  \"nested\": {\n    \"deep\": 1\n  }\n}\n";
         let symbols = json_symbols(text);
         let names: Vec<&str> = symbols.iter().map(|s| s.name.as_str()).collect();
         assert_eq!(names, vec!["name", "nested"]);

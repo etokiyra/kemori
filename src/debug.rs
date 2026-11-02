@@ -1,6 +1,6 @@
 //! Minimal debug adapter (DAP) scaffold.
 //!
-//! Koda does not ship a full debug adapter protocol client yet. This module
+//! Kemori does not ship a full debug adapter protocol client yet. This module
 //! provides a small, best-effort launcher that spawns an adapter, performs the
 //! `initialize`/`launch`/`setBreakpoints` handshake, and reports the outcome.
 //! It is the seam a real DAP client will replace.
@@ -73,7 +73,7 @@ pub fn launch(adapter: &str, args: &[&str], breakpoints: &[usize]) -> Result<Str
         "seq": 1,
         "type": "request",
         "command": "initialize",
-        "arguments": { "adapterID": adapter, "clientID": "koda", "clientName": "Koda" }
+        "arguments": { "adapterID": adapter, "clientID": "kemori", "clientName": "Kemori" }
     });
     write_frame(&mut stdin, &init).map_err(|err| err.to_string())?;
 

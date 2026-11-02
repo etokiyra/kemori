@@ -9,7 +9,7 @@ impl App {
         while !self.should_quit {
             // Only repaint when something changed: input arrived, background
             // work completed, the animation advanced, a status message expired,
-            // or the terminal was resized. An idle Koda does no work at all.
+            // or the terminal was resized. An idle Kemori does no work at all.
             self.poll_diagnostics();
             self.poll_lsp_start();
             let lsp_health_changed = self.poll_lsp_health();
@@ -67,7 +67,7 @@ impl App {
                         needs_redraw = true;
                     }
                     Event::FocusGained => {
-                        // Files may have appeared or vanished while Koda was in
+                        // Files may have appeared or vanished while Kemori was in
                         // the background; catch up quietly.
                         self.workspace.refresh();
                         self.request_git_refresh();

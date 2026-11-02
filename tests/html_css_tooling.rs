@@ -1,6 +1,6 @@
 //! Live smoke tests for the HTML/CSS language servers.
 //!
-//! These require Koda's managed `vscode-langservers-extracted` package (or the
+//! These require Kemori's managed `vscode-langservers-extracted` package (or the
 //! servers on `PATH`) and are therefore `#[ignore]`d by default. They are the
 //! closest automated check to the real user workflow:
 //!
@@ -14,16 +14,16 @@
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-use koda::language::id::LanguageId;
-use koda::language::lsp::Server;
-use koda::language::tools::{Tool, ToolRegistry};
+use kemori::language::id::LanguageId;
+use kemori::language::lsp::Server;
+use kemori::language::tools::{Tool, ToolRegistry};
 
 fn handshake(tool: Tool, language: LanguageId) {
     let registry = ToolRegistry::discover();
     let Some(path) = registry.program_path(tool).map(Path::to_path_buf) else {
         panic!("{tool:?} is not installed; run Language Setup first");
     };
-    let root = std::env::temp_dir().join("koda-live-html");
+    let root = std::env::temp_dir().join("kemori-live-html");
     std::fs::create_dir_all(&root).expect("temp root");
 
     let mut server = Server::start(language, path.to_str().unwrap(), tool.server_args(), &root)

@@ -1,6 +1,6 @@
 //! A text buffer backed by a rope.
 //!
-//! Ropey gives Koda efficient insertion, deletion and slicing even for large
+//! Ropey gives Kemori efficient insertion, deletion and slicing even for large
 //! files, which keeps editing responsive without a bespoke data structure.
 
 use std::ops::Range;
@@ -54,7 +54,7 @@ impl Default for Buffer {
     }
 }
 
-/// The largest file Koda will load into the editor. Larger files are refused
+/// The largest file Kemori will load into the editor. Larger files are refused
 /// with a clear message rather than risking a long freeze and huge allocations.
 pub const MAX_OPEN_BYTES: u64 = 64 * 1024 * 1024;
 
@@ -339,7 +339,7 @@ mod tests {
     }
 
     fn temp_path(name: &str) -> std::path::PathBuf {
-        let dir = std::env::temp_dir().join(format!("koda-buffer-{name}-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-buffer-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         dir.join("file")
@@ -410,7 +410,7 @@ mod tests {
         let leftovers: Vec<_> = std::fs::read_dir(path.parent().unwrap())
             .unwrap()
             .filter_map(Result::ok)
-            .filter(|entry| entry.file_name().to_string_lossy().contains(".koda-"))
+            .filter(|entry| entry.file_name().to_string_lossy().contains(".kemori-"))
             .collect();
         assert!(leftovers.is_empty(), "temp files left: {leftovers:?}");
 

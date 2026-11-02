@@ -1,4 +1,4 @@
-//! Convert LSP payloads into Koda's own types.
+//! Convert LSP payloads into Kemori's own types.
 //!
 //! Keeping conversions here means the UI never sees a `serde_json::Value`, and
 //! the same popups and pickers serve both language-server results and the
@@ -13,10 +13,10 @@ use crate::language::hover::Hover;
 
 use super::{PositionEncoding, uri_to_path};
 
-/// Convert a Koda **character** column into the `character` unit the server
+/// Convert a Kemori **character** column into the `character` unit the server
 /// negotiated for a line.
 ///
-/// Koda counts Unicode scalar values; LSP counts UTF-8 bytes, UTF-16 code units
+/// Kemori counts Unicode scalar values; LSP counts UTF-8 bytes, UTF-16 code units
 /// or code points depending on the connection. `col` is clamped to the line and
 /// the conversion always lands on a character boundary, so it never splits a
 /// code point.
@@ -29,7 +29,7 @@ pub fn char_to_lsp(line: &str, col: usize, encoding: PositionEncoding) -> usize 
     }
 }
 
-/// Convert an LSP `character` unit into a Koda character column.
+/// Convert an LSP `character` unit into a Kemori character column.
 ///
 /// Out-of-range or mid-code-point offsets are clamped to the end of the line
 /// rather than panicking, so a malformed server message degrades safely.
@@ -55,7 +55,7 @@ fn units_to_char(line: &str, mut units: usize, width: fn(char) -> usize) -> usiz
     chars
 }
 
-/// Convert the LSP-encoded ranges of `edits` into Koda character positions.
+/// Convert the LSP-encoded ranges of `edits` into Kemori character positions.
 ///
 /// `line_text` supplies the text of a (zero-based) line; every edit range is
 /// resolved against it so edits are applied at character offsets, never at a
@@ -348,7 +348,7 @@ pub fn workspace_symbols(value: &Value) -> Vec<WorkspaceSymbolItem> {
         .collect()
 }
 
-/// Map an LSP `SymbolKind` number onto Koda's own symbol kinds.
+/// Map an LSP `SymbolKind` number onto Kemori's own symbol kinds.
 fn symbol_kind(kind: Option<u64>) -> crate::language::symbols::SymbolKind {
     use crate::language::symbols::SymbolKind;
     match kind {

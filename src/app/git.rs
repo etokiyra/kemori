@@ -83,7 +83,7 @@ impl App {
         let name = root
             .file_name()
             .and_then(|n| n.to_str())
-            .unwrap_or("koda-project")
+            .unwrap_or("kemori-project")
             .to_string();
         self.background.github_create(root, name);
         self.set_status("Creating GitHub repository…");

@@ -1,12 +1,12 @@
 //! Asynchronous Language Server Protocol client.
 //!
-//! When a language server is installed, Koda starts one per workspace root and
+//! When a language server is installed, Kemori starts one per workspace root and
 //! speaks JSON-RPC over its stdio. This is deliberately minimal and grows
 //! feature by feature: today it runs the lifecycle and turns
-//! `textDocument/publishDiagnostics` into Koda diagnostics. Completion, hover,
+//! `textDocument/publishDiagnostics` into Kemori diagnostics. Completion, hover,
 //! navigation, rename and code actions build on the same connection later.
 //!
-//! Nothing here is required for basic editing. If no server is installed Koda
+//! Nothing here is required for basic editing. If no server is installed Kemori
 //! keeps using its built-in heuristic providers, so an offline machine still
 //! has syntax highlighting, structural diagnostics, symbols and formatting.
 
@@ -31,14 +31,14 @@ use crate::language::id::LanguageId;
 
 use jsonrpc::Message;
 
-/// How long the server has to answer a request before Koda gives up and clears
+/// How long the server has to answer a request before Kemori gives up and clears
 /// the pending state. Formatting can legitimately take longer than the others.
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(60);
 const FORMAT_REQUEST_TIMEOUT: Duration = Duration::from_secs(120);
 
 /// How a server counts the `character` offset in a `{line, character}` position.
 ///
-/// LSP defaults to UTF-16 code units; Koda works in Unicode scalar values. Koda
+/// LSP defaults to UTF-16 code units; Kemori works in Unicode scalar values. Kemori
 /// asks for UTF-8 (which matches its own counting) and only the servers that do
 /// not offer it fall back to UTF-16.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -54,16 +54,16 @@ pub enum PositionEncoding {
 pub enum TextDocumentSyncKind {
     /// The server asked for no document synchronization.
     None,
-    /// The server accepts whole-document changes. Koda sends full text for both
+    /// The server accepts whole-document changes. Kemori sends full text for both
     /// this and `Incremental`, which the protocol permits as the safe fallback.
     #[default]
     Full,
-    /// The server prefers incremental changes; Koda still sends full text
+    /// The server prefers incremental changes; Kemori still sends full text
     /// (omitting `range`), which is a valid whole-document replacement.
     Incremental,
 }
 
-/// The server features Koda knows how to use, from its `initialize` result.
+/// The server features Kemori knows how to use, from its `initialize` result.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 struct ServerCapabilities {
     completion: bool,
@@ -115,7 +115,7 @@ fn language_id_for(language: LanguageId, path: &Path) -> &'static str {
     }
 }
 
-/// The Koda feature a server request belongs to.
+/// The Kemori feature a server request belongs to.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RequestKind {
     Completion,
@@ -151,7 +151,7 @@ pub enum ServerEvent {
         id: i64,
         result: Result<Value, String>,
     },
-    /// The server asked Koda to apply a workspace edit. The app must apply it
+    /// The server asked Kemori to apply a workspace edit. The app must apply it
     /// and then call [`Server::apply_edit_response`].
     ApplyEdit { id: Value, params: Value },
     /// The server could not start or exited unexpectedly.
@@ -199,7 +199,7 @@ impl Server {
     }
 
     /// Spawn a server with extra environment variables, used to point managed
-    /// servers at Koda-provisioned runtimes (the .NET SDK, a managed JDK).
+    /// servers at Kemori-provisioned runtimes (the .NET SDK, a managed JDK).
     pub fn start_with_env(
         language: LanguageId,
         program: &str,
@@ -231,7 +231,7 @@ impl Server {
 
         let (tx, rx) = mpsc::channel::<Message>();
         thread::Builder::new()
-            .name("koda-lsp-reader".to_string())
+            .name("kemori-lsp-reader".to_string())
             .spawn(move || {
                 let mut reader = BufReader::new(stdout);
                 loop {
@@ -259,7 +259,7 @@ impl Server {
         if let Some(pipe) = stderr_pipe {
             let buffer = Arc::clone(&stderr);
             let _ = thread::Builder::new()
-                .name("koda-lsp-stderr".to_string())
+                .name("kemori-lsp-stderr".to_string())
                 .spawn(move || {
                     let reader = BufReader::new(pipe);
                     for line in reader.lines().map_while(Result::ok) {
@@ -301,7 +301,7 @@ impl Server {
             "initialize",
             json!({
                 "processId": null,
-                "clientInfo": { "name": "koda" },
+                "clientInfo": { "name": "kemori" },
                 "rootUri": path_to_uri(root),
                 "rootPath": root.to_string_lossy(),
                 "capabilities": {
@@ -743,7 +743,7 @@ impl Drop for Server {
     }
 }
 
-/// Parse the `initialize` result into the encoding and capabilities Koda uses.
+/// Parse the `initialize` result into the encoding and capabilities Kemori uses.
 fn parse_initialize(result: &Value) -> (PositionEncoding, ServerCapabilities) {
     let encoding = match result
         .pointer("/capabilities/positionEncoding")
@@ -781,7 +781,7 @@ fn parse_initialize(result: &Value) -> (PositionEncoding, ServerCapabilities) {
 /// Parse `textDocumentSync`, which the protocol defines as either a numeric
 /// `TextDocumentSyncKind` or an object carrying a `change` kind.
 ///
-/// Koda has always sent whole-document changes; an omitted field keeps that
+/// Kemori has always sent whole-document changes; an omitted field keeps that
 /// behaviour (some servers rely on it), while an explicit `None` is honoured so
 /// such a server is not spammed with changes it does not want.
 fn parse_sync(value: Option<&Value>) -> TextDocumentSyncKind {
@@ -935,9 +935,9 @@ mod tests {
 
     #[test]
     fn uri_round_trips_paths_with_spaces() {
-        let path = PathBuf::from("/tmp/koda lsp/main.rs");
+        let path = PathBuf::from("/tmp/kemori lsp/main.rs");
         let uri = path_to_uri(&path);
-        assert_eq!(uri, "file:///tmp/koda%20lsp/main.rs");
+        assert_eq!(uri, "file:///tmp/kemori%20lsp/main.rs");
         assert_eq!(uri_to_path(&uri).as_deref(), Some(path.as_path()));
     }
 
@@ -1027,7 +1027,7 @@ printf 'Content-Length: %s\r\n\r\n%s' "${#note}" "$note"
 cat >/dev/null
 "#;
 
-        let dir = std::env::temp_dir().join(format!("koda-lsp-mock-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-lsp-mock-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let script = dir.join("mock-lsp.sh");
@@ -1104,7 +1104,7 @@ cat >/dev/null
             parse_sync(Some(&json!({ "change": 2 }))),
             TextDocumentSyncKind::Incremental
         );
-        // An omitted field keeps Koda's long-standing full-text sync.
+        // An omitted field keeps Kemori's long-standing full-text sync.
         assert_eq!(parse_sync(None), TextDocumentSyncKind::Full);
 
         let (_, caps) = parse_initialize(&json!({ "capabilities": { "textDocumentSync": 0 } }));

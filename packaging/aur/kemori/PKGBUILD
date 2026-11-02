@@ -1,10 +1,10 @@
 # Maintainer: Kiyra <kiyrai@proton.me>
-pkgname=koda
+pkgname=kemori
 pkgver=2.1.0
 pkgrel=1
 pkgdesc='A modern, lightweight, terminal-native IDE'
 arch=('x86_64')
-url='https://github.com/etokiyra/koda'
+url='https://github.com/etokiyra/kemori'
 license=('MPL-2.0')
 depends=('glibc' 'libgcc')
 makedepends=('cargo')
@@ -29,7 +29,7 @@ optdepends=(
   'elixir: Elixir language server runtime'
   'nix: Nix language server and formatter'
 )
-source=("$pkgname-$pkgver.tar.gz::https://github.com/etokiyra/koda/archive/refs/tags/v$pkgver.tar.gz")
+source=("$pkgname-$pkgver.tar.gz::https://github.com/etokiyra/kemori/archive/refs/tags/v$pkgver.tar.gz")
 sha256sums=('d387161a821cc6152f27e10070f258dbef8c46aa0b05c9e71014b15c9aaa8dc3')
 
 prepare() {
@@ -49,7 +49,7 @@ check() {
 
 package() {
   cd "$pkgname-$pkgver"
-  install -Dm755 target/release/koda "$pkgdir/usr/bin/koda"
+  install -Dm755 target/release/kemori "$pkgdir/usr/bin/kemori"
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
   install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
   install -Dm644 CHANGELOG.md "$pkgdir/usr/share/doc/$pkgname/CHANGELOG.md"

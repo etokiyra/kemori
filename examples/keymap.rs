@@ -9,5 +9,5 @@
 //! the two drift, so regenerate with this example after adding a command.
 
 fn main() {
-    print!("{}", koda::commands::keymap_markdown());
+    print!("{}", kemori::commands::keymap_markdown());
 }

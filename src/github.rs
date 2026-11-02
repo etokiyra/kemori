@@ -1,6 +1,6 @@
 //! GitHub CLI (`gh`) integration.
 //!
-//! Koda shells out to the user's `gh` binary when present. It never stores
+//! Kemori shells out to the user's `gh` binary when present. It never stores
 //! credentials itself; authentication is delegated to `gh auth`.
 
 use std::path::Path;

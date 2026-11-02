@@ -313,7 +313,7 @@ mod tests {
         let kinds: Vec<TokenKind> = spans("[package]").iter().map(|s| s.0).collect();
         assert_eq!(kinds, vec![TokenKind::Attribute]);
 
-        let s = spans("name = \"koda\"");
+        let s = spans("name = \"kemori\"");
         assert_eq!(s[0].0, TokenKind::Function);
         assert!(s.iter().any(|(kind, _, _)| *kind == TokenKind::String));
         assert!(s.iter().any(|(kind, _, _)| *kind == TokenKind::Operator));
@@ -337,7 +337,8 @@ mod tests {
 
     #[test]
     fn symbols_list_tables_and_root_keys() {
-        let text = "title = \"x\"\n\n[package]\nname = \"koda\"\n\n[dependencies]\nserde = \"1\"\n";
+        let text =
+            "title = \"x\"\n\n[package]\nname = \"kemori\"\n\n[dependencies]\nserde = \"1\"\n";
         let symbols = toml_symbols(text);
         let names: Vec<&str> = symbols.iter().map(|s| s.name.as_str()).collect();
         assert_eq!(names, vec!["title", "package", "dependencies"]);

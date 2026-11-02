@@ -1,7 +1,7 @@
 //! Per-language support class, surfaced in-app.
 //!
 //! The authoritative source is `docs/LANGUAGE-SUPPORT.md`; this table mirrors
-//! it so Koda can answer "what can I realistically expect for this language?"
+//! it so Kemori can answer "what can I realistically expect for this language?"
 //! without a second hand-written document in the UI.
 
 use crate::language::id::LanguageId;
@@ -37,7 +37,7 @@ pub fn class(language: LanguageId) -> &'static str {
     }
 }
 
-/// Every language Koda knows, with its support class.
+/// Every language Kemori knows, with its support class.
 pub fn all() -> Vec<(LanguageId, &'static str)> {
     LanguageId::ALL
         .iter()

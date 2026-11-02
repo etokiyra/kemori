@@ -4,7 +4,7 @@
 //! single- and double-quoted strings, variables, keywords, builtins, numbers
 //! and operators. Structural diagnostics reuse the shared delimiter checker,
 //! and `phpactor` is used for richer intelligence when it happens to be
-//! installed (there is no portable user-local installer, so Koda does not
+//! installed (there is no portable user-local installer, so Kemori does not
 //! pretend to provision it).
 
 use crate::language::completion::{Completion, CompletionKind};
@@ -506,14 +506,14 @@ mod tests {
     #[test]
     fn highlights_tags_variables_and_keywords() {
         let (spans, state) = PhpProvider.highlight(
-            "<?php $name = 'koda'; echo $name;",
+            "<?php $name = 'kemori'; echo $name;",
             HighlightState::default(),
         );
         assert!(!state.in_block_comment);
         assert_eq!(kind_at(&spans, 0), Some(TokenKind::Keyword)); // <?php
         assert_eq!(kind_at(&spans, 6), Some(TokenKind::Type)); // $name
-        assert_eq!(kind_at(&spans, 14), Some(TokenKind::String)); // 'koda'
-        assert_eq!(kind_at(&spans, 22), Some(TokenKind::Keyword)); // echo
+        assert_eq!(kind_at(&spans, 14), Some(TokenKind::String)); // 'kemori'
+        assert_eq!(kind_at(&spans, 24), Some(TokenKind::Keyword)); // echo
     }
 
     #[test]

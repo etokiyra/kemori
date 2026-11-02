@@ -1,6 +1,6 @@
 //! A pragmatic `.gitignore` matcher.
 //!
-//! Koda deliberately links no git library, so this implements the subset of
+//! Kemori deliberately links no git library, so this implements the subset of
 //! `.gitignore` syntax that removes noise from the file tree, quick open, the
 //! inline tree filter and workspace symbol search:
 //!
@@ -303,7 +303,7 @@ mod tests {
     use std::fs;
 
     fn project(name: &str, gitignore: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("koda-ignore-{name}-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-ignore-{name}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         fs::write(dir.join(".gitignore"), gitignore).unwrap();

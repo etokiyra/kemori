@@ -1,26 +1,26 @@
 [package]
-# The crate is `koda-ide` because `koda` is already taken on crates.io; the
-# installed binary is still `koda`.
-name = "koda-ide"
-version = "2.1.0"
+# Kemori is published as `kemori`; the installed binary is `kemori`.
+name = "kemori"
+version = "3.0.0"
 edition = "2024"
 rust-version = "1.88"
+authors = ["Kiyra <kiyrai@proton.me>"]
 description = "A modern, lightweight, terminal-native IDE"
 license = "MPL-2.0"
-repository = "https://github.com/etokiyra/koda"
-homepage = "https://github.com/etokiyra/koda"
-documentation = "https://docs.rs/koda-ide"
+repository = "https://github.com/etokiyra/kemori"
+homepage = "https://github.com/etokiyra/kemori"
+documentation = "https://docs.rs/kemori"
 readme = "README.md"
 keywords = ["ide", "tui", "editor", "lsp", "terminal"]
 categories = ["command-line-utilities", "development-tools", "text-editors"]
-default-run = "koda"
+default-run = "kemori"
 
 [lib]
-name = "koda"
+name = "kemori"
 path = "src/lib.rs"
 
 [[bin]]
-name = "koda"
+name = "kemori"
 path = "src/main.rs"
 
 [dependencies]
@@ -34,15 +34,15 @@ unicode-width = "0.2.2"
 lto = "thin"
 codegen-units = 1
 
-# Debian/Ubuntu package (cargo deb). The binary is still `koda`; the package is
-# named `koda` so `apt install koda` and `sudo koda` are unsurprising.
+# Debian/Ubuntu package (cargo deb). The binary is still `kemori`; the package is
+# named `kemori` so `apt install kemori` and `sudo kemori` are unsurprising.
 [package.metadata.deb]
-name = "koda"
+name = "kemori"
 maintainer = "Kiyra <kiyrai@proton.me>"
-copyright = "2026, Koda contributors"
+copyright = "2026, Kemori contributors"
 license-file = ["LICENSE", "0"]
 extended-description = """\
-Koda is a terminal-native IDE: it detects a project's languages, provisions
+Kemori is a terminal-native IDE: it detects a project's languages, provisions
 the language servers it needs, and provides editing, search, git integration
 and language intelligence without a configuration file."""
 section = "editors"
@@ -51,25 +51,25 @@ depends = "libc6 (>= 2.35), libgcc-s1"
 recommends = ["git", "curl"]
 suggests = ["unzip", "gnupg"]
 assets = [
-    ["target/release/koda", "usr/bin/koda", "755"],
-    ["LICENSE", "usr/share/doc/koda/LICENSE", "644"],
-    ["README.md", "usr/share/doc/koda/README.md", "644"],
-    ["CHANGELOG.md", "usr/share/doc/koda/CHANGELOG.md", "644"],
-    ["SECURITY.md", "usr/share/doc/koda/SECURITY.md", "644"],
-    ["docs/*.md", "usr/share/doc/koda/docs/", "644"],
+    ["target/release/kemori", "usr/bin/kemori", "755"],
+    ["LICENSE", "usr/share/doc/kemori/LICENSE", "644"],
+    ["README.md", "usr/share/doc/kemori/README.md", "644"],
+    ["CHANGELOG.md", "usr/share/doc/kemori/CHANGELOG.md", "644"],
+    ["SECURITY.md", "usr/share/doc/kemori/SECURITY.md", "644"],
+    ["docs/*.md", "usr/share/doc/kemori/docs/", "644"],
 ]
 
 # RPM package (cargo generate-rpm). auto-req discovers libc/libgcc from ldd.
 [package.metadata.generate-rpm]
-name = "koda"
+name = "kemori"
 assets = [
-    { source = "target/release/koda", dest = "/usr/bin/koda", mode = "755" },
-    { source = "LICENSE", dest = "/usr/share/licenses/koda/LICENSE", mode = "644" },
-    { source = "README.md", dest = "/usr/share/doc/koda/README.md", mode = "644", doc = true },
-    { source = "CHANGELOG.md", dest = "/usr/share/doc/koda/CHANGELOG.md", mode = "644", doc = true },
-    { source = "SECURITY.md", dest = "/usr/share/doc/koda/SECURITY.md", mode = "644", doc = true },
-    { source = "docs/*.md", dest = "/usr/share/doc/koda/docs/", mode = "644", doc = true },
+    { source = "target/release/kemori", dest = "/usr/bin/kemori", mode = "755" },
+    { source = "LICENSE", dest = "/usr/share/licenses/kemori/LICENSE", mode = "644" },
+    { source = "README.md", dest = "/usr/share/doc/kemori/README.md", mode = "644", doc = true },
+    { source = "CHANGELOG.md", dest = "/usr/share/doc/kemori/CHANGELOG.md", mode = "644", doc = true },
+    { source = "SECURITY.md", dest = "/usr/share/doc/kemori/SECURITY.md", mode = "644", doc = true },
+    { source = "docs/*.md", dest = "/usr/share/doc/kemori/docs/", mode = "644", doc = true },
 ]
 release = "1"
-vendor = "Koda contributors"
+vendor = "Kemori contributors"
 auto-req = "builtin"

@@ -1,7 +1,7 @@
 //! Parse `textDocument/foldingRange` responses.
 //!
 //! A range hides the lines between `startLine` and `endLine`, both inclusive
-//! and zero-based in the protocol. Koda keeps the pair as `(header, last hidden
+//! and zero-based in the protocol. Kemori keeps the pair as `(header, last hidden
 //! line)` and rejects ranges that hide nothing.
 
 use serde_json::Value;

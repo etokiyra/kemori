@@ -144,7 +144,7 @@ mod tests {
             file_name: Some("README.md"),
             extension: Some("md"),
             project_markers: &["Cargo.toml".to_string()],
-            content_sample: Some("# Koda\n"),
+            content_sample: Some("# Kemori\n"),
         });
         assert_eq!(result.language, LanguageId::Unknown);
     }

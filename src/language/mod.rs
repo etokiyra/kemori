@@ -4,7 +4,7 @@
 //!
 //! * [`detection`] decides *which* language a file belongs to, combining project
 //!   context, file metadata and content.
-//! * [`provider`] decides *how* Koda supports that language.
+//! * [`provider`] decides *how* Kemori supports that language.
 //!
 //! [`LanguageService`] wires the two together for convenient use by the app, but
 //! neither half depends on the other.
@@ -69,7 +69,7 @@ pub struct LanguageService {
 }
 
 impl LanguageService {
-    /// Build the service with Koda's built-in languages.
+    /// Build the service with Kemori's built-in languages.
     pub fn builtin() -> Self {
         let registry = ProviderRegistry::builtin();
         let detector = DetectionEngine::new(registry.descriptors());
@@ -198,7 +198,7 @@ mod tests {
     use std::path::PathBuf;
 
     fn temp_dir(tag: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("koda-langs-{tag}-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-langs-{tag}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir

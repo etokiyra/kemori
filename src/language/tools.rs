@@ -1,13 +1,13 @@
-//! Discovery of the external tools Koda can drive.
+//! Discovery of the external tools Kemori can drive.
 //!
-//! Koda hides tool management: it probes for the language servers and
+//! Kemori hides tool management: it probes for the language servers and
 //! formatters it knows about, installs missing ones through their official
 //! package managers, and reports what it finds.
 //!
 //! A probe checks that the program exists *and* that it runs, because a
 //! `rustup` shim can exist for a component that is not installed. Lookups
 //! search `PATH` and then a handful of well-known user bin directories, so a
-//! tool installed by rustup or pip is found even when Koda was launched from a
+//! tool installed by rustup or pip is found even when Kemori was launched from a
 //! GUI or a non-login shell whose `PATH` omits them.
 
 use std::io::Write;
@@ -29,21 +29,21 @@ const PROBE_TIMEOUT: Duration = Duration::from_secs(5);
 /// is still running when the window closes is treated as usable.
 const PROBE_ALIVE_WINDOW: Duration = Duration::from_millis(600);
 
-/// The Node.js LTS release Koda provisions when the user has no `node`/`npm`.
+/// The Node.js LTS release Kemori provisions when the user has no `node`/`npm`.
 ///
 /// Pinned so the download and the SHA-256 Node.js publishes for it are
 /// reproducible; the npm bundled with this release installs the npm-based
-/// language servers into Koda's managed prefix.
+/// language servers into Kemori's managed prefix.
 const NODE_VERSION: &str = "24.21.0";
 
-/// The `rustup-init` release Koda downloads when the user has no `rustup`.
+/// The `rustup-init` release Kemori downloads when the user has no `rustup`.
 ///
 /// rustup publishes a per-target binary and its SHA-256 under a versioned
 /// archive URL, so the bootstrap is a verified download rather than the moving
 /// `sh.rustup.rs` script.
 const RUSTUP_VERSION: &str = "1.29.1";
 
-/// The exact official Go toolchain release Koda provisions. `go.dev/dl` publishes
+/// The exact official Go toolchain release Kemori provisions. `go.dev/dl` publishes
 /// the SHA-256 of every release's archives, so the version is pinned and the
 /// download is still verified against upstream metadata.
 const GO_VERSION: &str = "go1.27.1";
@@ -55,20 +55,20 @@ const GO_VERSION: &str = "go1.27.1";
 const ADOPTIUM_JDK25: &str = "jdk-25.0.4.1+1";
 const ADOPTIUM_JDK21: &str = "jdk-21.0.12.1+1";
 
-/// The `lua-language-server` release Koda provisions. It ships a self-contained
+/// The `lua-language-server` release Kemori provisions. It ships a self-contained
 /// archive per platform (no runtime required), so the version is pinned for a
 /// stable download URL.
 const LUA_LS_VERSION: &str = "3.19.1";
 
-/// The `kotlin-language-server` release Koda provisions. Pinned because its
-/// bundled Kotlin compiler must run on the dedicated JDK 21 Koda installs.
+/// The `kotlin-language-server` release Kemori provisions. Pinned because its
+/// bundled Kotlin compiler must run on the dedicated JDK 21 Kemori installs.
 const KOTLIN_LS_VERSION: &str = "1.3.13";
 
-/// The Dart SDK release Koda provisions. Pinned so the archive and Google's
+/// The Dart SDK release Kemori provisions. Pinned so the archive and Google's
 /// published `.sha256sum` stay in step.
 const DART_SDK_VERSION: &str = "3.13.5";
 
-/// The Swift toolchain release Koda provisions on supported Linux systems.
+/// The Swift toolchain release Kemori provisions on supported Linux systems.
 ///
 /// Swift ships one signed toolchain tarball per distribution release; the exact
 /// asset is resolved from `/etc/os-release` at install time. The version is
@@ -76,65 +76,65 @@ const DART_SDK_VERSION: &str = "3.13.5";
 /// step.
 const SWIFT_VERSION: &str = "6.4.0";
 
-/// The ElixirLS release Koda provisions. Its launcher needs a matching
-/// Erlang/OTP and Elixir runtime, which Koda installs alongside it.
+/// The ElixirLS release Kemori provisions. Its launcher needs a matching
+/// Erlang/OTP and Elixir runtime, which Kemori installs alongside it.
 const ELIXIR_LS_VERSION: &str = "0.31.1";
 
-/// The Erlang/OTP and Elixir releases Koda provisions. They are pinned as a
+/// The Erlang/OTP and Elixir releases Kemori provisions. They are pinned as a
 /// compatible pair: the Elixir build is compiled for this OTP major.
 const OTP_VERSION: &str = "27.3.4";
 const ELIXIR_VERSION: &str = "1.18.4";
 
-/// The Hex release Koda installs into the private Mix home. `mix local.hex`
+/// The Hex release Kemori installs into the private Mix home. `mix local.hex`
 /// accepts an exact version and Hex verifies the archive against the checksum
 /// in `builds.hex.pm/installs/hex.csv`, so this is pinned rather than "latest".
 const HEX_VERSION: &str = "2.5.1";
 
-/// The rebar3 release Koda installs into the private Mix home.
+/// The rebar3 release Kemori installs into the private Mix home.
 ///
-/// The GitHub release publishes a single escript and Koda runs it through
+/// The GitHub release publishes a single escript and Kemori runs it through
 /// `mix local.rebar rebar3 <path>`. GitHub reports no asset digest for this
-/// release, so the SHA-256 is a Koda-computed pin of the immutable tagged asset
+/// release, so the SHA-256 is a Kemori-computed pin of the immutable tagged asset
 /// (verified to run on the pinned Erlang/OTP). It is the newest rebar3
 /// compatible with OTP 27.
 const REBAR3_VERSION: &str = "3.24.0";
 const REBAR3_SHA256: &str = "d2d31cfb98904b8e4917300a75f870de12cb5167cd6214d1043e973a56668a54";
 
-/// `App::cpanminus`, the non-interactive CPAN client Koda bootstraps so Perl
+/// `App::cpanminus`, the non-interactive CPAN client Kemori bootstraps so Perl
 /// modules can be installed without an interactive `cpan` first run. The
 /// archive and its SHA-256 (from MetaCPAN) are pinned together.
 const CPANM_VERSION: &str = "1.7049";
 const CPANM_SHA256: &str = "b9ffb88e62a06aa91bd7d5a28ef6bdbb942608aea90e3969aa29b33640035214";
 
-/// The standalone `clangd` release Koda provisions. The clangd project publishes
+/// The standalone `clangd` release Kemori provisions. The clangd project publishes
 /// a small, self-contained bundle per platform (much smaller than a full LLVM
 /// toolchain), with a SHA-256 digest on the GitHub asset.
 const CLANGD_VERSION: &str = "23.1.0";
 
-/// The prebuilt `asm-lsp` release Koda provisions where one exists, with
+/// The prebuilt `asm-lsp` release Kemori provisions where one exists, with
 /// `cargo install` as the fallback.
 const ASM_LSP_VERSION: &str = "0.10.1";
 
-/// The `phpactor` release whose `phpactor.phar` Koda provisions. phpactor is a
+/// The `phpactor` release whose `phpactor.phar` Kemori provisions. phpactor is a
 /// single executable phar, so Composer is not required.
 const PHPACTOR_VERSION: &str = "2026.06.23.0";
 
-/// The nixpkgs revision Koda pins for Nix tooling (`nil`, `nixfmt`).
+/// The nixpkgs revision Kemori pins for Nix tooling (`nil`, `nixfmt`).
 ///
 /// `nil` publishes no release assets and is not on crates.io, so Nix itself is
 /// the only trustworthy source. A commit is immutable and Nix verifies every
-/// store path it builds, so the install is reproducible without a Koda-side
+/// store path it builds, so the install is reproducible without a Kemori-side
 /// checksum.
 const NIXPKGS_REV: &str = "55bfb4d7437bd4e09ab7cba58a43bd68eb310044";
 
 /// The SHA-256 of the pinned `kotlin-language-server` `server.zip`.
 ///
 /// GitHub publishes no asset digest for this release, so the value is a
-/// Koda-computed pin of the immutable release asset (recorded from a fresh
+/// Kemori-computed pin of the immutable release asset (recorded from a fresh
 /// download and reviewed). A replaced or corrupted asset fails closed.
 const KOTLIN_LS_SHA256: &str = "4fe7d71d087b307c7869036171bd9d8c6a4284cd7c25b89098b0a24eb2d9b6d2";
 
-/// The Eclipse JDT Language Server milestone Koda provisions.
+/// The Eclipse JDT Language Server milestone Kemori provisions.
 ///
 /// Eclipse publishes a `.sha256` beside each milestone archive, and the
 /// snapshot timestamp is part of the immutable filename, so the pinned version
@@ -143,10 +143,10 @@ const JDTLS_VERSION: &str = "1.61.0";
 const JDTLS_SNAPSHOT: &str = "1.61.0-202609031315";
 const JDTLS_SHA256: &str = "338e7e73d61836651ba2453919a0d34fa763eb4e7c03342092309bffb8934c64";
 
-/// The OmniSharp release Koda provisions, pinned to an exact tag.
+/// The OmniSharp release Kemori provisions, pinned to an exact tag.
 const OMNISHARP_VERSION: &str = "v2.0.0";
 
-/// The exact .NET SDK version Koda provisions for OmniSharp.
+/// The exact .NET SDK version Kemori provisions for OmniSharp.
 ///
 /// Microsoft publishes a SHA-512 for every SDK archive in the channel's
 /// `releases.json`, so a pinned version can be verified without the moving
@@ -155,7 +155,7 @@ const DOTNET_SDK_VERSION: &str = "10.0.401";
 const DOTNET_CHANNEL: &str = "10.0";
 
 // Pinned package-manager inputs. A package manager still resolves its own
-// dependencies, but Koda always names an exact version, so an install is
+// dependencies, but Kemori always names an exact version, so an install is
 // reproducible and a new upstream release cannot arrive silently.
 const GOPLS_SPEC: &str = "golang.org/x/tools/gopls@v0.23.0";
 const SQLS_SPEC: &str = "github.com/sqls-server/sqls@v0.2.48";
@@ -175,15 +175,15 @@ const PERL_LS_SPEC: &str = "Perl::LanguageServer@2.6.2";
 /// must never wedge the background worker forever.
 const COMMAND_TIMEOUT: Duration = Duration::from_secs(30 * 60);
 
-/// The most output Koda keeps from an install command. A verbose or hostile
+/// The most output Kemori keeps from an install command. A verbose or hostile
 /// tool cannot exhaust memory; the excess is drained and discarded.
 const MAX_TOOL_OUTPUT: usize = 256 * 1024;
 
-/// The largest archive Koda will download. The managed JDK and .NET SDK are
+/// The largest archive Kemori will download. The managed JDK and .NET SDK are
 /// the biggest, and both are well under this.
 const MAX_DOWNLOAD_BYTES: u64 = 2 * 1024 * 1024 * 1024;
 
-/// A tool Koda knows how to use.
+/// A tool Kemori knows how to use.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Tool {
     RustAnalyzer,
@@ -225,7 +225,7 @@ pub enum ToolPurpose {
 }
 
 impl Tool {
-    /// Every tool Koda looks for, in the order it is presented.
+    /// Every tool Kemori looks for, in the order it is presented.
     pub const ALL: &'static [Tool] = &[
         Tool::RustAnalyzer,
         Tool::Gopls,
@@ -300,7 +300,7 @@ impl Tool {
     ///
     /// Some ecosystems ship different launcher names depending on how the tool
     /// was installed (for example ElixirLS's `language_server.sh` release
-    /// script versus the `elixir-ls` binary packaged by Homebrew/Mason). Koda
+    /// script versus the `elixir-ls` binary packaged by Homebrew/Mason). Kemori
     /// probes every name so an existing install is still found.
     pub fn candidates(self) -> &'static [&'static str] {
         match self {
@@ -514,43 +514,43 @@ impl Tool {
     pub fn install_hint(self) -> &'static str {
         match self {
             Tool::RustAnalyzer => "install with `rustup component add rust-analyzer`",
-            Tool::Gopls => "Koda installs gopls with `go install`, provisioning Go if missing",
-            Tool::Pylsp => "install `python-lsp-server` into a Koda-managed environment",
-            Tool::BashLs => "install with npm — Koda provisions Node.js if missing",
-            Tool::TypeScriptLs => "install with npm — Koda provisions Node.js if missing",
-            Tool::Clangd => "Koda can install the official clangd release",
-            Tool::Jdtls => "Koda can install a managed JDK and Eclipse JDT",
-            Tool::OmniSharp => "Koda can install the .NET SDK and OmniSharp",
-            Tool::KotlinLs => "Koda can install a managed JDK 21 and kotlin-language-server",
-            Tool::Phpactor => "Koda can install phpactor.phar (needs a PHP runtime)",
-            Tool::LuaLs => "Koda can install a self-contained lua-language-server",
-            Tool::Sqls => "Koda installs sqls with `go install`, provisioning Go if missing",
-            Tool::RubyLs => "Koda installs solargraph into an isolated gem home (needs Ruby)",
-            Tool::AsmLsp => "Koda can install the prebuilt asm-lsp release",
+            Tool::Gopls => "Kemori installs gopls with `go install`, provisioning Go if missing",
+            Tool::Pylsp => "install `python-lsp-server` into a Kemori-managed environment",
+            Tool::BashLs => "install with npm — Kemori provisions Node.js if missing",
+            Tool::TypeScriptLs => "install with npm — Kemori provisions Node.js if missing",
+            Tool::Clangd => "Kemori can install the official clangd release",
+            Tool::Jdtls => "Kemori can install a managed JDK and Eclipse JDT",
+            Tool::OmniSharp => "Kemori can install the .NET SDK and OmniSharp",
+            Tool::KotlinLs => "Kemori can install a managed JDK 21 and kotlin-language-server",
+            Tool::Phpactor => "Kemori can install phpactor.phar (needs a PHP runtime)",
+            Tool::LuaLs => "Kemori can install a self-contained lua-language-server",
+            Tool::Sqls => "Kemori installs sqls with `go install`, provisioning Go if missing",
+            Tool::RubyLs => "Kemori installs solargraph into an isolated gem home (needs Ruby)",
+            Tool::AsmLsp => "Kemori can install the prebuilt asm-lsp release",
             Tool::PerlLs => {
-                "Koda bootstraps cpanm and installs Perl::LanguageServer into an isolated local::lib"
+                "Kemori bootstraps cpanm and installs Perl::LanguageServer into an isolated local::lib"
             }
-            Tool::Pls => "Koda bootstraps cpanm and installs PLS into an isolated local::lib",
-            Tool::DartAnalyzer => "Koda can install a managed Dart SDK for the analysis server",
-            Tool::ElixirLs => "Koda can install Erlang/OTP, Elixir and ElixirLS",
+            Tool::Pls => "Kemori bootstraps cpanm and installs PLS into an isolated local::lib",
+            Tool::DartAnalyzer => "Kemori can install a managed Dart SDK for the analysis server",
+            Tool::ElixirLs => "Kemori can install Erlang/OTP, Elixir and ElixirLS",
             Tool::SwiftLs => {
-                "Koda can install a GPG-verified Swift toolchain on supported Linux distributions"
+                "Kemori can install a GPG-verified Swift toolchain on supported Linux distributions"
             }
-            Tool::HtmlLs | Tool::CssLs => "install with npm — Koda provisions Node.js if missing",
+            Tool::HtmlLs | Tool::CssLs => "install with npm — Kemori provisions Node.js if missing",
             Tool::Rustfmt => "install with `rustup component add rustfmt`",
-            Tool::Gofmt => "Koda can install the official Go toolchain, which includes gofmt",
-            Tool::Prettier => "install with npm — Koda provisions Node.js if missing",
+            Tool::Gofmt => "Kemori can install the official Go toolchain, which includes gofmt",
+            Tool::Prettier => "install with npm — Kemori provisions Node.js if missing",
             Tool::ClangFormat => "it ships with the Clang/LLVM toolchain",
             Tool::Shfmt => "install it with `go install mvdan.cc/sh/v3/cmd/shfmt@v3.14.1`",
             Tool::PerlTidy => "install it with `cpan Perl::Tidy`",
-            Tool::Nil => "Koda installs nil from a pinned nixpkgs revision with `nix profile`",
+            Tool::Nil => "Kemori installs nil from a pinned nixpkgs revision with `nix profile`",
             Tool::Nixfmt => {
-                "Koda installs nixfmt from a pinned nixpkgs revision with `nix profile`"
+                "Kemori installs nixfmt from a pinned nixpkgs revision with `nix profile`"
             }
         }
     }
 
-    /// A rough download size for a managed install, when Koda runs one.
+    /// A rough download size for a managed install, when Kemori runs one.
     ///
     /// Used to warn about a large download before it starts. It is an estimate,
     /// not a promise: the archive a distribution serves can change.
@@ -574,9 +574,9 @@ impl Tool {
 
     /// A precise, actionable reason a tool is not usable, for Language Setup.
     ///
-    /// Unlike [`Tool::install_hint`] this distinguishes "Koda can install this",
+    /// Unlike [`Tool::install_hint`] this distinguishes "Kemori can install this",
     /// "this platform is unsupported", and "a prerequisite is missing", so the
-    /// UI never tells the user to install something Koda would do itself.
+    /// UI never tells the user to install something Kemori would do itself.
     pub fn setup_reason(self) -> String {
         if can_install(self) {
             let mut reason = self.install_hint().to_string();
@@ -588,10 +588,10 @@ impl Tool {
         match self {
             Tool::SwiftLs if swift_toolchain().is_none() => "no Swift toolchain is published for \
                  this platform (musl or a non-Linux host); install the Swift toolchain manually \
-                 and Koda will use it"
+                 and Kemori will use it"
                 .to_string(),
             Tool::SwiftLs if locate("gpg").is_none() => {
-                "install `gnupg` so Koda can verify the Swift toolchain signature".to_string()
+                "install `gnupg` so Kemori can verify the Swift toolchain signature".to_string()
             }
             Tool::SwiftLs => {
                 // `can_install` was false for another reason: a library the
@@ -604,15 +604,15 @@ impl Tool {
                 };
                 format!(
                     "the Swift toolchain needs {}{hint} from your distribution; install it and \
-                     Koda can install Swift",
+                     Kemori can install Swift",
                     missing.join(", ")
                 )
             }
             Tool::ElixirLs => "no Erlang/Elixir build is published for this platform; install \
-                 Erlang and Elixir and Koda will use ElixirLS"
+                 Erlang and Elixir and Kemori will use ElixirLS"
                 .to_string(),
             Tool::PerlLs | Tool::Pls if locate("perl").is_none() => {
-                "install Perl and Koda can set up its language server automatically".to_string()
+                "install Perl and Kemori can set up its language server automatically".to_string()
             }
             _ => {
                 let missing = self.missing_prerequisites();
@@ -625,7 +625,7 @@ impl Tool {
         }
     }
 
-    /// The tool for a language and purpose, if Koda knows one.
+    /// The tool for a language and purpose, if Kemori knows one.
     pub fn for_language(language: LanguageId, purpose: ToolPurpose) -> Option<Tool> {
         Tool::ALL
             .iter()
@@ -636,7 +636,7 @@ impl Tool {
     /// The first language server for `language` that is installed and usable.
     ///
     /// A language may have more than one candidate server — Perl has PLS and
-    /// `Perl::LanguageServer` — so Koda picks the first *available* one in
+    /// `Perl::LanguageServer` — so Kemori picks the first *available* one in
     /// preference order rather than committing to a single tool.
     pub fn available_server(language: LanguageId, tools: &ToolRegistry) -> Option<Tool> {
         Tool::ALL.iter().copied().find(|tool| {
@@ -646,7 +646,7 @@ impl Tool {
         })
     }
 
-    /// The first language server for `language` that Koda could install.
+    /// The first language server for `language` that Kemori could install.
     pub fn installable_server(language: LanguageId, tools: &ToolRegistry) -> Option<Tool> {
         Tool::ALL.iter().copied().find(|tool| {
             tool.serves(language)
@@ -672,22 +672,22 @@ impl Tool {
                 &["install", "-g", TYPESCRIPT_LS_SPEC, TYPESCRIPT_SPEC],
             )),
             // `clangd`, `phpactor`, `lua-language-server`, Kotlin, Dart, Elixir,
-            // Swift and Go tooling are installed by Koda's own managed plans.
+            // Swift and Go tooling are installed by Kemori's own managed plans.
             Tool::Clangd => None,
             Tool::Phpactor => None,
             Tool::LuaLs => None,
             Tool::KotlinLs => None,
-            // Go tooling is installed by Koda's managed plan, which provisions
+            // Go tooling is installed by Kemori's managed plan, which provisions
             // Go itself when it is missing.
             Tool::Gopls | Tool::Sqls => None,
-            // `solargraph` installs into a Koda-private gem home.
+            // `solargraph` installs into a Kemori-private gem home.
             Tool::RubyLs => None,
             // `asm-lsp` uses a prebuilt release, falling back to `cargo`.
             Tool::AsmLsp => None,
-            // Perl, Dart, Elixir and Swift servers are installed by Koda's own
+            // Perl, Dart, Elixir and Swift servers are installed by Kemori's own
             // plans rather than a single package-manager command.
             Tool::PerlLs | Tool::Pls | Tool::DartAnalyzer | Tool::ElixirLs | Tool::SwiftLs => None,
-            // `jdtls` and `OmniSharp` are installed by Koda's own managed
+            // `jdtls` and `OmniSharp` are installed by Kemori's own managed
             // download plan rather than a single package-manager command.
             Tool::Jdtls | Tool::OmniSharp => None,
             Tool::HtmlLs | Tool::CssLs => {
@@ -699,21 +699,21 @@ impl Tool {
             // `clang-format`, `perltidy` and `nixfmt` ship with their language
             // toolchains or distributions.
             Tool::ClangFormat | Tool::PerlTidy | Tool::Nixfmt => None,
-            // `nil` is installed by Koda's managed Nix profile plan.
+            // `nil` is installed by Kemori's managed Nix profile plan.
             Tool::Nil => None,
         }
     }
 
-    /// Programs this tool needs before it can be installed, so Koda can explain
+    /// Programs this tool needs before it can be installed, so Kemori can explain
     /// when a whole toolchain is missing.
     pub fn prerequisites(self) -> &'static [&'static str] {
         match self {
             Tool::RustAnalyzer | Tool::Rustfmt => &["rustup"],
-            // `gopls`/`sqls`/`shfmt` are installed by Koda's own plan, which
+            // `gopls`/`sqls`/`shfmt` are installed by Kemori's own plan, which
             // provisions the official Go toolchain when none is present.
             Tool::Gopls | Tool::Gofmt | Tool::Sqls | Tool::Shfmt => &[],
             Tool::Pylsp => &["python3"],
-            // Koda can provision Node.js itself, so npm is not a hard
+            // Kemori can provision Node.js itself, so npm is not a hard
             // prerequisite. The install plan checks for `curl` and an archive
             // tool before offering the managed runtime.
             Tool::BashLs | Tool::TypeScriptLs => &[],
@@ -725,18 +725,18 @@ impl Tool {
             Tool::Clangd | Tool::OmniSharp => &[],
             Tool::Phpactor => &["php"],
             Tool::LuaLs => &[],
-            // The dedicated JDK 21 is provided by Koda's managed download plan,
+            // The dedicated JDK 21 is provided by Kemori's managed download plan,
             // so no system Java is required.
             Tool::KotlinLs => &[],
-            // `solargraph` installs into a Koda-private gem home but still needs
+            // `solargraph` installs into a Kemori-private gem home but still needs
             // a system Ruby.
             Tool::RubyLs => &["gem"],
             Tool::AsmLsp => &[],
             Tool::PerlLs | Tool::Pls => &["perl"],
             // Dart, Erlang/Elixir and the Swift toolchain are provided by
-            // Koda's managed download plans.
+            // Kemori's managed download plans.
             Tool::DartAnalyzer | Tool::ElixirLs | Tool::SwiftLs => &[],
-            // Nix tooling comes from Nix itself; Koda never installs a package
+            // Nix tooling comes from Nix itself; Kemori never installs a package
             // manager for it.
             Tool::Nil | Tool::Nixfmt => &["nix"],
             // Formatters.
@@ -754,12 +754,12 @@ impl Tool {
             .collect()
     }
 
-    /// The ordered strategies Koda will try to install this tool.
+    /// The ordered strategies Kemori will try to install this tool.
     ///
-    /// Each attempt is a short command sequence; Koda re-probes the tool after
+    /// Each attempt is a short command sequence; Kemori re-probes the tool after
     /// every attempt and stops at the first that yields a working binary. Every
     /// strategy is self-contained and targets a location the user can write to
-    /// — a Koda-managed Python virtualenv or npm prefix, `--user` installs, or
+    /// — a Kemori-managed Python virtualenv or npm prefix, `--user` installs, or
     /// the official `rustup` installer — so a missing permission or a Python
     /// without `pip` never blocks provisioning.
     pub fn install_attempts(self) -> Vec<InstallAttempt> {
@@ -773,25 +773,25 @@ impl Tool {
             Tool::BashLs => npm_attempts(&[BASH_LS_SPEC]),
             Tool::TypeScriptLs => npm_attempts(&[TYPESCRIPT_LS_SPEC, TYPESCRIPT_SPEC]),
             // The clangd project publishes a small, self-contained bundle, so
-            // Koda does not need a full LLVM toolchain.
+            // Kemori does not need a full LLVM toolchain.
             Tool::Clangd => clangd_attempts(),
-            // `phpactor` is a single phar; Koda downloads it directly and only
+            // `phpactor` is a single phar; Kemori downloads it directly and only
             // needs a PHP runtime, not Composer.
             Tool::Phpactor => phpactor_attempts(),
             // `lua-language-server` ships a self-contained, runtime-free archive
-            // per platform, so Koda manages it like the JDK and OmniSharp.
+            // per platform, so Kemori manages it like the JDK and OmniSharp.
             Tool::LuaLs => lua_ls_attempts(),
             // `kotlin-language-server` needs a JDK whose version its bundled
-            // compiler understands, so Koda installs a dedicated JDK 21.
+            // compiler understands, so Kemori installs a dedicated JDK 21.
             Tool::KotlinLs => kotlin_ls_attempts(),
             Tool::Sqls => go_attempts(&[SQLS_SPEC]),
-            // `solargraph` installs into a Koda-private gem home when a system
+            // `solargraph` installs into a Kemori-private gem home when a system
             // Ruby is available.
             Tool::RubyLs => ruby_attempts(),
             // A prebuilt `asm-lsp` release where one exists, otherwise `cargo`
             // (bootstrapping the Rust toolchain when needed).
             Tool::AsmLsp => asm_lsp_attempts(),
-            // The Dart SDK is self-contained and managed by Koda.
+            // The Dart SDK is self-contained and managed by Kemori.
             Tool::DartAnalyzer => dart_sdk_attempts(),
             // `Perl::LanguageServer` bootstraps cpanm and installs into an
             // isolated local::lib.
@@ -806,7 +806,7 @@ impl Tool {
             Tool::Jdtls => jdtls_attempts(),
             Tool::OmniSharp => omnisharp_attempts(),
             Tool::HtmlLs | Tool::CssLs => npm_attempts(&[VSCODE_LANGSERVERS_SPEC]),
-            // `gofmt` ships with Go, so Koda provisions the toolchain.
+            // `gofmt` ships with Go, so Kemori provisions the toolchain.
             Tool::Gofmt => go_toolchain_attempts(),
             Tool::Prettier => npm_attempts(&[PRETTIER_SPEC]),
             Tool::Shfmt => go_attempts(&[SHFMT_SPEC]),
@@ -896,11 +896,11 @@ pub enum InstallStep {
     /// Microsoft publishes in the channel's `releases.json`. The archive still
     /// needs an [`InstallStep::Extract`].
     DotnetSdk { dest: PathBuf },
-    /// Download and verify a Koda-managed Node.js runtime, whose checksum the
+    /// Download and verify a Kemori-managed Node.js runtime, whose checksum the
     /// Node.js project publishes in `SHASUMS256.txt`. The archive still needs
     /// an [`InstallStep::Extract`].
     NodeRuntime { dest: PathBuf },
-    /// Download and verify a Koda-managed Dart SDK, whose checksum Google
+    /// Download and verify a Kemori-managed Dart SDK, whose checksum Google
     /// publishes beside the archive. The archive still needs an
     /// [`InstallStep::Extract`].
     DartSdk { dest: PathBuf },
@@ -926,7 +926,7 @@ pub enum InstallStep {
         asset: String,
         dest: PathBuf,
     },
-    /// Create Koda's Swift compatibility directory: a `libncurses.so.6` alias to
+    /// Create Kemori's Swift compatibility directory: a `libncurses.so.6` alias to
     /// the system's wide library and a link to the system's `libxml2.so.2`,
     /// without modifying the system.
     SwiftCompat { dest: PathBuf },
@@ -962,7 +962,7 @@ pub enum BobPackage {
     Elixir,
 }
 
-/// A strategy for installing a tool: an ordered command sequence that Koda runs
+/// A strategy for installing a tool: an ordered command sequence that Kemori runs
 /// and then verifies by re-probing the tool.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InstallAttempt {
@@ -1009,12 +1009,12 @@ fn component_attempts(component: &'static str) -> Vec<InstallAttempt> {
     attempts
 }
 
-/// Install a Nix package from the pinned nixpkgs revision into a Koda-private
+/// Install a Nix package from the pinned nixpkgs revision into a Kemori-private
 /// Nix profile.
 ///
 /// Nix is the only practical source for `nil`/`nixfmt` (no prebuilt release, not
 /// on crates.io), and it verifies every store path it builds. The profile is
-/// kept under Koda's tools directory so the user's own profile is untouched.
+/// kept under Kemori's tools directory so the user's own profile is untouched.
 fn nix_attempts(package: &'static str) -> Vec<InstallAttempt> {
     let Some(profile) = nix_profile_dir() else {
         return Vec::new();
@@ -1035,7 +1035,7 @@ fn nix_attempts(package: &'static str) -> Vec<InstallAttempt> {
     vec![InstallAttempt::one("nix profile", command)]
 }
 
-/// The Nix profile Koda installs Nix tooling into, when a tools directory is
+/// The Nix profile Kemori installs Nix tooling into, when a tools directory is
 /// available.
 fn nix_profile_dir() -> Option<PathBuf> {
     Some(tools_dir()?.join("nix-profile"))
@@ -1100,7 +1100,7 @@ fn first_sha256(body: &str) -> Option<String> {
 ///
 /// The old bootstrap ran the moving `sh.rustup.rs` script with no integrity
 /// check. rustup publishes a per-target `rustup-init` binary and its SHA-256
-/// under a versioned archive URL, so Koda downloads the exact binary, verifies
+/// under a versioned archive URL, so Kemori downloads the exact binary, verifies
 /// it, and runs it non-interactively; rustup then verifies the toolchain it
 /// installs through its own signed manifests.
 fn rustup_init(dest: &Path) -> Result<(), String> {
@@ -1125,7 +1125,7 @@ fn rustup_init(dest: &Path) -> Result<(), String> {
 }
 
 /// Bootstrap the Rust toolchain with the verified `rustup-init` binary, then run
-/// `final_command`. Skipped on Windows, where Koda has no supported path.
+/// `final_command`. Skipped on Windows, where Kemori has no supported path.
 fn rustup_bootstrap_with(final_command: InstallCommand) -> Option<InstallAttempt> {
     if cfg!(windows) || home_dir().is_none() || rustup_target().is_none() {
         return None;
@@ -1142,10 +1142,10 @@ fn rustup_bootstrap_with(final_command: InstallCommand) -> Option<InstallAttempt
 
 /// Install Go tooling with `go install`, provisioning Go itself when absent.
 ///
-/// `go install` writes to a Koda-private `GOBIN`, so the tools never land in
+/// `go install` writes to a Kemori-private `GOBIN`, so the tools never land in
 /// the user's `~/go` and never mix with a system Go's installations. The first
 /// attempt uses whatever `go` the user has; the second downloads the official
-/// Go toolchain into Koda's data directory.
+/// Go toolchain into Kemori's data directory.
 fn go_attempts(packages: &[&str]) -> Vec<InstallAttempt> {
     let install = go_install_command(packages);
     let mut attempts = vec![InstallAttempt::one("go install", install.clone())];
@@ -1156,7 +1156,7 @@ fn go_attempts(packages: &[&str]) -> Vec<InstallAttempt> {
 }
 
 /// Download the official Go toolchain (and optionally run a final command with
-/// it), when Koda can provision Go on this platform.
+/// it), when Kemori can provision Go on this platform.
 fn managed_go_attempt(final_command: Option<InstallCommand>) -> Option<InstallAttempt> {
     go_platform()?;
     let downloads = downloads_dir()?;
@@ -1184,7 +1184,7 @@ fn go_toolchain_attempts() -> Vec<InstallAttempt> {
 }
 
 /// The `go install` command for a set of pinned `module@version` specs, with a
-/// Koda-private `GOPATH`/`GOBIN` so installations stay isolated.
+/// Kemori-private `GOPATH`/`GOBIN` so installations stay isolated.
 fn go_install_command(specs: &[&str]) -> InstallCommand {
     let mut args = vec!["install".to_string()];
     for spec in specs {
@@ -1318,9 +1318,9 @@ fn phpactor_attempts() -> Vec<InstallAttempt> {
     )]
 }
 
-/// Install `solargraph` into a Koda-private gem home.
+/// Install `solargraph` into a Kemori-private gem home.
 ///
-/// A system Ruby is still required; Koda only isolates the gems so the user's
+/// A system Ruby is still required; Kemori only isolates the gems so the user's
 /// global gem environment is untouched.
 fn ruby_attempts() -> Vec<InstallAttempt> {
     if locate("gem").is_none() {
@@ -1369,7 +1369,7 @@ fn python_attempts() -> Vec<InstallAttempt> {
         let pip = venv_program(&venv, "pip").to_string_lossy().into_owned();
         for python in ["python3", "python"] {
             attempts.push(InstallAttempt::sequence(
-                "a Koda-managed virtualenv",
+                "a Kemori-managed virtualenv",
                 vec![
                     InstallCommand::with_args(
                         python,
@@ -1409,7 +1409,7 @@ fn python_attempts() -> Vec<InstallAttempt> {
 /// Strategies for installing an npm package into a user-local prefix.
 ///
 /// The first two use whatever `npm` the user already has; the last provisions a
-/// Koda-managed Node.js runtime (with its bundled npm) so the install still
+/// Kemori-managed Node.js runtime (with its bundled npm) so the install still
 /// succeeds on a machine with no Node.js at all.
 fn npm_attempts(packages: &[&str]) -> Vec<InstallAttempt> {
     let mut attempts = Vec::new();
@@ -1430,7 +1430,7 @@ fn npm_attempts(packages: &[&str]) -> Vec<InstallAttempt> {
         InstallCommand::with_args("npm", npm_args(None, packages)),
     ));
 
-    // No Node.js at all: install one under Koda's data directory and use its
+    // No Node.js at all: install one under Kemori's data directory and use its
     // bundled npm, so zero-configuration still holds.
     if node_provisionable()
         && let (Some(prefix), Some(archive), Some(dest), Some(npm)) =
@@ -1438,7 +1438,7 @@ fn npm_attempts(packages: &[&str]) -> Vec<InstallAttempt> {
     {
         let cache = prefix.with_file_name("npm-cache");
         attempts.push(InstallAttempt::managed(
-            "a Koda-managed Node.js runtime",
+            "a Kemori-managed Node.js runtime",
             vec![
                 InstallStep::NodeRuntime {
                     dest: archive.clone(),
@@ -1474,7 +1474,7 @@ fn npm_args(prefix_and_cache: Option<(&Path, &Path)>, packages: &[&str]) -> Vec<
 
 /// A best-effort advisory lock over the managed tools directory.
 ///
-/// Two Koda instances sharing a data directory must not install into the same
+/// Two Kemori instances sharing a data directory must not install into the same
 /// npm prefix or Python virtualenv at once. The lock is a file created with
 /// `create_new`; a stale one (from a crashed instance) is reclaimed by age.
 struct InstallLock {
@@ -1517,7 +1517,7 @@ impl InstallLock {
             .is_some_and(|age| age > STALE_INSTALL_LOCK);
         if !stale {
             return Err(
-                "another Koda instance is installing tools — try again shortly".to_string(),
+                "another Kemori instance is installing tools — try again shortly".to_string(),
             );
         }
         let _ = std::fs::remove_file(&path);
@@ -1527,7 +1527,7 @@ impl InstallLock {
                 Ok(InstallLock { path, nonce })
             }
             Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
-                Err("another Koda instance is installing tools — try again shortly".to_string())
+                Err("another Kemori instance is installing tools — try again shortly".to_string())
             }
             Err(err) => Err(err.to_string()),
         }
@@ -1557,12 +1557,12 @@ impl Drop for InstallLock {
 /// Install a tool by trying each strategy and verifying the result.
 ///
 /// Intended for the background worker. A strategy's commands run in order; if
-/// one fails the strategy is abandoned, and after every strategy Koda re-probes
+/// one fails the strategy is abandoned, and after every strategy Kemori re-probes
 /// the tool — a package manager can report success without producing a binary
-/// Koda can find. Returns a short success message or the most recent
+/// Kemori can find. Returns a short success message or the most recent
 /// actionable error.
 ///
-/// A lock around the managed tools directory keeps two Koda instances from
+/// A lock around the managed tools directory keeps two Kemori instances from
 /// installing into the same npm prefix or Python virtualenv at once.
 pub fn install(tool: Tool) -> Result<String, String> {
     let attempts = tool.install_attempts();
@@ -1626,7 +1626,7 @@ fn filter_runnable(attempts: Vec<InstallAttempt>) -> Vec<InstallAttempt> {
 
 /// Validate an install plan before any destructive work begins.
 ///
-/// This checks only what Koda can know cheaply and reliably: that its tools
+/// This checks only what Kemori can know cheaply and reliably: that its tools
 /// directory exists and is writable, and that the target filesystem has room for
 /// the estimated download. Network availability, proxy reachability and archive
 /// contents are necessarily runtime checks and are not predicted here.
@@ -1639,18 +1639,18 @@ fn preflight(tool: Tool) -> Result<(), String> {
     Ok(())
 }
 
-/// Confirm Koda can create and write inside its managed tools directory.
+/// Confirm Kemori can create and write inside its managed tools directory.
 fn ensure_tools_dir_writable(dir: &Path) -> Result<(), String> {
     std::fs::create_dir_all(dir).map_err(|err| {
         format!(
-            "could not create Koda's tools directory {}: {err}",
+            "could not create Kemori's tools directory {}: {err}",
             dir.display()
         )
     })?;
     let probe = temp_sibling(&dir.join("write-probe"))?;
     std::fs::write(&probe, b"").map_err(|err| {
         format!(
-            "Koda's tools directory {} is not writable: {err}",
+            "Kemori's tools directory {} is not writable: {err}",
             dir.display()
         )
     })?;
@@ -1692,15 +1692,15 @@ fn run_step(step: &InstallStep) -> Result<(), String> {
     }
 }
 
-/// A `Command` for an install subprocess, run from Koda's own tools directory.
+/// A `Command` for an install subprocess, run from Kemori's own tools directory.
 ///
 /// Installing from the user's project directory lets a repository-local
 /// `.npmrc` (or an equivalent per-directory config) redirect a package manager
-/// to an attacker-controlled registry. Running from a Koda-managed directory
+/// to an attacker-controlled registry. Running from a Kemori-managed directory
 /// removes that vector while leaving the user's own `~/.npmrc` and similar
 /// configuration in effect.
 ///
-/// Koda's managed runtimes (Node.js, Erlang/OTP, Elixir, Dart, Perl, Swift) are
+/// Kemori's managed runtimes (Node.js, Erlang/OTP, Elixir, Dart, Perl, Swift) are
 /// put on `PATH`, so a managed `elixir`, `npm` or `perl` and any
 /// `#!/usr/bin/env` launcher work even before the user has installed anything.
 fn install_command(program: &str) -> Command {
@@ -1714,7 +1714,7 @@ fn install_command(program: &str) -> Command {
     command
 }
 
-/// `PATH` with every Koda-managed runtime bin directory first.
+/// `PATH` with every Kemori-managed runtime bin directory first.
 fn managed_path() -> Option<String> {
     let mut dirs: Vec<PathBuf> = Vec::new();
     if let Some(node) = node_bin_dir() {
@@ -1801,7 +1801,7 @@ fn run_command(command: &InstallCommand) -> Result<(), String> {
 
 /// Download `url` to `dest`, verifying a SHA-256 when one is known.
 ///
-/// A verified artifact is reused from Koda's cache when present, so a reinstall
+/// A verified artifact is reused from Kemori's cache when present, so a reinstall
 /// or repair needs no network. The destination is replaced atomically only after
 /// verification, so a failed download never clobbers a known-good file.
 fn download(url: &str, dest: &Path, sha256: Option<&str>) -> Result<(), String> {
@@ -1998,7 +1998,7 @@ fn verify_hash(dest: &Path, expected: &str, kind: HashKind) -> Result<(), String
     Ok(())
 }
 
-/// Koda's cache of verified provisioning artifacts.
+/// Kemori's cache of verified provisioning artifacts.
 ///
 /// A sibling of the managed tools directory, keyed by the artifact's own digest
 /// so two different artifacts can never collide and a cached entry is always
@@ -2116,7 +2116,7 @@ fn temp_sibling(path: &Path) -> Result<PathBuf, String> {
         .duration_since(SystemTime::UNIX_EPOCH)
         .map(|since| since.as_nanos())
         .unwrap_or(0);
-    Ok(parent.join(format!(".{name}.koda-{}-{unique}", std::process::id())))
+    Ok(parent.join(format!(".{name}.kemori-{}-{unique}", std::process::id())))
 }
 
 /// Move `src` over `dest` in one step, creating `dest`'s parent if needed.
@@ -2160,7 +2160,7 @@ fn proxy_from_env(env: impl Fn(&str) -> Option<String>) -> Option<String> {
 /// Forward the selected proxy environment variable to `curl`.
 ///
 /// `curl` honours these variables itself, but passing the selected one
-/// explicitly keeps Koda's intent visible and testable. This forwards the
+/// explicitly keeps Kemori's intent visible and testable. This forwards the
 /// variable; it does not establish or validate a live proxy.
 fn apply_proxy(command: &mut Command) {
     if let Some(proxy) = proxy_from_env(|key| std::env::var(key).ok()) {
@@ -2195,7 +2195,7 @@ fn free_disk_bytes(path: &Path) -> Option<u64> {
 ///
 /// A clear error beats a half-written toolchain. When free space cannot be
 /// measured (`df` missing or unparsable) the check is skipped rather than
-/// blocking a valid install, and a size Koda does not know is not guessed.
+/// blocking a valid install, and a size Kemori does not know is not guessed.
 fn ensure_disk_space(dest: &Path, needed: u64) -> Result<(), String> {
     let Some(free) = free_disk_bytes(dest) else {
         return Ok(());
@@ -2287,7 +2287,7 @@ fn dotnet_platform() -> Option<&'static str> {
 /// Download and verify the pinned .NET SDK that OmniSharp runs on.
 ///
 /// Microsoft publishes each channel's `releases.json` with a SHA-512 for every
-/// SDK archive, so Koda downloads the versioned archive directly instead of
+/// SDK archive, so Kemori downloads the versioned archive directly instead of
 /// fetching and running the moving, unverified `dotnet-install.sh` script. The
 /// pinned SDK version must be present in the channel or the install fails
 /// closed rather than silently moving to another version.
@@ -2358,7 +2358,7 @@ fn node_asset() -> Option<String> {
     Some(format!("node-v{NODE_VERSION}-{triple}.{extension}"))
 }
 
-/// Whether Koda can provision a managed Node.js runtime here: a published
+/// Whether Kemori can provision a managed Node.js runtime here: a published
 /// archive for the platform, plus `curl` and the matching archive tool.
 fn node_provisionable() -> bool {
     let Some(asset) = node_asset() else {
@@ -2374,7 +2374,7 @@ fn node_provisionable() -> bool {
 
 /// Download and verify the Node.js runtime archive.
 ///
-/// Node.js publishes one `SHASUMS256.txt` per release, so Koda reads the
+/// Node.js publishes one `SHASUMS256.txt` per release, so Kemori reads the
 /// checksum for *this* platform's asset and verifies it before extraction. The
 /// archive is not unpacked here; an [`InstallStep::Extract`] follows.
 fn node_runtime(dest: &Path) -> Result<(), String> {
@@ -2439,9 +2439,9 @@ fn dart_sdk_asset() -> Option<&'static str> {
     })
 }
 
-/// Download and verify a Koda-managed Dart SDK.
+/// Download and verify a Kemori-managed Dart SDK.
 ///
-/// Google publishes a sibling `.sha256sum` for every SDK archive, so Koda reads
+/// Google publishes a sibling `.sha256sum` for every SDK archive, so Kemori reads
 /// the checksum for *this* platform's asset and verifies it before extraction.
 /// Only the Dart SDK is downloaded; Flutter is not, because the analysis server
 /// is part of Dart and a Dart-only project does not need it.
@@ -2588,7 +2588,7 @@ fn fnv1a(value: &str) -> u64 {
 
 /// Download a file and verify it against a detached GPG signature.
 ///
-/// The keys are imported into a private keyring under Koda's tools directory, so
+/// The keys are imported into a private keyring under Kemori's tools directory, so
 /// the user's own GPG configuration is never touched. Verification is
 /// fail-closed: a missing `gpg`, a missing signature, or a signature that does
 /// not match leaves no downloaded file behind.
@@ -2599,10 +2599,10 @@ fn download_gpg(url: &str, dest: &Path, signature_url: &str, keys_url: &str) -> 
         );
     }
     let Some(home) = gnupg_home() else {
-        return Err("could not locate Koda's data directory for a GPG keyring".to_string());
+        return Err("could not locate Kemori's data directory for a GPG keyring".to_string());
     };
     let Some(downloads) = downloads_dir() else {
-        return Err("could not locate Koda's download directory".to_string());
+        return Err("could not locate Kemori's download directory".to_string());
     };
     let keys = downloads.join("release-keys.asc");
     let signature = append_extension(dest, "sig");
@@ -2687,7 +2687,7 @@ fn verify_signature(home: &Path, keys: &Path, signature: &Path, file: &Path) -> 
 /// The SHA-256 GitHub's API reports for a release asset, if present.
 ///
 /// GitHub added a `digest` field (`sha256:<hex>`) to release assets, which lets
-/// Koda verify an asset without a separately published checksum file.
+/// Kemori verify an asset without a separately published checksum file.
 fn github_asset_sha256(body: &str, asset: &str) -> Option<String> {
     let value: serde_json::Value = serde_json::from_str(body).ok()?;
     let assets = value.get("assets")?.as_array()?;
@@ -2716,10 +2716,10 @@ fn github_release(repo: &str, tag: &str, asset: &str, dest: &Path) -> Result<(),
     download(&url, dest, Some(&checksum))
 }
 
-/// Create Koda's Swift compatibility directory.
+/// Create Kemori's Swift compatibility directory.
 ///
 /// The official toolchain's only mismatches with a non-native distribution are
-/// the ncurses soname (Koda's build expects `libncurses.so.6`, the system ships
+/// the ncurses soname (Kemori's build expects `libncurses.so.6`, the system ships
 /// `libncursesw.so.6`, the same library) and `libxml2.so.2`, which some rolling
 /// distributions provide through a compatibility package. Nothing in the system
 /// is copied or modified: the directory holds links that a scoped
@@ -2807,7 +2807,7 @@ fn go_platform() -> Option<(&'static str, &'static str)> {
 /// Download the pinned official Go toolchain.
 ///
 /// `go.dev/dl/?mode=json&include=all` reports every release and the SHA-256 of
-/// each archive, so Koda selects `GO_VERSION` and verifies against upstream
+/// each archive, so Kemori selects `GO_VERSION` and verifies against upstream
 /// metadata instead of tracking the latest stable. The archive root is `go/`, so
 /// a later [`InstallStep::Extract`] with `strip: 1` yields `go/bin/go`.
 fn go_toolchain(dest: &Path) -> Result<(), String> {
@@ -2847,7 +2847,7 @@ fn go_toolchain(dest: &Path) -> Result<(), String> {
         }
     }
     let filename = filename.ok_or_else(|| format!("Go published no {os}/{arch} archive"))?;
-    // Fail closed: Go runs Koda's tooling, so never install it unverified.
+    // Fail closed: Go runs Kemori's tooling, so never install it unverified.
     let sha256 = sha256.ok_or_else(|| format!("Go published no checksum for {filename}"))?;
     download(
         &format!("https://go.dev/dl/{filename}"),
@@ -2866,7 +2866,7 @@ fn append_extension(path: &Path, extension: &str) -> PathBuf {
 
 /// Read `/etc/os-release` into `(ID, ID_LIKE, VERSION_ID)`.
 ///
-/// This is how Koda picks the right toolchain artifact for the running
+/// This is how Kemori picks the right toolchain artifact for the running
 /// distribution without guessing from a kernel version.
 fn os_release() -> Option<(String, String, String)> {
     let text = std::fs::read_to_string("/etc/os-release").ok()?;
@@ -2934,7 +2934,7 @@ fn swift_native_asset() -> Option<(&'static str, &'static str)> {
     swift_platform(&id, &id_like, &version, std::env::consts::ARCH)
 }
 
-/// The Swift toolchain Koda should provision on this host.
+/// The Swift toolchain Kemori should provision on this host.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct SwiftToolchain {
     /// The swift.org release directory (`ubuntu2404`, `ubi10`, …).
@@ -2949,7 +2949,7 @@ struct SwiftToolchain {
 /// Resolve the Swift toolchain for this host.
 ///
 /// A distribution swift.org builds for directly gets its own artifact. Any
-/// other glibc Linux system gets the portable UBI10 build plus Koda's
+/// other glibc Linux system gets the portable UBI10 build plus Kemori's
 /// compatibility layer (a ncurses soname alias and the distribution's
 /// `libxml2.so.2`), which is how the maintained Arch package makes the same
 /// toolchain run. musl systems and non-Linux hosts get nothing.
@@ -2979,7 +2979,7 @@ fn swift_toolchain() -> Option<SwiftToolchain> {
 /// Libraries the Swift toolchain needs that this system does not provide.
 ///
 /// `libncurses.so.6` is satisfied by the wide `libncursesw.so.6` (the same
-/// library; the soname differs because Koda's build is not the system's).
+/// library; the soname differs because Kemori's build is not the system's).
 /// `libxml2.so.2` is a genuine ABI version some rolling distributions moved past
 /// and provide through a compatibility package.
 fn swift_missing_libs() -> Vec<&'static str> {
@@ -3044,7 +3044,7 @@ fn bob_platform() -> Option<&'static str> {
 ///
 /// `bob`'s Ubuntu 24.04 builds link against a modern glibc and OpenSSL 3, which
 /// current rolling distributions ship, so they run on many systems that have no
-/// explicit build. Koda still verifies the result by launching the real server,
+/// explicit build. Kemori still verifies the result by launching the real server,
 /// so an incompatible system fails with a clear message instead of a false
 /// success. musl systems (Alpine) are excluded because the glibc build cannot
 /// run there at all.
@@ -3288,7 +3288,7 @@ fn promote_directory(staging: &Path, dest: &Path) -> Result<(), String> {
     }
 }
 
-/// Which tool Koda uses to unpack a zip archive.
+/// Which tool Kemori uses to unpack a zip archive.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum ZipExtractor {
     Unzip,
@@ -3351,7 +3351,7 @@ fn extract_zip_with(
 
     // `unzip` and Python have no `--strip-components`, so unpack into a scratch
     // directory and move the wanted level up by hand.
-    let scratch = dest.with_extension("koda-extract");
+    let scratch = dest.with_extension("kemori-extract");
     let _ = std::fs::remove_dir_all(&scratch);
     std::fs::create_dir_all(&scratch)
         .map_err(|err| format!("could not create {}: {err}", scratch.display()))?;
@@ -3585,7 +3585,7 @@ fn last_stderr_line(stderr: &[u8]) -> String {
 
 /// Whether every step of at least one install strategy can run here.
 ///
-/// Koda only offers to install a tool it can really install, so it never
+/// Kemori only offers to install a tool it can really install, so it never
 /// promises an install and then fails because no package manager, `curl` or
 /// archive tool exists.
 pub fn can_install(tool: Tool) -> bool {
@@ -3604,10 +3604,10 @@ fn step_available(step: &InstallStep) -> bool {
         InstallStep::Run(command) => {
             locate(&command.program).is_some()
                 || is_user_bin_program(&command.program)
-                // A program supplied by a Koda-managed runtime an earlier step
+                // A program supplied by a Kemori-managed runtime an earlier step
                 // in the same attempt installs (for example `elixir` before the
                 // ElixirLS build).
-                || is_koda_provided_program(&command.program)
+                || is_kemori_provided_program(&command.program)
         }
         InstallStep::Download { .. }
         | InstallStep::AdoptiumJdk { .. }
@@ -3645,25 +3645,25 @@ fn step_available(step: &InstallStep) -> bool {
 /// Such a program may not exist yet but is produced by an earlier step in the
 /// strategy — the `rustup` bootstrap installs `~/.cargo/bin/rustup`, and a
 /// managed virtualenv's `pip` is created by `python -m venv` just before it is
-/// used. Treating these as available lets Koda offer the strategy it can run
+/// used. Treating these as available lets Kemori offer the strategy it can run
 /// instead of rejecting it up front.
 fn is_user_bin_program(program: &str) -> bool {
     let path = Path::new(program);
     path.is_absolute() && known_bin_dirs().iter().any(|dir| path.starts_with(dir))
 }
 
-/// Whether a program is supplied by a runtime Koda installs itself.
+/// Whether a program is supplied by a runtime Kemori installs itself.
 ///
 /// An install attempt may run one of these after an earlier step has produced
 /// it, so a missing binary is not a reason to withhold the offer.
-fn is_koda_provided_program(program: &str) -> bool {
+fn is_kemori_provided_program(program: &str) -> bool {
     matches!(
         program,
         "elixir" | "mix" | "erl" | "escript" | "go" | "cargo"
     )
 }
 
-/// What Koda learned about one tool.
+/// What Kemori learned about one tool.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ToolStatus {
     pub tool: Tool,
@@ -3692,33 +3692,33 @@ impl ToolStatus {
         }
     }
 
-    /// Whether Koda owns this install (it lives under Koda's tools directory).
+    /// Whether Kemori owns this install (it lives under Kemori's tools directory).
     ///
-    /// Only a managed tool may be updated or removed by Koda; a user's own
+    /// Only a managed tool may be updated or removed by Kemori; a user's own
     /// `rust-analyzer`, `clangd` or `gem` install is never touched.
     pub fn is_managed(&self) -> bool {
         self.path.as_deref().is_some_and(is_managed_path)
     }
 
-    /// The on-disk size of the Koda-managed component, when Koda owns the
+    /// The on-disk size of the Kemori-managed component, when Kemori owns the
     /// install. User/system installs return `None`.
     pub fn managed_size(&self) -> Option<u64> {
         let dir = managed_component(self.path.as_deref()?)?;
         directory_size(&dir)
     }
 
-    /// The managed component directory Koda would remove for this tool.
+    /// The managed component directory Kemori would remove for this tool.
     pub fn managed_dir(&self) -> Option<PathBuf> {
         managed_component(self.path.as_deref()?)
     }
 }
 
-/// Whether `path` was installed by Koda under its own tools directory.
+/// Whether `path` was installed by Kemori under its own tools directory.
 pub fn is_managed_path(path: &Path) -> bool {
     tools_dir().is_some_and(|tools| path.starts_with(tools))
 }
 
-/// The Koda-managed component directory containing `path`: the first path
+/// The Kemori-managed component directory containing `path`: the first path
 /// segment under the tools directory.
 pub fn managed_component(path: &Path) -> Option<PathBuf> {
     let tools = tools_dir()?;
@@ -3779,7 +3779,7 @@ impl ToolRegistry {
     /// test binary saturates the machine spawning thousands of `--version`
     /// processes at once. The environment does not change during a test run, so
     /// the first result is shared. Production always probes fresh, preserving
-    /// Koda's ability to notice a tool installed while it is running.
+    /// Kemori's ability to notice a tool installed while it is running.
     pub fn discover_cached() -> Self {
         #[cfg(test)]
         {
@@ -3904,7 +3904,7 @@ fn probe(tool: Tool) -> ToolStatus {
 ///
 /// The extracted VS Code servers reject every version query, so the only honest
 /// check is to launch the real server and see that it does not exit with an
-/// error. `stdin` is held open so the server initializes and waits; Koda stops
+/// error. `stdin` is held open so the server initializes and waits; Kemori stops
 /// it once the window elapses. A server that exits successfully on its own is
 /// also accepted, and one that exits with a failure status is not.
 fn probe_server(tool: Tool, path: PathBuf, mut command: Command) -> ToolStatus {
@@ -3970,7 +3970,7 @@ fn locate_tool(tool: Tool) -> Option<PathBuf> {
 /// Whether `program` can be found, returning its full path.
 ///
 /// `PATH` is searched first, then a handful of well-known user and system bin
-/// directories. The latter matters because Koda is often launched from a GUI or
+/// directories. The latter matters because Kemori is often launched from a GUI or
 /// a non-login shell whose `PATH` omits `~/.cargo/bin` and `~/.local/bin` —
 /// exactly where rustup and pip put language tooling.
 pub fn locate(program: &str) -> Option<PathBuf> {
@@ -4032,7 +4032,7 @@ fn known_bin_dirs() -> Vec<PathBuf> {
     // (for example under `sudo`).
     dirs.push(PathBuf::from("/run/current-system/sw/bin"));
     dirs.push(PathBuf::from("/nix/var/nix/profiles/default/bin"));
-    // Tools Koda installed itself, plus the npm prefix, Python virtualenv,
+    // Tools Kemori installed itself, plus the npm prefix, Python virtualenv,
     // managed Node.js and managed runtimes it maintains.
     if let Some(tools) = tools_dir() {
         if let Some(prefix) = npm_prefix() {
@@ -4079,34 +4079,34 @@ fn known_bin_dirs() -> Vec<PathBuf> {
     dirs
 }
 
-/// Koda's own directory for tools it installs, kept under the user's data
+/// Kemori's own directory for tools it installs, kept under the user's data
 /// directory so no elevated permissions are ever required.
 pub fn tools_dir() -> Option<PathBuf> {
     if let Some(data) = std::env::var_os("XDG_DATA_HOME") {
-        return Some(PathBuf::from(data).join("koda/tools"));
+        return Some(PathBuf::from(data).join("kemori/tools"));
     }
-    Some(PathBuf::from(std::env::var_os("HOME")?).join(".local/share/koda/tools"))
+    Some(PathBuf::from(std::env::var_os("HOME")?).join(".local/share/kemori/tools"))
 }
 
-/// The npm prefix Koda installs global packages into. It is user-writable, so
+/// The npm prefix Kemori installs global packages into. It is user-writable, so
 /// `npm install -g --prefix` never hits a permission error.
 pub fn npm_prefix() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("npm"))
 }
 
-/// Koda's managed Python virtualenv, used to install the Python language
+/// Kemori's managed Python virtualenv, used to install the Python language
 /// server even when the system Python has no `pip`.
 pub fn venv_dir() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("python"))
 }
 
-/// Koda's managed Node.js runtime, used to run `npm` and the npm-based language
+/// Kemori's managed Node.js runtime, used to run `npm` and the npm-based language
 /// servers without requiring the user to install Node.js themselves.
 pub fn node_dir() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("node"))
 }
 
-/// The `bin` directory of Koda's managed Node.js runtime (the runtime root on
+/// The `bin` directory of Kemori's managed Node.js runtime (the runtime root on
 /// Windows, where `node.exe`/`npm.cmd` sit directly in the extracted folder).
 fn node_bin_dir() -> Option<PathBuf> {
     let dir = node_dir()?;
@@ -4117,7 +4117,7 @@ fn node_bin_dir() -> Option<PathBuf> {
     }
 }
 
-/// The `npm` bundled with Koda's managed Node.js, whether or not it exists yet.
+/// The `npm` bundled with Kemori's managed Node.js, whether or not it exists yet.
 fn managed_npm() -> Option<PathBuf> {
     let dir = node_dir()?;
     Some(if cfg!(windows) {
@@ -4134,132 +4134,132 @@ fn node_archive() -> Option<PathBuf> {
     Some(dir.join(asset))
 }
 
-/// Koda's managed .NET install directory (the SDK OmniSharp runs on).
+/// Kemori's managed .NET install directory (the SDK OmniSharp runs on).
 pub fn dotnet_dir() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("dotnet"))
 }
 
-/// Koda's managed JDK directory, used to run `jdtls` without touching the
+/// Kemori's managed JDK directory, used to run `jdtls` without touching the
 /// user's system Java.
 pub fn jdk_dir() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("jdk"))
 }
 
-/// Koda's managed OmniSharp directory.
+/// Kemori's managed OmniSharp directory.
 pub fn omnisharp_dir() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("omnisharp"))
 }
 
-/// Koda's managed `jdtls` directory.
+/// Kemori's managed `jdtls` directory.
 pub fn jdtls_dir() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("jdtls"))
 }
 
-/// Koda's managed `lua-language-server` directory.
+/// Kemori's managed `lua-language-server` directory.
 pub fn lua_ls_dir() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("lua-language-server"))
 }
 
-/// Koda's dedicated JDK 21, used only to run `kotlin-language-server`. It is
+/// Kemori's dedicated JDK 21, used only to run `kotlin-language-server`. It is
 /// kept separate from the JDK 25 that `jdtls` requires, because the Kotlin
 /// compiler bundled with the server rejects the newer version string.
 pub fn kotlin_jdk_dir() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("kotlin-jdk"))
 }
 
-/// Koda's managed `kotlin-language-server` directory.
+/// Kemori's managed `kotlin-language-server` directory.
 pub fn kotlin_ls_dir() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("kotlin-language-server"))
 }
 
-/// Koda's managed Dart SDK directory.
+/// Kemori's managed Dart SDK directory.
 pub fn dart_sdk_dir() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("dart-sdk"))
 }
 
-/// Koda's isolated Perl `local::lib`, used to install `Perl::LanguageServer`
+/// Kemori's isolated Perl `local::lib`, used to install `Perl::LanguageServer`
 /// without touching the system Perl.
 pub fn perl_local_lib_dir() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("perl5"))
 }
 
-/// Koda's managed Swift toolchain directory. The archive extracts a `usr/`
+/// Kemori's managed Swift toolchain directory. The archive extracts a `usr/`
 /// subtree, so the launcher is `tools/swift/usr/bin/sourcekit-lsp`.
 pub fn swift_dir() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("swift"))
 }
 
-/// Koda's Swift compatibility directory: links to the system libraries the
+/// Kemori's Swift compatibility directory: links to the system libraries the
 /// official toolchain needs but does not ship, used through a scoped
 /// `LD_LIBRARY_PATH` without modifying the system.
 pub fn swift_compat_dir() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("swift-compat"))
 }
 
-/// Koda's managed Erlang/OTP installation directory.
+/// Kemori's managed Erlang/OTP installation directory.
 pub fn otp_dir() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("otp"))
 }
 
-/// Koda's managed Elixir installation directory.
+/// Kemori's managed Elixir installation directory.
 pub fn elixir_dir() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("elixir"))
 }
 
-/// Koda's managed ElixirLS installation directory (the release launcher).
+/// Kemori's managed ElixirLS installation directory (the release launcher).
 pub fn elixir_ls_dir() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("elixir-ls"))
 }
 
-/// Koda's private GPG keyring, used only to verify downloaded release
+/// Kemori's private GPG keyring, used only to verify downloaded release
 /// signatures. Keeping it separate means the user's `~/.gnupg` is untouched and
 /// a stale key in it can never be trusted by mistake.
 fn gnupg_home() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("gnupg"))
 }
 
-/// Koda's private Mix/Hex home for the managed Elixir runtime and ElixirLS.
+/// Kemori's private Mix/Hex home for the managed Elixir runtime and ElixirLS.
 fn mix_home() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("mix"))
 }
 
-/// Where Koda keeps the checksum-verified `cpanm` it bootstraps.
+/// Where Kemori keeps the checksum-verified `cpanm` it bootstraps.
 fn cpanm_dir() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("cpanm"))
 }
 
-/// Koda's managed Go toolchain (`go/bin/go`), kept isolated from `/usr/local/go`.
+/// Kemori's managed Go toolchain (`go/bin/go`), kept isolated from `/usr/local/go`.
 pub fn go_dir() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("go"))
 }
 
-/// Koda's private `GOPATH`, so `go install` never writes to the user's `~/go`.
+/// Kemori's private `GOPATH`, so `go install` never writes to the user's `~/go`.
 pub fn go_path() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("gopath"))
 }
 
-/// The `GOBIN` inside Koda's private `GOPATH`, where `gopls`/`sqls`/`shfmt`
+/// The `GOBIN` inside Kemori's private `GOPATH`, where `gopls`/`sqls`/`shfmt`
 /// are installed.
 fn go_bin_dir() -> Option<PathBuf> {
     go_path().map(|dir| dir.join("bin"))
 }
 
-/// Koda's managed `clangd` directory (`bin/clangd` plus its resource headers).
+/// Kemori's managed `clangd` directory (`bin/clangd` plus its resource headers).
 pub fn clangd_dir() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("clangd"))
 }
 
-/// Koda's managed prebuilt `asm-lsp` directory.
+/// Kemori's managed prebuilt `asm-lsp` directory.
 pub fn asm_lsp_dir() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("asm-lsp"))
 }
 
-/// Koda's managed `phpactor.phar` directory.
+/// Kemori's managed `phpactor.phar` directory.
 pub fn phpactor_dir() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("phpactor"))
 }
 
-/// Koda's isolated Ruby gem home, so `solargraph` never pollutes the user's.
+/// Kemori's isolated Ruby gem home, so `solargraph` never pollutes the user's.
 pub fn gem_home() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("gems"))
 }
@@ -4269,7 +4269,7 @@ fn downloads_dir() -> Option<PathBuf> {
     tools_dir().map(|dir| dir.join("downloads"))
 }
 
-/// Environment a tool needs to run, pointing it at Koda-managed runtimes and
+/// Environment a tool needs to run, pointing it at Kemori-managed runtimes and
 /// prepending their bin directories to `PATH` so child processes find them.
 pub fn launch_env(tool: Tool) -> Vec<(String, String)> {
     let mut env = Vec::new();
@@ -4290,7 +4290,7 @@ pub fn launch_env(tool: Tool) -> Vec<(String, String)> {
             }
         }
         // The Kotlin compiler bundled with the server cannot parse JDK 25's
-        // four-part version, so the server runs on Koda's dedicated JDK 21.
+        // four-part version, so the server runs on Kemori's dedicated JDK 21.
         Tool::KotlinLs => {
             if let Some(jdk) = kotlin_jdk_dir() {
                 let jdk = jdk.to_string_lossy().into_owned();
@@ -4299,13 +4299,13 @@ pub fn launch_env(tool: Tool) -> Vec<(String, String)> {
             }
         }
         // npm-based servers are launched through `#!/usr/bin/env node`, so a
-        // Koda-managed Node.js must be on `PATH` when the user has none.
+        // Kemori-managed Node.js must be on `PATH` when the user has none.
         Tool::BashLs | Tool::TypeScriptLs | Tool::HtmlLs | Tool::CssLs => {
             if let Some(node) = node_bin_dir() {
                 env.push(("PATH".to_string(), prepend_path(&node.to_string_lossy())));
             }
         }
-        // A server installed into Koda's isolated Perl local::lib needs that
+        // A server installed into Kemori's isolated Perl local::lib needs that
         // library and its bin directory, and nothing from the system Perl.
         Tool::PerlLs | Tool::Pls => {
             if let Some(lib) = perl_local_lib_dir() {
@@ -4314,7 +4314,7 @@ pub fn launch_env(tool: Tool) -> Vec<(String, String)> {
                 env.push(("PATH".to_string(), prepend_path(&format!("{lib}/bin"))));
             }
         }
-        // ElixirLS is a shell launcher that runs `elixir`; when Koda installed
+        // ElixirLS is a shell launcher that runs `elixir`; when Kemori installed
         // it, it needs the managed OTP and Elixir runtimes on `PATH` and a
         // private Mix/Hex home so the user's `~/.mix` is never touched. A
         // system-provided ElixirLS is left on the user's own environment.
@@ -4328,7 +4328,7 @@ pub fn launch_env(tool: Tool) -> Vec<(String, String)> {
         }
         // The managed Swift toolchain's `sourcekit-lsp` finds its sibling
         // binaries through `usr/bin`, and its libraries through the toolchain's
-        // own lib directory plus Koda's compatibility directory (which aliases
+        // own lib directory plus Kemori's compatibility directory (which aliases
         // the sonames a non-native distribution does not provide).
         Tool::SwiftLs => {
             if let Some(dir) = swift_dir() {
@@ -4351,7 +4351,7 @@ pub fn launch_env(tool: Tool) -> Vec<(String, String)> {
                 ));
             }
         }
-        // `solargraph` is installed into a Koda-private gem home; its launcher
+        // `solargraph` is installed into a Kemori-private gem home; its launcher
         // needs that home and its bin directory on the environment.
         Tool::RubyLs => {
             if let Some(gems) = gem_home() {
@@ -4368,7 +4368,7 @@ pub fn launch_env(tool: Tool) -> Vec<(String, String)> {
                 env.push(("PATH".to_string(), prepend_path(&dir.to_string_lossy())));
             }
         }
-        // Go-installed tools are launched by their resolved path; a Koda-managed
+        // Go-installed tools are launched by their resolved path; a Kemori-managed
         // Go only needs its bin directories when a child process invokes `go`.
         Tool::Gopls | Tool::Sqls | Tool::Shfmt => {
             if let Some(bin) = go_bin_dir() {
@@ -4405,7 +4405,7 @@ fn prepend_colon(dirs: &str) -> String {
 /// The environment the managed Erlang/Elixir runtime needs: its `bin`
 /// directories on `PATH` and a private Mix/Hex home.
 ///
-/// Only the directories Koda actually installed are used, so a system Elixir is
+/// Only the directories Kemori actually installed are used, so a system Elixir is
 /// left on the user's own configuration.
 pub fn elixir_env() -> Vec<(String, String)> {
     let mut env = Vec::new();
@@ -4430,7 +4430,7 @@ pub fn elixir_env() -> Vec<(String, String)> {
 /// Whether this host uses musl rather than glibc.
 ///
 /// musl systems (Alpine, Void musl) cannot run the glibc-targeted precompiled
-/// runtimes, so Koda reports them as unsupported instead of downloading a build
+/// runtimes, so Kemori reports them as unsupported instead of downloading a build
 /// that fails.
 pub fn libc_is_musl() -> bool {
     let alpine = std::path::Path::new("/etc/alpine-release").exists();
@@ -4476,7 +4476,7 @@ fn jdtls_attempts() -> Vec<InstallAttempt> {
         None => return Vec::new(),
     };
     vec![InstallAttempt::managed(
-        "a Koda-managed JDK and Eclipse JDT",
+        "a Kemori-managed JDK and Eclipse JDT",
         vec![
             InstallStep::AdoptiumJdk {
                 release: ADOPTIUM_JDK25,
@@ -4521,7 +4521,7 @@ fn lua_ls_asset() -> Option<String> {
 ///
 /// The archive extracts its `bin/`, `main.lua` and `script/` at the top level,
 /// so `tools/lua-language-server/bin/lua-language-server` is the launcher. It
-/// needs no runtime, which is why Koda can provision it unconditionally.
+/// needs no runtime, which is why Kemori can provision it unconditionally.
 fn lua_ls_attempts() -> Vec<InstallAttempt> {
     let Some(asset) = lua_ls_asset() else {
         return Vec::new();
@@ -4548,10 +4548,10 @@ fn lua_ls_attempts() -> Vec<InstallAttempt> {
     )]
 }
 
-/// A dedicated JDK 21 and `kotlin-language-server`, both managed by Koda.
+/// A dedicated JDK 21 and `kotlin-language-server`, both managed by Kemori.
 ///
 /// The server's bundled Kotlin compiler rejects the four-part version string of
-/// the JDK 25 that `jdtls` uses, so Koda provisions its own JDK 21 in an
+/// the JDK 25 that `jdtls` uses, so Kemori provisions its own JDK 21 in an
 /// isolated directory instead of downgrading anything the user has.
 fn kotlin_ls_attempts() -> Vec<InstallAttempt> {
     let (Some(downloads), Some(dest)) = (downloads_dir(), kotlin_ls_dir()) else {
@@ -4607,10 +4607,10 @@ fn pls_attempts() -> Vec<InstallAttempt> {
 
 /// Bootstrap `cpanm` and install `package` into an isolated `local::lib`.
 ///
-/// Koda bootstraps `cpanm` from a checksum-verified `App::cpanminus` archive —
+/// Kemori bootstraps `cpanm` from a checksum-verified `App::cpanminus` archive —
 /// so an interactive, unconfigured `cpan` is never run — and uses it with
 /// `--local-lib`, which never touches the system Perl. A system `perl` is still
-/// required to run `cpanm`; Koda does not build a Perl runtime.
+/// required to run `cpanm`; Kemori does not build a Perl runtime.
 fn perl_module_attempts(package: &str) -> Vec<InstallAttempt> {
     if locate("perl").is_none() {
         return Vec::new();
@@ -4669,12 +4669,12 @@ fn swift_toolchain_urls(tag: &str, suffix: &str) -> (String, String) {
 /// A GPG-verified Swift toolchain from swift.org.
 ///
 /// swift.org publishes one toolchain per distribution release and signs it with
-/// a detached signature, so Koda verifies the signature against swift.org's
+/// a detached signature, so Kemori verifies the signature against swift.org's
 /// published keys and extracts the `usr/` tree. A distribution swift.org does
 /// not build for gets the portable UBI10 build plus a managed compatibility
 /// layer, so the same verified artifact runs without touching the system. When
 /// even that cannot run (a missing compatibility library, musl, a non-Linux
-/// host) the attempt is empty and Koda explains exactly why.
+/// host) the attempt is empty and Kemori explains exactly why.
 fn swift_attempts() -> Vec<InstallAttempt> {
     let Some(toolchain) = swift_toolchain() else {
         return Vec::new();
@@ -4831,7 +4831,7 @@ fn elixir_ls_attempts() -> Vec<InstallAttempt> {
     )]
 }
 
-/// A Koda-managed Dart SDK for the analysis server (`dart language-server`).
+/// A Kemori-managed Dart SDK for the analysis server (`dart language-server`).
 ///
 /// The SDK archive extracts to a `dart-sdk/` root, so it is stripped by one
 /// level. Only Dart is installed; Flutter is not downloaded.
@@ -4858,7 +4858,7 @@ fn dart_sdk_attempts() -> Vec<InstallAttempt> {
     )]
 }
 
-/// OmniSharp plus the .NET SDK it runs on, both managed by Koda.
+/// OmniSharp plus the .NET SDK it runs on, both managed by Kemori.
 fn omnisharp_attempts() -> Vec<InstallAttempt> {
     let Some(asset) = omnisharp_asset() else {
         return Vec::new();
@@ -5023,7 +5023,7 @@ mod tests {
     }
 
     /// Assert a `Run` step names an exact version for every package-manager
-    /// install. The remaining delegation Koda cannot pin independently
+    /// install. The remaining delegation Kemori cannot pin independently
     /// (`rustup component add`) is intentionally not matched; Hex is pinned by
     /// version, and rebar3 is a verified `Download` step.
     fn assert_run_is_pinned(tool: Tool, command: &InstallCommand) {
@@ -5196,7 +5196,7 @@ mod tests {
 
     #[test]
     fn new_language_tools_use_trusted_managers() {
-        // Go tooling (`sqls`) is provisioned by Koda's managed Go plan.
+        // Go tooling (`sqls`) is provisioned by Kemori's managed Go plan.
         assert_eq!(Tool::Sqls.install_command(), None);
         if go_platform().is_some() && tools_dir().is_some() {
             assert!(
@@ -5262,7 +5262,7 @@ mod tests {
             can_install(Tool::ElixirLs),
             bob_platform().is_some() && archives && zip_extractor().is_some()
         );
-        // The Dart SDK is managed as a zip, so Koda can install it where
+        // The Dart SDK is managed as a zip, so Kemori can install it where
         // published and a zip extractor is available.
         assert_eq!(
             can_install(Tool::DartAnalyzer),
@@ -5392,14 +5392,14 @@ mod tests {
             "the run must install pinned gopls: {:?}",
             run.args
         );
-        // Tool installations stay inside Koda's private GOPATH/GOBIN.
+        // Tool installations stay inside Kemori's private GOPATH/GOBIN.
         if let Some(gobin) = go_bin_dir() {
             assert!(
                 run.env
                     .iter()
                     .any(|(key, value)| key == "GOBIN"
                         && value == &gobin.to_string_lossy().into_owned()),
-                "GOBIN must point at Koda's private bin directory: {:?}",
+                "GOBIN must point at Kemori's private bin directory: {:?}",
                 run.env
             );
         }
@@ -5413,7 +5413,7 @@ mod tests {
         let managed = go_dir().is_some_and(|dir| dir.join("bin/go").is_file());
         let has_goroot = command.env.iter().any(|(key, _)| key == "GOROOT");
         assert_eq!(has_goroot, managed);
-        // Tool installs always stay inside Koda's private GOBIN.
+        // Tool installs always stay inside Kemori's private GOBIN.
         assert!(command.env.iter().any(|(key, _)| key == "GOBIN"));
     }
 
@@ -5463,7 +5463,7 @@ mod tests {
 
     #[test]
     fn file_sha256_matches_a_known_digest() {
-        let path = std::env::temp_dir().join(format!("koda-sha-{}", std::process::id()));
+        let path = std::env::temp_dir().join(format!("kemori-sha-{}", std::process::id()));
         std::fs::write(&path, b"abc").unwrap();
         let hash = file_sha256(&path).expect("a SHA-256 tool");
         assert_eq!(
@@ -5682,7 +5682,7 @@ mod tests {
         assert_eq!(
             Tool::available_server(LanguageId::Perl, &registry),
             Some(Tool::PerlLs),
-            "Koda must fall back to another installed Perl server"
+            "Kemori must fall back to another installed Perl server"
         );
     }
 
@@ -5714,7 +5714,7 @@ mod tests {
 
     #[test]
     fn swift_compat_needs_system_libraries() {
-        let dir = std::env::temp_dir().join(format!("koda-swift-compat-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-swift-compat-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         match swift_compat(&dir) {
             Ok(()) => {
@@ -5937,7 +5937,7 @@ mod tests {
             Tool::Prettier.install_command(),
             Some(("npm", &["install", "-g", PRETTIER_SPEC][..]))
         );
-        // `shfmt` is installed by Koda's managed Go plan, not a package-manager
+        // `shfmt` is installed by Kemori's managed Go plan, not a package-manager
         // command.
         assert_eq!(Tool::Shfmt.install_command(), None);
     }
@@ -5947,7 +5947,7 @@ mod tests {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            let path = std::env::temp_dir().join(format!("koda-exec-{}", std::process::id()));
+            let path = std::env::temp_dir().join(format!("kemori-exec-{}", std::process::id()));
             let _ = std::fs::remove_file(&path);
             std::fs::write(&path, "#!/bin/sh\n").unwrap();
             let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644));
@@ -5960,7 +5960,7 @@ mod tests {
 
     #[test]
     fn unknown_program_is_not_located() {
-        assert!(locate("koda-definitely-not-a-real-tool").is_none());
+        assert!(locate("kemori-definitely-not-a-real-tool").is_none());
     }
 
     #[test]
@@ -5968,7 +5968,7 @@ mod tests {
         if locate("tar").is_none() {
             return;
         }
-        let dir = std::env::temp_dir().join(format!("koda-traverse-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-traverse-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("inner")).unwrap();
         std::fs::write(dir.join("inner/file.txt"), "x").unwrap();
@@ -5999,7 +5999,7 @@ mod tests {
         if locate("tar").is_none() {
             return;
         }
-        let dir = std::env::temp_dir().join(format!("koda-extract-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-extract-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("pkg/bin")).unwrap();
         std::fs::write(dir.join("pkg/bin/tool"), "#!/bin/sh\n").unwrap();
@@ -6075,7 +6075,7 @@ mod tests {
 
     #[test]
     fn directory_size_sums_files_recursively() {
-        let dir = std::env::temp_dir().join(format!("koda-size-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-size-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("a/b")).unwrap();
         std::fs::write(dir.join("x"), vec![0u8; 10]).unwrap();
@@ -6104,7 +6104,7 @@ mod tests {
     }
 
     fn cache_test_dir(tag: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("koda-{tag}-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-{tag}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         dir
@@ -6267,7 +6267,7 @@ mod tests {
                     "{tool:?} kept a strategy with an unavailable step"
                 );
             }
-            // If no strategy can run, Koda must not claim the tool is installable.
+            // If no strategy can run, Kemori must not claim the tool is installable.
             if runnable.is_empty() {
                 assert!(!can_install(tool), "{tool:?} has no runnable strategy");
             }
@@ -6300,7 +6300,7 @@ mod tests {
         .expect("the first step succeeds");
         assert!(a.is_file());
 
-        // Step B fails; the failure is explicit and earlier work remains. Koda
+        // Step B fails; the failure is explicit and earlier work remains. Kemori
         // reports the incomplete plan rather than a false success.
         let b = dir.join("b");
         let error = run_step(&InstallStep::Download {
@@ -6322,7 +6322,7 @@ mod tests {
 
     #[test]
     fn metadata_cache_round_trips_and_is_url_keyed() {
-        let url = "https://example.invalid/koda-metadata-test";
+        let url = "https://example.invalid/kemori-metadata-test";
         remember_metadata(url, "{\"body\":1}").unwrap();
         assert_eq!(cached_metadata(url).as_deref(), Some("{\"body\":1}"));
         assert_eq!(cached_metadata("https://example.invalid/other"), None);
@@ -6333,7 +6333,7 @@ mod tests {
 
     #[test]
     fn a_checksum_mismatch_is_rejected_before_install() {
-        let dir = std::env::temp_dir().join(format!("koda-badsum-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-badsum-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let source = dir.join("payload.tar.gz");
@@ -6356,7 +6356,7 @@ mod tests {
 
     #[test]
     fn a_truncated_download_is_rejected_before_install() {
-        let dir = std::env::temp_dir().join(format!("koda-truncated-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-truncated-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let full = b"a complete archive payload with enough bytes to truncate cleanly";
@@ -6389,7 +6389,7 @@ mod tests {
         if locate("tar").is_none() {
             return;
         }
-        let dir = std::env::temp_dir().join(format!("koda-shorttar-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-shorttar-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("pkg/bin")).unwrap();
         std::fs::write(dir.join("pkg/bin/tool"), "#!/bin/sh\n").unwrap();
@@ -6431,7 +6431,7 @@ mod tests {
         let leftovers: Vec<_> = std::fs::read_dir(&dir)
             .unwrap()
             .flatten()
-            .filter(|entry| entry.file_name().to_string_lossy().contains(".koda-"))
+            .filter(|entry| entry.file_name().to_string_lossy().contains(".kemori-"))
             .map(|entry| entry.file_name())
             .collect();
         assert!(
@@ -6493,7 +6493,7 @@ mod tests {
         if locate("python3").is_none() {
             return;
         }
-        let dir = std::env::temp_dir().join(format!("koda-zip-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-zip-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("pkg/bin")).unwrap();
         std::fs::write(dir.join("pkg/bin/tool"), "x").unwrap();
@@ -6544,7 +6544,7 @@ mod tests {
         // a scratch directory and its single root is moved up. Regression: the
         // Kotlin server once landed under `server/` because the strip was
         // silently ignored.
-        let dir = std::env::temp_dir().join(format!("koda-strip-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-strip-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let scratch = dir.join("scratch");
         std::fs::create_dir_all(scratch.join("pkg/bin")).unwrap();
@@ -6567,7 +6567,7 @@ mod tests {
 
     #[test]
     fn install_lock_is_exclusive_and_reclaims_stale_locks() {
-        let dir = std::env::temp_dir().join(format!("koda-lock-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-lock-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
 
@@ -6599,7 +6599,7 @@ mod tests {
 
     #[test]
     fn dropping_a_reclaimed_lock_leaves_the_successor_alone() {
-        let dir = std::env::temp_dir().join(format!("koda-lock-nonce-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-lock-nonce-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
 
@@ -6678,7 +6678,7 @@ mod tests {
                         && command.args.iter().any(|arg| arg == TYPESCRIPT_LS_SPEC)
                 })
             }),
-            "TypeScript should install with npm into Koda's own prefix: {attempts:?}"
+            "TypeScript should install with npm into Kemori's own prefix: {attempts:?}"
         );
     }
 
@@ -6705,7 +6705,7 @@ mod tests {
             Tool::Pylsp.install_command(),
             Some(("pipx", &["install", PYTHON_LSP_SPEC][..]))
         );
-        // Go tooling is provisioned by Koda's managed Go plan.
+        // Go tooling is provisioned by Kemori's managed Go plan.
         assert_eq!(Tool::Gopls.install_command(), None);
         assert_eq!(Tool::Sqls.install_command(), None);
         assert_eq!(
@@ -6754,7 +6754,7 @@ mod tests {
                 .args
                 .iter()
                 .any(|arg| arg == &prefix.to_string_lossy()),
-            "the prefix should be Koda's own user-local directory: {:?}",
+            "the prefix should be Kemori's own user-local directory: {:?}",
             command.args
         );
         assert!(
@@ -6764,7 +6764,7 @@ mod tests {
         );
 
         // A system Python without `pip` must not block pylsp: the plan includes
-        // a Koda-managed virtualenv (which bootstraps its own pip), and it
+        // a Kemori-managed virtualenv (which bootstraps its own pip), and it
         // never asks pip to override the OS (`--break-system-packages`).
         let attempts = Tool::Pylsp.install_attempts();
         assert!(
@@ -6843,16 +6843,16 @@ mod tests {
 
     #[test]
     fn candidate_lookup_finds_a_file_in_a_directory() {
-        let dir = std::env::temp_dir().join(format!("koda-tools-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-tools-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("koda-fake-tool"), "").unwrap();
+        std::fs::write(dir.join("kemori-fake-tool"), "").unwrap();
 
         assert_eq!(
-            candidate_in(&dir, "koda-fake-tool"),
-            Some(dir.join("koda-fake-tool"))
+            candidate_in(&dir, "kemori-fake-tool"),
+            Some(dir.join("kemori-fake-tool"))
         );
-        assert!(candidate_in(&dir, "koda-absent-tool").is_none());
+        assert!(candidate_in(&dir, "kemori-absent-tool").is_none());
 
         std::fs::remove_dir_all(&dir).ok();
     }
@@ -6980,7 +6980,7 @@ mod tests {
                 run_commands(managed)
                     .into_iter()
                     .any(|command| is_user_bin_program(&command.program)),
-                "the managed npm must be the runtime Koda just installed"
+                "the managed npm must be the runtime Kemori just installed"
             );
         }
     }
@@ -6990,7 +6990,7 @@ mod tests {
         if let Some(node) = node_bin_dir() {
             assert!(
                 known_bin_dirs().iter().any(|dir| dir == &node),
-                "Koda's managed Node.js bin directory should be searched"
+                "Kemori's managed Node.js bin directory should be searched"
             );
         }
     }

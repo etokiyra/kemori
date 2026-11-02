@@ -1,6 +1,6 @@
 //! Language provider abstraction.
 //!
-//! A [`LanguageProvider`] bundles everything Koda knows about supporting one
+//! A [`LanguageProvider`] bundles everything Kemori knows about supporting one
 //! language: how to recognise it, how to highlight it, and which capabilities it
 //! offers. Language-specific logic lives here — never in the editor core.
 
@@ -202,7 +202,7 @@ pub trait LanguageProvider: Send + Sync {
     }
 }
 
-/// A minimal provider used for files Koda does not yet recognise.
+/// A minimal provider used for files Kemori does not yet recognise.
 pub struct PlainTextProvider;
 
 impl LanguageProvider for PlainTextProvider {
@@ -244,7 +244,7 @@ pub struct ProviderRegistry {
 }
 
 impl ProviderRegistry {
-    /// The registry Koda ships with. This is the single place where built-in
+    /// The registry Kemori ships with. This is the single place where built-in
     /// languages are wired in.
     pub fn builtin() -> Self {
         let mut registry = ProviderRegistry {
@@ -286,7 +286,7 @@ impl ProviderRegistry {
     /// This is the extension point for new languages: implement
     /// [`LanguageProvider`] and register it here. Built-in languages are wired
     /// in [`ProviderRegistry::builtin`]; extra providers can be added at
-    /// runtime to extend Koda without modifying the editor or UI, which stay
+    /// runtime to extend Kemori without modifying the editor or UI, which stay
     /// language-agnostic. A provider with an id that is already registered
     /// replaces the previous one.
     pub fn register(&mut self, provider: Box<dyn LanguageProvider>) {

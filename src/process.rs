@@ -1,7 +1,7 @@
 //! Bounded, timed subprocess capture.
 //!
 //! External tools (formatters, package managers, `git`) are run as children and
-//! must never be able to hang Koda forever or exhaust memory with unbounded
+//! must never be able to hang Kemori forever or exhaust memory with unbounded
 //! output. This module captures both pipes on their own threads — so a child
 //! cannot deadlock on a full pipe — caps the bytes kept, and kills the child if
 //! it runs past a deadline.

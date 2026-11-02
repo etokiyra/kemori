@@ -359,7 +359,7 @@ mod tests {
     #[test]
     fn inline_code_links_and_emphasis() {
         let (spans, _) = MarkdownProvider.highlight(
-            "Use `cargo` and [Koda](https://koda.dev) *today*.",
+            "Use `cargo` and [Kemori](https://kemori.dev) *today*.",
             HighlightState::default(),
         );
         let kinds: Vec<TokenKind> = spans.iter().map(|s| s.kind).collect();
@@ -382,10 +382,10 @@ mod tests {
 
     #[test]
     fn symbols_collect_headings() {
-        let text = "# Koda\n\ntext\n\n## Install\n\n### Notes\n";
+        let text = "# Kemori\n\ntext\n\n## Install\n\n### Notes\n";
         let symbols = markdown_symbols(text);
         let names: Vec<&str> = symbols.iter().map(|s| s.name.as_str()).collect();
-        assert_eq!(names, vec!["Koda", "Install", "Notes"]);
+        assert_eq!(names, vec!["Kemori", "Install", "Notes"]);
         assert_eq!(symbols[0].kind, SymbolKind::Heading);
         assert_eq!(symbols[1].line, 4);
     }

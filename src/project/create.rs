@@ -3,7 +3,7 @@
 //! Creating a project writes a small, conventional structure directly rather
 //! than shelling out to `cargo`, `go` or `pip`. That keeps the operation
 //! instant, deterministic and usable with no network and no toolchain, which
-//! matches Koda's zero-configuration promise: the project is ready to code in
+//! matches Kemori's zero-configuration promise: the project is ready to code in
 //! before the user sees the editor.
 //!
 //! Initialization never removes anything. If a write fails after the directory
@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 
 use crate::language::id::LanguageId;
 
-/// Languages Koda can scaffold, in the order it presents them.
+/// Languages Kemori can scaffold, in the order it presents them.
 pub const CREATABLE: &[LanguageId] = &[
     LanguageId::Rust,
     LanguageId::Go,
@@ -40,7 +40,7 @@ pub const CREATABLE: &[LanguageId] = &[
     LanguageId::Cpp,
 ];
 
-/// Whether Koda can generate a conventional project for `language`.
+/// Whether Kemori can generate a conventional project for `language`.
 pub fn is_creatable(language: LanguageId) -> bool {
     CREATABLE.contains(&language)
 }
@@ -80,7 +80,7 @@ pub enum CreateOutcome {
     /// The project was created; `files` lists what was written, for reporting.
     Created { root: PathBuf, files: Vec<PathBuf> },
     /// Creation failed. `root` is `Some` when a partial directory was left
-    /// behind (Koda never deletes it).
+    /// behind (Kemori never deletes it).
     Failed {
         root: Option<PathBuf>,
         message: String,
@@ -234,11 +234,11 @@ fn go(root: &Path, name: &str) -> Result<Vec<PathBuf>, String> {
 fn python(root: &Path, name: &str) -> Result<Vec<PathBuf>, String> {
     let module = python_module(name);
     let manifest = format!(
-        "[project]\nname = \"{name}\"\nversion = \"0.1.0\"\ndescription = \"A new project created with Koda\"\nrequires-python = \">=3.9\"\n\n[build-system]\nrequires = [\"setuptools>=61\"]\nbuild-backend = \"setuptools.build_meta\"\n"
+        "[project]\nname = \"{name}\"\nversion = \"0.1.0\"\ndescription = \"A new project created with Kemori\"\nrequires-python = \">=3.9\"\n\n[build-system]\nrequires = [\"setuptools>=61\"]\nbuild-backend = \"setuptools.build_meta\"\n"
     );
     let init = format!("\"\"\"{name} package.\"\"\"\n\n__version__ = \"0.1.0\"\n");
     let entry = "def main() -> None:\n    print(\"Hello from your new project!\")\n\n\nif __name__ == \"__main__\":\n    main()\n";
-    let readme = format!("# {name}\n\nA Python project created with Koda.\n");
+    let readme = format!("# {name}\n\nA Python project created with Kemori.\n");
     Ok(vec![
         write(root, "pyproject.toml", &manifest)?,
         write(root, &format!("src/{module}/__init__.py"), &init)?,
@@ -251,7 +251,7 @@ fn shell(root: &Path, name: &str) -> Result<Vec<PathBuf>, String> {
     let script = format!(
         "#!/usr/bin/env bash\nset -euo pipefail\n\nmain() {{\n    echo \"Hello from {name}!\"\n}}\n\nmain \"$@\"\n"
     );
-    let readme = format!("# {name}\n\nA shell project created with Koda.\n");
+    let readme = format!("# {name}\n\nA shell project created with Kemori.\n");
     let script_path = write(root, &format!("{name}.sh"), &script)?;
     make_executable(&script_path);
     Ok(vec![script_path, write(root, "README.md", &readme)?])
@@ -259,7 +259,7 @@ fn shell(root: &Path, name: &str) -> Result<Vec<PathBuf>, String> {
 
 fn nix(root: &Path, name: &str) -> Result<Vec<PathBuf>, String> {
     let flake = format!(
-        "{{\n  description = \"A Nix flake created with Koda ({name})\";\n\n  inputs.nixpkgs.url = \"github:NixOS/nixpkgs/nixos-unstable\";\n\n  outputs =\n    {{ self, nixpkgs }}:\n    let\n      systems = [\n        \"x86_64-linux\"\n        \"aarch64-linux\"\n        \"x86_64-darwin\"\n        \"aarch64-darwin\"\n      ];\n      forAllSystems = nixpkgs.lib.genAttrs systems;\n    in\n    {{\n      packages = forAllSystems (system: {{\n        default = nixpkgs.legacyPackages.${{system}}.hello;\n      }});\n    }};\n}}\n"
+        "{{\n  description = \"A Nix flake created with Kemori ({name})\";\n\n  inputs.nixpkgs.url = \"github:NixOS/nixpkgs/nixos-unstable\";\n\n  outputs =\n    {{ self, nixpkgs }}:\n    let\n      systems = [\n        \"x86_64-linux\"\n        \"aarch64-linux\"\n        \"x86_64-darwin\"\n        \"aarch64-darwin\"\n      ];\n      forAllSystems = nixpkgs.lib.genAttrs systems;\n    in\n    {{\n      packages = forAllSystems (system: {{\n        default = nixpkgs.legacyPackages.${{system}}.hello;\n      }});\n    }};\n}}\n"
     );
     Ok(vec![
         write(root, "flake.nix", &flake)?,
@@ -374,7 +374,7 @@ fn csharp(root: &Path, name: &str) -> Result<Vec<PathBuf>, String> {
 fn php(root: &Path, name: &str) -> Result<Vec<PathBuf>, String> {
     let package = crate_name(name);
     let composer = format!(
-        "{{\n  \"name\": \"koda/{package}\",\n  \"description\": \"A new project created with Koda\",\n  \"type\": \"project\",\n  \"require\": {{}}\n}}\n"
+        "{{\n  \"name\": \"kemori/{package}\",\n  \"description\": \"A new project created with Kemori\",\n  \"type\": \"project\",\n  \"require\": {{}}\n}}\n"
     );
     let index = format!(
         "<?php\n\ndeclare(strict_types=1);\n\nfunction main(): void\n{{\n    echo \"Hello from {name}!\\n\";\n}}\n\nmain();\n"
@@ -431,7 +431,7 @@ fn elixir(root: &Path, name: &str) -> Result<Vec<PathBuf>, String> {
         pascal = pascal_case(name)
     );
     let lib = format!(
-        "defmodule {pascal} do\n  @moduledoc \"A new project created with Koda.\"\n\n  def hello do\n    IO.puts(\"Hello from {name}!\")\n  end\nend\n",
+        "defmodule {pascal} do\n  @moduledoc \"A new project created with Kemori.\"\n\n  def hello do\n    IO.puts(\"Hello from {name}!\")\n  end\nend\n",
         pascal = pascal_case(name)
     );
     Ok(vec![
@@ -444,7 +444,7 @@ fn elixir(root: &Path, name: &str) -> Result<Vec<PathBuf>, String> {
 fn dart(root: &Path, name: &str) -> Result<Vec<PathBuf>, String> {
     let package = python_module(name);
     let pubspec = format!(
-        "name: {package}\ndescription: A new project created with Koda.\nversion: 0.1.0\nenvironment:\n  sdk: '>=3.0.0 <4.0.0'\n"
+        "name: {package}\ndescription: A new project created with Kemori.\nversion: 0.1.0\nenvironment:\n  sdk: '>=3.0.0 <4.0.0'\n"
     );
     let main = format!("void main() {{\n  print('Hello from {name}!');\n}}\n");
     Ok(vec![
@@ -460,7 +460,7 @@ fn swift(root: &Path, name: &str) -> Result<Vec<PathBuf>, String> {
         "// swift-tools-version:5.9\nimport PackageDescription\n\nlet package = Package(\n    name: \"{name}\",\n    targets: [\n        .executableTarget(name: \"{module}\")\n    ]\n)\n"
     );
     let main = format!("print(\"Hello from {name}!\")\n");
-    let readme = format!("# {name}\n\nA Swift package created with Koda.\n");
+    let readme = format!("# {name}\n\nA Swift package created with Kemori.\n");
     Ok(vec![
         write(root, "Package.swift", &manifest)?,
         write(root, &format!("Sources/{module}/main.swift"), &main)?,
@@ -473,7 +473,7 @@ fn perl(root: &Path, name: &str) -> Result<Vec<PathBuf>, String> {
     let script = format!(
         "#!/usr/bin/env perl\nuse strict;\nuse warnings;\n\nsub main {{\n    print \"Hello from {name}!\\n\";\n}}\n\nmain();\n"
     );
-    let readme = format!("# {name}\n\nA Perl project created with Koda.\n");
+    let readme = format!("# {name}\n\nA Perl project created with Kemori.\n");
     let script_path = write(root, &format!("{name}.pl"), &script)?;
     make_executable(&script_path);
     Ok(vec![script_path, write(root, "README.md", &readme)?])
@@ -483,7 +483,7 @@ fn sql(root: &Path, name: &str) -> Result<Vec<PathBuf>, String> {
     let schema = format!(
         "-- {name}: a starter schema.\n\nCREATE TABLE example (\n    id INTEGER PRIMARY KEY,\n    name TEXT NOT NULL,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\nINSERT INTO example (name) VALUES ('hello');\n"
     );
-    let readme = format!("# {name}\n\nA SQL project created with Koda.\n");
+    let readme = format!("# {name}\n\nA SQL project created with Kemori.\n");
     Ok(vec![
         write(root, "schema.sql", &schema)?,
         write(root, "README.md", &readme)?,
@@ -622,7 +622,7 @@ mod tests {
     use super::*;
 
     fn scratch(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("koda-create-{name}-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-create-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         dir
@@ -858,7 +858,7 @@ mod tests {
         assert!(index.starts_with("<?php"));
         assert!(index.contains("Hello from My Service!"));
         let composer = std::fs::read_to_string(root.join("composer.json")).unwrap();
-        assert!(composer.contains("\"name\": \"koda/my-service\""));
+        assert!(composer.contains("\"name\": \"kemori/my-service\""));
         // The generated project is recognised as a PHP project by its marker.
         assert_eq!(crate::project::ProjectKind::Php.language(), LanguageId::Php);
         std::fs::remove_dir_all(&dir).ok();

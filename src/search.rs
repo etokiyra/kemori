@@ -1,6 +1,6 @@
 //! Project-wide text search.
 //!
-//! A fast, dependency-free scan over the files Koda already knows about
+//! A fast, dependency-free scan over the files Kemori already knows about
 //! (respecting `.gitignore`), used by the background worker for **Search in
 //! Project…**. Matching is a plain case-insensitive substring search, line by
 //! line; binary and oversized files are skipped so the scan stays predictable.
@@ -100,7 +100,7 @@ mod tests {
     use std::fs;
 
     fn project(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("koda-search-{name}-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kemori-search-{name}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(dir.join("src")).unwrap();
         dir

@@ -1,7 +1,7 @@
 //! Compute the smallest `textDocument/didChange` range for an edit.
 //!
 //! The protocol allows a full-document replacement, but servers that advertise
-//! incremental sync handle an unchanged prefix and suffix more cheaply. Koda
+//! incremental sync handle an unchanged prefix and suffix more cheaply. Kemori
 //! compares the old and new text by characters, then converts the changed span
 //! to line/character offsets. This is deliberately a display-independent diff:
 //! it only needs to be a valid range, not the prettiest one.

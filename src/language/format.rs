@@ -1,9 +1,9 @@
 //! Formatting through mature external tools.
 //!
-//! Koda does not reimplement formatting. When a language has a trusted
+//! Kemori does not reimplement formatting. When a language has a trusted
 //! formatter it runs it on a buffer snapshot (the tools read from stdin, so
 //! unsaved edits are included), entirely on the background worker. If the tool
-//! is missing, Koda says exactly what is missing instead of failing silently.
+//! is missing, Kemori says exactly what is missing instead of failing silently.
 //!
 //! This is the "reuse system tools" half of the zero-configuration promise;
 //! missing tools are installed through their official package managers from
@@ -17,7 +17,7 @@ use std::time::Duration;
 /// The longest a formatter may run before it is killed.
 const FORMAT_TIMEOUT: Duration = Duration::from_secs(30);
 
-/// The most formatter output Koda keeps; the excess is drained and discarded.
+/// The most formatter output Kemori keeps; the excess is drained and discarded.
 const MAX_FORMAT_OUTPUT: usize = 8 * 1024 * 1024;
 
 /// The result of asking a provider to format a document.
@@ -74,7 +74,7 @@ pub fn prettier(path: &Path, text: &str) -> FormatOutcome {
         &["--stdin-filepath", &filepath],
         text,
         "prettier",
-        "install it with `npm install -g prettier` — Koda manages Node.js",
+        "install it with `npm install -g prettier` — Kemori manages Node.js",
     )
 }
 
@@ -109,7 +109,7 @@ pub fn shfmt(text: &str) -> FormatOutcome {
 ///
 /// `nixfmt` reads a buffer from stdin and writes the formatted expression to
 /// stdout, including unsaved edits. On NixOS it is normally available from the
-/// system profile; otherwise Koda installs it from a pinned nixpkgs revision,
+/// system profile; otherwise Kemori installs it from a pinned nixpkgs revision,
 /// and a distribution package works too.
 pub fn nixfmt(text: &str) -> FormatOutcome {
     run(
@@ -142,13 +142,13 @@ pub fn dart_format(path: &Path, text: &str) -> FormatOutcome {
     let stem = path
         .file_stem()
         .map(|stem| stem.to_string_lossy().into_owned())
-        .unwrap_or_else(|| "koda".to_string());
+        .unwrap_or_else(|| "kemori".to_string());
     let stamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|since| since.as_nanos())
         .unwrap_or(0);
     let temp = std::env::temp_dir().join(format!(
-        "koda-format-{stem}-{}-{stamp}.dart",
+        "kemori-format-{stem}-{}-{stamp}.dart",
         std::process::id()
     ));
     if let Err(err) = std::fs::write(&temp, text) {
@@ -171,7 +171,7 @@ pub fn dart_format(path: &Path, text: &str) -> FormatOutcome {
 /// `mix format -` reads a snapshot from stdin and writes the formatted source to
 /// stdout, so it fits the shared contract directly. It runs from the enclosing
 /// Mix project (found by walking up to `mix.exs`) so the project's
-/// `.formatter.exs` applies, and with Koda's managed Erlang/Elixir when present.
+/// `.formatter.exs` applies, and with Kemori's managed Erlang/Elixir when present.
 pub fn mix_format(path: &Path, text: &str) -> FormatOutcome {
     let root = path
         .ancestors()
@@ -203,7 +203,7 @@ fn run_full(
     cwd: Option<&Path>,
     extra_env: &[(String, String)],
 ) -> FormatOutcome {
-    // Prefer a located executable: the process PATH may be minimal when Koda is
+    // Prefer a located executable: the process PATH may be minimal when Kemori is
     // launched from a GUI or a non-login shell.
     let program_path = crate::language::tools::locate(program)
         .unwrap_or_else(|| std::path::PathBuf::from(program));
@@ -217,7 +217,7 @@ fn run_full(
         command.current_dir(dir);
     }
     // npm-installed formatters (Prettier) are `#!/usr/bin/env node` scripts, so
-    // a Koda-managed Node.js must be on PATH when the user has none. Apply this
+    // a Kemori-managed Node.js must be on PATH when the user has none. Apply this
     // before the caller's environment so a managed runtime's PATH wins.
     if let Some(node) = crate::language::tools::node_dir() {
         let bin = if cfg!(windows) {
@@ -324,7 +324,7 @@ mod tests {
 
     #[test]
     fn missing_program_is_not_available() {
-        assert!(!is_available("koda-definitely-not-a-real-tool"));
+        assert!(!is_available("kemori-definitely-not-a-real-tool"));
     }
 
     #[test]
@@ -339,7 +339,7 @@ mod tests {
         {
             return;
         }
-        let path = std::env::temp_dir().join("koda-format-test.rs");
+        let path = std::env::temp_dir().join("kemori-format-test.rs");
         let outcome = rustfmt(&path, "fn main(){let x=1;}\n");
         match outcome {
             FormatOutcome::Formatted(formatted) => {
@@ -388,7 +388,7 @@ mod tests {
     #[test]
     fn missing_tool_is_reported() {
         let outcome = run(
-            "koda-definitely-not-a-real-formatter",
+            "kemori-definitely-not-a-real-formatter",
             &[],
             "x",
             "fakefmt",

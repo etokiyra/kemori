@@ -1,6 +1,6 @@
-//! The welcome screen — Koda's home screen and little terminal art scene.
+//! The welcome screen — Kemori's home screen and little terminal art scene.
 //!
-//! Shown whenever no file is open. Besides the animated Koda familiar and the
+//! Shown whenever no file is open. Besides the animated Kemori familiar and the
 //! wordmark, it presents a keyboard-navigable menu: open a file, open a
 //! project, create a new project, resume the workspace's last session, and
 //! reopen recent projects or files. The composition budgets its space so the

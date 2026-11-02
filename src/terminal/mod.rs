@@ -1,6 +1,6 @@
 //! Terminal lifecycle and terminal-native services.
 //!
-//! Koda cooperates with the terminal rather than hiding it. In particular it never
+//! Kemori cooperates with the terminal rather than hiding it. In particular it never
 //! paints an opaque background, so transparent terminals keep working.
 
 use std::io::{self, Write};
@@ -18,7 +18,7 @@ use ratatui::DefaultTerminal;
 pub fn init() -> io::Result<DefaultTerminal> {
     let terminal = ratatui::try_init()?;
     // Bracketed paste lets the terminal deliver a paste as one event; focus
-    // reporting lets Koda refresh the tree when the user returns to it.
+    // reporting lets Kemori refresh the tree when the user returns to it.
     //
     // The keyboard-enhancement request (kitty protocol) asks the terminal to
     // report modified keys distinctly, so `Ctrl+Shift+P` is not delivered as a

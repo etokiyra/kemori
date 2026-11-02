@@ -27,7 +27,7 @@ impl App {
 
     /// Write the preferences if the user changed any this session.
     ///
-    /// Settings are saved on quit (like the session and recent stores), so Koda
+    /// Settings are saved on quit (like the session and recent stores), so Kemori
     /// never creates a settings file for a user who changed nothing.
     pub(super) fn persist_settings(&self) {
         if self.settings_dirty {

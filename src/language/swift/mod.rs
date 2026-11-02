@@ -3,7 +3,7 @@
 //! Built-in and offline: `//` and `/* … */` comments, regular and multiline
 //! strings, attributes, keywords, types, numbers and operators. Structural
 //! diagnostics reuse the shared delimiter checker. `sourcekit-lsp` (which ships
-//! with the Swift toolchain) is discovered and launched when present; Koda does
+//! with the Swift toolchain) is discovered and launched when present; Kemori does
 //! not pretend a Swift toolchain is portable to every platform.
 
 use crate::language::completion::{Completion, CompletionKind};

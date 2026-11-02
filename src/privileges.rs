@@ -1,6 +1,6 @@
 //! Runtime privilege detection.
 //!
-//! Koda is normally started by the logged-in user. It is also valid to run it
+//! Kemori is normally started by the logged-in user. It is also valid to run it
 //! through `sudo` to edit a system file. In that case the effective user is
 //! root while `HOME`/`XDG_*` may still describe the invoking user (depending on
 //! the sudoers configuration), so state must not be written into another
@@ -31,7 +31,7 @@ pub fn is_root() -> bool {
 
 /// The user `sudo` was invoked by, when the process is elevated.
 ///
-/// `SUDO_USER` is set by sudo itself, not by Koda, and is empty for a direct
+/// `SUDO_USER` is set by sudo itself, not by Kemori, and is empty for a direct
 /// root login. It is a hint for choosing an account-safe state location, never
 /// a source of executable paths.
 pub fn sudo_user() -> Option<String> {
@@ -54,12 +54,12 @@ fn root_home() -> Option<PathBuf> {
     candidate.is_dir().then_some(candidate)
 }
 
-/// Choose the directory that contains Koda's per-user state.
+/// Choose the directory that contains Kemori's per-user state.
 ///
 /// * Normal launch: `$XDG_STATE_HOME`, otherwise `$HOME/.local/state`.
 /// * Elevated launch (`sudo`): the root account's state directory, even when
 ///   the environment still points at the invoking user's home. This keeps the
-///   user's own Koda state writable by that user.
+///   user's own Kemori state writable by that user.
 ///
 /// `root_home` is a parameter so the fallback logic is testable without
 /// touching the real account database.

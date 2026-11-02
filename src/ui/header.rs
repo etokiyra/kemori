@@ -1,6 +1,6 @@
-//! The Koda header: identity plus a breadcrumb, no boring rule.
+//! The Kemori header: identity plus a breadcrumb, no boring rule.
 //!
-//! `  ✦ koda  ·  Rust  ·  src/main.rs ●`
+//! `  ✦ kemori  ·  Rust  ·  src/main.rs ●`
 
 use ratatui::Frame;
 use ratatui::layout::Rect;
@@ -17,7 +17,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
 
     let mut spans = vec![
         Span::styled(" ✦ ", theme::star()),
-        Span::styled("koda", theme::accent_bold()),
+        Span::styled("kemori", theme::accent_bold()),
         Span::styled("  ", theme::dim()),
         Span::styled("·", theme::dim()),
         Span::styled("  ", theme::dim()),
