@@ -1,6 +1,6 @@
 # NEXT — the working plan for turning Kemori into a full IDE
 
-**Status snapshot:** 2026-11-02, version 3.0.0, commit `9be6382`.
+**Status snapshot:** 2026-11-02, version 3.0.0, commit `03d5362`.
 **Verification at the time of writing:** `cargo check --all-targets`, `cargo clippy --all-targets` clean; `cargo test` green (645 library tests, 51 render tests, plus tooling suites with ignored live tests).
 **Release status:** `kemori` 3.0.0 is on crates.io, docs.rs and the GitHub `v3.0.0` release. The AUR packages are prepared and validated locally; pushing them still needs the maintainer's AUR SSH key.
 
@@ -567,7 +567,7 @@ Keep this table current so the next session knows where to resume.
 | 1. Bottom panel | done | 3f1083e | Problems, Output and Debug Console; `Ctrl+J`, tab switching, resize, per-tab state |
 | 1. Problems panel | partial | 3f1083e | Covers open files and groups by file; workspace-wide sweep and pull diagnostics remain |
 | 1. Integrated terminal | not started | — | Needs the PTY dependency decision (open decision 3) |
-| 1. Live tasks | done | pending | Streaming, follow-tail, cancel and rerun; history and problem parsing remain |
+| 1. Live tasks | done | 03d5362 | Streaming, follow-tail, cancel and rerun; history and problem parsing remain |
 | 1. Task depth | not started | — | Output history, references into Problems, Run Active File |
 | 1. Project search/replace | done | 9be6382 | Form overlay, literals/regex, globs, preview, atomic replace, unsaved-buffer safety |
 | 1. Workspace trust | not started | — | — |
