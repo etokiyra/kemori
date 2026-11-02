@@ -13,10 +13,9 @@ use ratatui::widgets::{Block, BorderType, Clear, Paragraph};
 
 use crate::app::overlay::{
     CompletionState, DiffLineKind, DiffState, DirEntryKind, DirPicker, Help, HoverState,
-    NewProject, NewProjectStep, Picker, Prompt, SETTINGS_ROWS, Search, SearchField, SettingsRow,
-    SettingsState,
+    NewProject, NewProjectStep, Picker, Prompt, Search, SearchField,
 };
-use crate::app::{Toast, ToastKind};
+use crate::app::{SETTINGS_ROWS, SettingsRow, SettingsState, Toast, ToastKind};
 use crate::commands::CommandRegistry;
 use crate::project::create;
 use crate::settings::Settings;

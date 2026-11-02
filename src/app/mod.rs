@@ -6,6 +6,8 @@
 pub mod overlay;
 pub mod panel;
 
+pub use settings::{SETTINGS_ROWS, SettingsRow, SettingsState};
+
 mod background;
 mod commands;
 mod completion;

@@ -1,7 +1,7 @@
 use super::*;
 use std::fs;
 
-use super::overlay::{SETTINGS_ROWS, SettingsRow};
+use super::{SETTINGS_ROWS, SettingsRow};
 use crate::settings::{Settings, ThemeId};
 
 fn temp_project(name: &str) -> PathBuf {
