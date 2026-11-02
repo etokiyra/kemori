@@ -4,7 +4,7 @@ This directory contains two ready-to-push AUR packages:
 
 | Directory | AUR package | Source |
 | --- | --- | --- |
-| `kemori/` | stable release | GitHub tag `v2.1.0` |
+| `kemori/` | stable release | GitHub tag `v3.0.0` |
 | `kemori-git/` | VCS package | `master` from GitHub |
 
 Both install `/usr/bin/kemori`, so a normal Arch/Artix `sudo kemori` resolves the
@@ -21,10 +21,13 @@ namcap PKGBUILD
 namcap <built-package>.pkg.tar.zst
 ```
 
-- `kemori 0.1.2-1` built successfully; its package contains `/usr/bin/kemori`.
+- `kemori 3.0.0-1` built successfully; its package contains `/usr/bin/kemori`.
+- `makepkg --verifysource` passed for the 3.0.0 source archive, and
+  `makepkg --printsrcinfo` matches the checked-in `.SRCINFO`.
 - `kemori-git` built successfully; its `pkgver()` derives the version from
   `git describe`, and the package provides and conflicts with `kemori`.
-- `namcap` reported no findings for either PKGBUILD or package.
+- `namcap` reported no findings for the earlier packages; rerun it for 3.0.0
+  before pushing.
 - Runtime dependencies are `glibc` and `libgcc`; language runtimes and servers
   are `optdepends`, because Kemori itself provisions or discovers them.
 

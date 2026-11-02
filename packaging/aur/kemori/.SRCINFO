@@ -1,6 +1,6 @@
 pkgbase = kemori
 	pkgdesc = A modern, lightweight, terminal-native IDE
-	pkgver = 2.1.0
+	pkgver = 3.0.0
 	pkgrel = 1
 	url = https://github.com/etokiyra/kemori
 	arch = x86_64
@@ -27,7 +27,7 @@ pkgbase = kemori
 	optdepends = dart: Dart language server
 	optdepends = elixir: Elixir language server runtime
 	optdepends = nix: Nix language server and formatter
-	source = kemori-2.1.0.tar.gz::https://github.com/etokiyra/kemori/archive/refs/tags/v2.1.0.tar.gz
-	sha256sums = d387161a821cc6152f27e10070f258dbef8c46aa0b05c9e71014b15c9aaa8dc3
+	source = kemori-3.0.0.tar.gz::https://github.com/etokiyra/kemori/archive/refs/tags/v3.0.0.tar.gz
+	sha256sums = 710ce0adee681699259a71a3ea0f9fc869d388b18b385d94909670cdcfb0334b
 
 pkgname = kemori
