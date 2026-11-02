@@ -233,6 +233,8 @@ impl App {
             ids::WORKSPACE_SYMBOLS => self.open_workspace_symbols(),
             ids::PROJECT_SEARCH => self.open_project_search(),
             ids::RUN_TASKS => self.open_task_picker(),
+            ids::CANCEL_TASK => self.cancel_task(),
+            ids::RERUN_TASK => self.rerun_task(),
             ids::CHANGED_FILES => self.open_changed_files(),
             ids::GIT_COMMIT => self.commit_changes(),
             ids::GIT_TOGGLE_STAGE => self.toggle_stage_target(),
@@ -739,6 +741,12 @@ impl App {
                 false,
                 Some("no tasks detected for this project".to_string()),
             ),
+            ids::CANCEL_TASK if !self.pending_task => {
+                (false, Some("no task is running".to_string()))
+            }
+            ids::RERUN_TASK if self.last_task.is_none() => {
+                (false, Some("run a task first".to_string()))
+            }
             ids::GIT_COMMIT if self.workspace.git.files.is_empty() => {
                 (false, Some("nothing to commit".to_string()))
             }

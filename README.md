@@ -327,8 +327,9 @@ The editor is the heart of Kemori, and it is built for real projects.
   current output, and `Esc` returns to the editor.
 - **Run Task…** runs one of the project's own commands — `cargo build`/`test`,
   `go build`/`test`, `make`, `python3 -m pytest`, `mix test` or any declared
-  `npm` script — detected from the project's markers with no configuration, and
-  keeps its output in the panel's **Output** tab. `Enter` jumps to the
+  `npm` script — detected from the project's markers with no configuration.
+  Output streams live into the panel's **Output** tab, `x` cancels a running
+  task, `r` reruns the last one, and `Enter` jumps to the
   `file:line[:column]` reference on the selected row.
 - A background worker keeps detection, diagnostics, formatting and git off the
   UI thread.
@@ -807,6 +808,7 @@ Kemori reports what happened rather than deleting anything.
 | Context | `↑ / ↓, PageUp / PageDown` | panel / project search: move through results |
 | Context | `Enter` | panel / project search: open or search; welcome: open |
 | Context | `c` | panel: clear the current output |
+| Context | `r / x` | panel Output: rerun the last task / cancel the running one |
 | Context | `Alt+↑↓` | panel: grow or shrink |
 | Context | `Esc` | panel / project search: close |
 | Context | `↑ / ↓` | welcome: choose an action |

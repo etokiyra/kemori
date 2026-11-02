@@ -474,11 +474,12 @@ fn a_run_task_executes_and_shows_its_output() {
         "the statusline should say the task is running"
     );
 
-    // The make script finishes quickly; wait for the panel to receive output.
+    // The task finishes quickly; wait for the final result in the panel.
     let deadline = Instant::now() + Duration::from_secs(30);
-    while app.panel.output.is_none() && Instant::now() < deadline {
+    while app.pending_task && Instant::now() < deadline {
         app.pump_background(Duration::from_millis(50));
     }
+    assert!(!app.pending_task, "the pending flag must clear");
     match &app.panel.output {
         Some(run) => {
             assert!(run.success, "the task should have exited cleanly");
@@ -494,7 +495,59 @@ fn a_run_task_executes_and_shows_its_output() {
     }
     assert!(app.panel.open, "the panel should open with the output");
     assert_eq!(app.panel.tab, super::panel::PanelTab::Output);
-    assert!(!app.pending_task, "the pending flag must clear");
+    fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
+fn task_output_appends_partial_lines_and_follows_the_tail() {
+    use crate::app::panel::TaskRunState;
+
+    let mut run = TaskRunState::from_output(&PathBuf::from("."), "T", "cmd", "running", true, "");
+    run.append("one\ntw");
+    run.append("o\n");
+    assert_eq!(run.lines, vec!["one".to_string(), "two".to_string()]);
+    assert_eq!(run.selected, 1, "follow keeps the cursor on the last line");
+    assert!(run.follow);
+
+    // Scrolling up must stop the view from being yanked back by new output.
+    run.select_by(-1);
+    assert!(!run.follow);
+    run.append("three\n");
+    assert_eq!(run.selected, 0);
+    assert_eq!(run.lines.len(), 3);
+
+    run.select_by(i64::MAX);
+    assert!(run.follow);
+    assert_eq!(run.selected, 2);
+}
+
+#[cfg(unix)]
+#[test]
+fn a_running_task_can_be_cancelled() {
+    let dir = temp_project("task-cancel");
+    let file = dir.join("src/main.rs");
+    let mut app = app_with_file(&file);
+
+    app.run_task(Task {
+        label: "Slow".to_string(),
+        program: "sh".to_string(),
+        args: vec!["-c".to_string(), "sleep 30".to_string()],
+    });
+    assert!(app.pending_task);
+    app.cancel_task();
+    assert!(
+        app.status_message()
+            .is_some_and(|message| message.contains("Cancelling"))
+    );
+
+    let deadline = Instant::now() + Duration::from_secs(15);
+    while app.pending_task && Instant::now() < deadline {
+        app.pump_background(Duration::from_millis(20));
+    }
+    assert!(!app.pending_task, "cancelling must end the task promptly");
+    let run = app.panel.output.as_ref().expect("output state");
+    assert_eq!(run.outcome, "cancelled");
+    assert!(!run.success);
     fs::remove_dir_all(&dir).ok();
 }
 

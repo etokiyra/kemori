@@ -100,6 +100,8 @@ impl App {
             Some("searching project")
         } else if self.pending_project_replace.is_some() {
             Some("replacing in project")
+        } else if self.pending_task {
+            Some("running task")
         } else if self.pending_install.is_some() {
             Some("installing")
         } else if self.pending_commit {

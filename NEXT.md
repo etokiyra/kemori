@@ -1,7 +1,7 @@
 # NEXT — the working plan for turning Kemori into a full IDE
 
 **Status snapshot:** 2026-11-02, version 3.0.0, commit `9be6382`.
-**Verification at the time of writing:** `cargo check --all-targets`, `cargo clippy --all-targets` clean; `cargo test` green (641 library tests, 51 render tests, plus tooling suites with ignored live tests).
+**Verification at the time of writing:** `cargo check --all-targets`, `cargo clippy --all-targets` clean; `cargo test` green (645 library tests, 51 render tests, plus tooling suites with ignored live tests).
 **Release status:** `kemori` 3.0.0 is on crates.io, docs.rs and the GitHub `v3.0.0` release. The AUR packages are prepared and validated locally; pushing them still needs the maintainer's AUR SSH key.
 
 ### What this session completed
@@ -11,6 +11,10 @@
   grouped results and a per-line replacement preview. `Alt+Enter` replaces
   atomically on the worker, skips unsaved open files, names every changed file,
   reloads clean open buffers and asks twice before deleting matches.
+- **Live task output.** A task opens the Output tab at start, streams
+  stdout/stderr as it arrives, follows the tail until the user scrolls up,
+  cancels with `x`, reruns with `r`, and replaces the live view with the final
+  stdout/stderr-separated result.
 - **Phase 1's bottom panel is in place.** `Ctrl+J` opens a keyboard-focusable
   panel with **Problems** (diagnostics across open files, grouped by file),
   **Output** (the last task's captured result) and **Debug Console** (adapter
@@ -343,9 +347,11 @@ workspace-wide problems and trust remain.
 - [ ] **Integrated terminal** via a PTY, rooted at the workspace. Multiple
       sessions, copy/paste, resize, signals. A dependency decision is required;
       record it in `DECISIONS.md`.
-- [ ] **Live tasks.** Stream stdout/stderr into Output; cancel, rerun, history.
-      Parse `file:line[:col]` references into Problems. Add "Run Active File"
-      for standalone scripts.
+- [x] **Live task output.** Stream stdout/stderr into Output, follow the tail
+      until the user scrolls, cancel with `x`, rerun with `r`, and show the
+      final stdout/stderr-separated batch.
+- [ ] **Task depth.** Output history, `file:line[:col]` references parsed into
+      Problems, and "Run Active File" for standalone scripts.
 - [x] **Project search and replace.** Literal/regex, case, whole word,
       include/exclude globs, results grouped by file, replacement preview,
       atomic writes, unsaved-buffer safety and every changed file named.
@@ -456,7 +462,7 @@ so "Complete" means the development loop works.
 ## 5. Suggested next commits
 
 1. `feat(terminal): PTY-backed terminal in the bottom panel`
-2. `feat(tasks): stream live output with cancel and rerun`
+2. `feat(tasks): output history and references into Problems`
 3. `feat(diagnostics): workspace-wide Problems and pull diagnostics`
 4. `feat(app): workspace trust before running project code`
 
@@ -490,8 +496,9 @@ cargo fmt --check
 cargo run -- .
 ```
 
-New subprocess call sites must use `process::wait_captured`. New managed
-downloads must be pinned and verified. Never paint an opaque full-screen
+New subprocess call sites must use `process::wait_captured` (or
+`process::wait_streaming` for live output). New managed downloads must be pinned
+and verified. Never paint an opaque full-screen
 background. Never use `unwrap()` on user input or filesystem results. Never
 add a dependency without listing and justifying it first.
 
@@ -560,7 +567,8 @@ Keep this table current so the next session knows where to resume.
 | 1. Bottom panel | done | 3f1083e | Problems, Output and Debug Console; `Ctrl+J`, tab switching, resize, per-tab state |
 | 1. Problems panel | partial | 3f1083e | Covers open files and groups by file; workspace-wide sweep and pull diagnostics remain |
 | 1. Integrated terminal | not started | — | Needs the PTY dependency decision (open decision 3) |
-| 1. Live tasks | not started | — | Output is a completed batch in the panel; streaming, cancel and rerun remain |
+| 1. Live tasks | done | pending | Streaming, follow-tail, cancel and rerun; history and problem parsing remain |
+| 1. Task depth | not started | — | Output history, references into Problems, Run Active File |
 | 1. Project search/replace | done | 9be6382 | Form overlay, literals/regex, globs, preview, atomic replace, unsaved-buffer safety |
 | 1. Workspace trust | not started | — | — |
 | 2. LSP depth | not started | — | — |

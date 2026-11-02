@@ -36,7 +36,8 @@ src/
 │   ├── tasks.rs            # task picker and bounded run output
 │   ├── tests.rs            # the app-level integration tests
 │   └── view.rs             # tree/diagnostic/wrap/fold toggles and reveal
-├── background.rs           # worker pool for detection, LSP, git, formatting
+├── background.rs           # worker pool for detection, LSP, git, formatting, tasks
+├── task_run.rs             # one project task: streaming, bounded, cancellable
 ├── commands/mod.rs         # command registry (ids, titles, shortcuts)
 ├── debug.rs                # DAP handshake preview (not a debugger yet)
 ├── editor/
@@ -72,7 +73,7 @@ src/
 │   │   └── convert.rs      # the char ↔ LSP position boundary
 │   └── <name>/mod.rs       # one provider per language (rust, go, …)
 ├── privileges.rs           # root/sudo safety boundary helpers
-├── process.rs              # wait_captured: bounded, pipe-draining subprocess
+├── process.rs              # wait_captured / wait_streaming: bounded subprocesses
 ├── project/
 │   ├── mod.rs              # Project detection + Workspace
 │   ├── create.rs           # deterministic, offline project templates

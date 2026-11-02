@@ -50,10 +50,12 @@ describes the current state.
 - **Project setup is offered once per workspace.** After **Later** it does not
   re-prompt; reopen it with **Set Up Project…** in the command palette (or from
   **Language Setup…** for individual tools).
-- **Run Task output is a single bounded batch.** A task runs to completion (or
-  its deadline) on the background worker, and stdout and stderr are shown apart
-  when both were captured — there is no live streaming. The batch stays in the
-  panel's **Output** tab until the next task or **Panel: Clear**.
+- **Task output streams, but history is single-slot.** A task's stdout/stderr is
+  appended to the panel's **Output** tab live and the view follows the tail
+  until the user scrolls up. `x` cancels and `r` reruns the last task. Only the
+  most recent task is kept: there is no output history, and the display cannot
+  retroactively reorder stdout and stderr — the final batch separates them.
+  A task can still run to its ten-minute deadline if it is never cancelled.
 - **The Problems tab covers the open files only.** Diagnostics exist for
   documents Kemori has opened and analysed; there is no workspace-wide
   diagnostic sweep and no LSP pull diagnostics yet. The tab groups what it has

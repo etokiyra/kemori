@@ -37,5 +37,6 @@ pub mod remote;
 pub mod search;
 pub mod session;
 pub mod settings;
+mod task_run;
 pub mod terminal;
 pub mod ui;

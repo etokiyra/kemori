@@ -26,9 +26,11 @@ Historical entries below retain the old name; 3.0.0 is the rename release.
   console, and `Esc` returns to the editor. Each tab keeps its own state.
 
 ### Changed
-- **Task output lives in the bottom panel.** Running a task no longer opens a
-  modal view; its output stays available in the Output tab, so jumping to an
-  error does not discard the rest of the result.
+- **Task output streams into the bottom panel.** Running a task opens the
+  **Output** tab immediately and appends stdout/stderr as it arrives, following
+  the tail until the user scrolls up. `x` in the tab cancels the running task,
+  `r` reruns the last one, and the final result still separates stdout from
+  stderr. Running a task no longer opens a modal view.
 - **The debug-adapter preview writes to the Debug Console.** Its messages are
   kept in the panel instead of only flashing in the statusline.
 

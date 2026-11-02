@@ -329,6 +329,10 @@ impl App {
                 self.project_languages = Some(languages);
                 true
             }
+            BackgroundEvent::TaskOutput { stream: _, text } => {
+                self.append_task_output(&text);
+                true
+            }
             BackgroundEvent::TaskRun(outcome) => {
                 self.pending_task = false;
                 self.show_task_run(outcome);

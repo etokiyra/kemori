@@ -151,9 +151,11 @@ this file, and add or change a test.
   move the cursor from a response that has been superseded.
 - **Requests and subprocesses are bounded.** Every LSP request has a deadline
   (formatting a longer one); expired requests are removed and their UI state
-  cleared. External processes run through `process::wait_captured`, which drains
-  both pipes, caps output and kills the child at a deadline. New subprocess call
-  sites must use it rather than `Command::output` or `wait_with_output`.
+  cleared. External processes run through `process::wait_captured` (or
+  `process::wait_streaming` when live output is required), which drains both
+  pipes, caps output and kills the child at a deadline. New subprocess call
+  sites must use one of them rather than `Command::output` or
+  `wait_with_output`.
 - **Background work is isolated.** A small worker pool runs background requests,
   so one slow operation cannot stall unrelated services. Automatic,
   superseding snapshots (diagnostics) may be dropped when the queue is
@@ -321,6 +323,17 @@ this file, and add or change a test.
   than overwritten, and clean open buffers reload immediately after the write.
   Replacement text is literal (the regex engine has no groups). An empty
   replacement is treated as a delete and requires a second confirmation.
+
+- **Task output is streamed, bounded and cancellable.** A run task is spawned
+  with piped stdout/stderr; `process::wait_streaming` forwards UTF-8 chunks to
+  the UI while keeping the same per-stream byte cap and deadline as
+  `wait_captured`. The reader threads drain after the cap, so a chatty child
+  cannot block or exhaust memory. A shared cancellation flag is checked on every
+  poll and kills the child; the result distinguishes cancellation from a
+  timeout. The panel follows the tail while the user has not scrolled up, and
+  the final batch replaces the live view with stdout and stderr separated (the
+  live interleaving is arrival order, not a claim about the child's write
+  order). Only one task runs at a time.
 
 - **Deterministic project scaffolding.** `project/create.rs` writes conventional
   project files directly instead of invoking `cargo`, `go` or `pip`, so

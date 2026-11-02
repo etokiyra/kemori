@@ -57,6 +57,7 @@ use crate::language::tools::{Tool, ToolPurpose, ToolRegistry};
 use crate::language::{Capability, LanguageId, LanguageService, WorkspaceSymbol};
 use crate::project::Workspace;
 use crate::project::create::{self, CreateOutcome};
+use crate::project::tasks::Task;
 use crate::recent::Recent;
 use crate::session::Session;
 use crate::terminal;
@@ -375,6 +376,8 @@ pub struct App {
     git_markers_revision: u64,
     /// Whether a background run task is in flight, guarding a second run.
     pending_task: bool,
+    /// The last task started, so it can be rerun.
+    last_task: Option<Task>,
     /// Whether a stage/unstage is running and the changed-files picker should
     /// be rebuilt when the refreshed snapshot arrives.
     pending_stage_refresh: bool,
@@ -528,6 +531,7 @@ impl App {
             pending_git_diff: None,
             git_markers_revision: 0,
             pending_task: false,
+            last_task: None,
             pending_stage_refresh: false,
             pending_code_actions: Vec::new(),
             last_disk_check: Instant::now(),

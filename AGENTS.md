@@ -77,7 +77,8 @@ Adding a language means implementing `LanguageProvider` and registering it in
 - Public items get doc comments explaining intent.
 - UI strings use plain ASCII except intentional glyphs (`▸ ▾ │ ● ⎇ ❯ ✦ ☾`).
 - Measure positions in **characters**, not bytes.
-- Run external processes through `process::wait_captured`; never
+- Run external processes through `process::wait_captured` (or
+  `process::wait_streaming` when live output is required); never
   `Command::output`/`wait_with_output` in a new call site.
 - Convert LSP positions only in `language/lsp/convert.rs`; never do ad-hoc
   character/byte arithmetic in the UI.

@@ -220,6 +220,8 @@ impl App {
             KeyCode::End => self.panel_edge(true),
             KeyCode::Enter => self.activate_panel_selection(),
             KeyCode::Char('c') => self.clear_panel(),
+            KeyCode::Char('x') if self.panel.tab == PanelTab::Output => self.cancel_task(),
+            KeyCode::Char('r') if self.panel.tab == PanelTab::Output => self.rerun_task(),
             _ => {}
         }
     }
@@ -351,6 +353,10 @@ pub struct TaskRunState {
     pub root: PathBuf,
     pub lines: Vec<String>,
     pub selected: usize,
+    /// Whether new output should keep the cursor on the last line.
+    pub follow: bool,
+    /// The incomplete last line of a live stream.
+    partial: String,
 }
 
 impl TaskRunState {
@@ -375,6 +381,24 @@ impl TaskRunState {
             root: root.to_path_buf(),
             lines,
             selected: 0,
+            follow: true,
+            partial: String::new(),
+        }
+    }
+
+    /// Append a live chunk, keeping the incomplete final line for the next one.
+    pub fn append(&mut self, text: &str) {
+        self.partial.push_str(text);
+        if let Some(index) = self.partial.rfind('\n') {
+            let complete: String = self.partial.drain(..=index).collect();
+            self.lines.extend(
+                complete
+                    .lines()
+                    .map(|line| line.trim_end_matches('\r').to_string()),
+            );
+        }
+        if self.follow {
+            self.selected = self.lines.len().saturating_sub(1);
         }
     }
 
@@ -386,6 +410,7 @@ impl TaskRunState {
             let next = (self.selected as i64).saturating_add(delta);
             self.selected = next.clamp(0, self.lines.len() as i64 - 1) as usize;
         }
+        self.follow = self.selected + 1 >= self.lines.len();
     }
 
     /// The file and position the selected line references, resolved against the

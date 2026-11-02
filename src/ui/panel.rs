@@ -75,6 +75,12 @@ fn keys_line(app: &App) -> Line<'static> {
         spans.push(Span::styled("·", theme::dim()));
         spans.push(Span::styled(" Enter open ", theme::muted()));
     }
+    if app.panel.tab == PanelTab::Output {
+        spans.push(Span::styled("·", theme::dim()));
+        spans.push(Span::styled(" r rerun ", theme::muted()));
+        spans.push(Span::styled("·", theme::dim()));
+        spans.push(Span::styled(" x cancel ", theme::muted()));
+    }
     spans.push(Span::styled("·", theme::dim()));
     spans.push(Span::styled(" c clear ", theme::muted()));
     spans.push(Span::styled("·", theme::dim()));
@@ -164,7 +170,9 @@ fn render_output(frame: &mut Frame, area: Rect, app: &App) {
     if area.height == 0 {
         return;
     }
-    let outcome_style = if run.success {
+    let outcome_style = if run.outcome == "running" {
+        theme::accent()
+    } else if run.success {
         theme::success()
     } else {
         theme::error()

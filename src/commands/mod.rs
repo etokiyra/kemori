@@ -79,6 +79,8 @@ pub mod ids {
     pub const WORKSPACE_SYMBOLS: &str = "project.symbols";
     pub const PROJECT_SEARCH: &str = "project.search";
     pub const RUN_TASKS: &str = "project.tasks";
+    pub const CANCEL_TASK: &str = "project.cancelTask";
+    pub const RERUN_TASK: &str = "project.rerunTask";
     pub const OPEN_PROJECT: &str = "project.openDir";
     pub const SWITCH_WORKSPACE: &str = "project.switchWorkspace";
     pub const NEW_PROJECT: &str = "project.new";
@@ -448,6 +450,10 @@ impl CommandRegistry {
                 .describes("Install the language tooling this project needs"),
             Command::new(RUN_TASKS, "Run Task…", "Project", Some("Ctrl+Shift+R"))
                 .describes("Run one of the project's own commands"),
+            Command::new(CANCEL_TASK, "Cancel Task", "Project", None)
+                .describes("Stop the task that is currently running"),
+            Command::new(RERUN_TASK, "Rerun Last Task", "Project", None)
+                .describes("Run the last project task again"),
             Command::new(CHANGED_FILES, "Changed Files…", "Git", Some("Ctrl+Shift+G"))
                 .describes("List the files changed in the working tree"),
             Command::new(GIT_COMMIT, "Commit Changes…", "Git", Some("Ctrl+Shift+C"))
@@ -607,6 +613,10 @@ pub const CONTEXT_KEYS: &[(&str, &str)] = &[
         "panel / project search: open or search; welcome: open",
     ),
     ("c", "panel: clear the current output"),
+    (
+        "r / x",
+        "panel Output: rerun the last task / cancel the running one",
+    ),
     ("Alt+↑↓", "panel: grow or shrink"),
     ("Esc", "panel / project search: close"),
     ("↑ / ↓", "welcome: choose an action"),

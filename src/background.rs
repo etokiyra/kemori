@@ -7,6 +7,7 @@
 
 use std::collections::HashSet;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -20,8 +21,10 @@ use crate::language::diagnostics::Diagnostic;
 use crate::language::format::FormatOutcome;
 use crate::language::id::LanguageId;
 use crate::language::tools::{Tool, ToolRegistry};
+use crate::process::Stream;
 use crate::project::tasks::Task;
 use crate::search::{ReplaceOutcome, SearchMatch, SearchOptions};
+pub use crate::task_run::TaskRunOutcome;
 
 /// Work sent to the background thread.
 enum Request {
@@ -199,29 +202,21 @@ pub enum Event {
         language: LanguageId,
         outcome: crate::project::create::CreateOutcome,
     },
-    /// The captured output of a run task.
+    /// A live chunk of a run task's output.
+    TaskOutput {
+        stream: Stream,
+        text: String,
+    },
+    /// The final result of a run task.
     TaskRun(TaskRunOutcome),
-}
-
-/// How a run task ended and what it printed.
-pub struct TaskRunOutcome {
-    pub task: Task,
-    /// Success when the process exited cleanly; `None` means killed or lost.
-    pub exit_code: Option<i32>,
-    /// True when the task ran past Kemori's deadline and was killed.
-    pub timed_out: bool,
-    /// True when the child could not be spawned at all.
-    pub spawn_error: Option<String>,
-    /// stdout and stderr, each capped, stdout first.
-    pub text: String,
-    /// Whether the capped stream was truncated before the task ended.
-    pub truncated: bool,
 }
 
 /// Handle to the background worker.
 pub struct Background {
     requests: mpsc::SyncSender<Request>,
     events: Receiver<Event>,
+    /// Set to cancel the task currently running on a worker.
+    task_cancel: Arc<AtomicBool>,
 }
 
 /// How many background operations may run at once. A small pool keeps a slow
@@ -237,26 +232,19 @@ const REQUEST_QUEUE: usize = 128;
 /// and skips generated directories; the cap keeps a huge tree predictable.
 const PROJECT_SCAN_LIMIT: usize = 4000;
 
-/// How long a run task may execute before the background worker kills it. A
-/// blocked worker is acceptable (the UI stays responsive); an unbounded child
-/// is not.
-const TASK_TIMEOUT: Duration = Duration::from_secs(600);
-
-/// The most output bytes a run task may leave behind, beyond which the tail is
-/// drained and dropped.
-const TASK_OUTPUT_CAP: usize = 256 * 1024;
-
 impl Background {
     /// Spawn the workers, sharing the language service with the UI thread.
     pub fn spawn(language: Arc<LanguageService>) -> Self {
         let (request_tx, request_rx) = mpsc::sync_channel::<Request>(REQUEST_QUEUE);
         let (event_tx, event_rx) = mpsc::channel::<Event>();
         let request_rx = Arc::new(Mutex::new(request_rx));
+        let task_cancel = Arc::new(AtomicBool::new(false));
 
         for index in 0..WORKER_THREADS {
             let requests = Arc::clone(&request_rx);
             let events = event_tx.clone();
             let language = Arc::clone(&language);
+            let task_cancel = Arc::clone(&task_cancel);
             let _ = thread::Builder::new()
                 .name(format!("kemori-background-{index}"))
                 .spawn(move || {
@@ -271,7 +259,7 @@ impl Background {
                             receiver.recv()
                         };
                         let Ok(request) = request else { break };
-                        handle_request(request, &language, &events);
+                        handle_request(request, &language, &events, &task_cancel);
                     }
                 });
         }
@@ -280,6 +268,7 @@ impl Background {
         Background {
             requests: request_tx,
             events: event_rx,
+            task_cancel,
         }
     }
 
@@ -461,7 +450,13 @@ impl Background {
 
     /// Ask for a project task to run in the project root.
     pub fn run_task(&self, root: PathBuf, task: Task) {
+        self.task_cancel.store(false, Ordering::Relaxed);
         let _ = self.requests.send(Request::RunTask { root, task });
+    }
+
+    /// Cancel the task currently running on a worker, if any.
+    pub fn cancel_task(&self) {
+        self.task_cancel.store(true, Ordering::Relaxed);
     }
 
     /// Take the next finished event, if any.
@@ -476,7 +471,12 @@ impl Background {
 }
 
 /// Execute one request and publish its event(s).
-fn handle_request(request: Request, language: &LanguageService, events: &Sender<Event>) {
+fn handle_request(
+    request: Request,
+    language: &LanguageService,
+    events: &Sender<Event>,
+    task_cancel: &Arc<AtomicBool>,
+) {
     match request {
         Request::Detect { path, markers } => {
             let result = language.detect_file(&path, &markers);
@@ -695,66 +695,14 @@ fn handle_request(request: Request, language: &LanguageService, events: &Sender<
             });
         }
         Request::RunTask { root, task } => {
-            let _ = events.send(Event::TaskRun(run_task(&root, task)));
+            let sender = events.clone();
+            let outcome = crate::task_run::run(&root, task, task_cancel, move |stream, text| {
+                let _ = sender.send(Event::TaskOutput {
+                    stream,
+                    text: text.to_string(),
+                });
+            });
+            let _ = events.send(Event::TaskRun(outcome));
         }
     }
-}
-
-/// Run one task in `root`, with bounded output and a deadline.
-///
-/// The command is spawned exactly as named: no shell, so project-provided
-/// arguments cannot be reinterpreted. stdout and stderr are captured on their
-/// own threads by [`crate::process::wait_captured`].
-fn run_task(root: &std::path::Path, task: Task) -> TaskRunOutcome {
-    use std::process::{Command, Stdio};
-
-    let mut outcome = TaskRunOutcome {
-        task: task.clone(),
-        exit_code: None,
-        timed_out: false,
-        spawn_error: None,
-        text: String::new(),
-        truncated: false,
-    };
-    let mut child = match Command::new(&task.program)
-        .args(&task.args)
-        .current_dir(root)
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-    {
-        Ok(child) => child,
-        Err(err) => {
-            outcome.spawn_error = Some(format!(
-                "`{}' could not be started: {err}",
-                task.command_line()
-            ));
-            return outcome;
-        }
-    };
-    let captured = match crate::process::wait_captured(&mut child, TASK_TIMEOUT, TASK_OUTPUT_CAP) {
-        Ok(captured) => captured,
-        Err(err) => {
-            outcome.spawn_error = Some(err.to_string());
-            return outcome;
-        }
-    };
-    let status = captured.status;
-    outcome.exit_code = status.as_ref().and_then(|status| status.code());
-    outcome.timed_out = status.is_none();
-    outcome.truncated =
-        captured.stdout.len() >= TASK_OUTPUT_CAP || captured.stderr.len() >= TASK_OUTPUT_CAP;
-    let stdout_text = String::from_utf8_lossy(&captured.stdout);
-    let stderr_text = String::from_utf8_lossy(&captured.stderr);
-    match (stdout_text.trim().is_empty(), stderr_text.trim().is_empty()) {
-        (true, true) => {}
-        (false, true) => outcome.text += stdout_text.trim_end(),
-        (true, false) => outcome.text += stderr_text.trim_end(),
-        // Kept apart: the capture threads raced, so interleaving is fiction.
-        (false, false) => {
-            outcome.text = format!("{stdout_text}\n── stderr ──\n{stderr_text}");
-        }
-    }
-    outcome
 }

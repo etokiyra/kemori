@@ -202,18 +202,18 @@ part of the core IDE loop below.
 
 **Done (3.x).** A bottom panel (`Ctrl+J`) holds **Problems**, **Output** and
 **Debug Console** tabs with their own state. Problems gathers diagnostics across
-the open files, groups them by file and jumps to the source; task output and
-debug-adapter messages land in their tabs instead of a modal; the panel resizes
-and leaves the editor readable on a short terminal. Project-wide search and
-replace (`Ctrl+Shift+F`) supports literal or regex queries, case/word toggles,
-include/exclude globs, grouped results, a replacement preview, atomic writes
-that skip unsaved buffers, and immediate reload of clean open files. The full
-execution plan and acceptance criteria are in [NEXT.md](NEXT.md) Phase 1.
+the open files, groups them by file and jumps to the source; task output streams
+live and can be cancelled or rerun; debug-adapter messages land in their tab
+instead of a modal; the panel resizes and leaves the editor readable on a short
+terminal. Project-wide search and replace (`Ctrl+Shift+F`) supports literal or
+regex queries, case/word toggles, include/exclude globs, grouped results, a
+replacement preview, atomic writes that skip unsaved buffers, and immediate
+reload of clean open files. The full execution plan and acceptance criteria are
+in [NEXT.md](NEXT.md) Phase 1.
 
 **Remaining.**
 - An integrated terminal (PTY), with sessions, copy/paste, resize and signals.
-- Live task output with cancel, rerun and history, and references parsed into
-  Problems.
+- Task output history, and task references parsed into Problems.
 - Workspace-wide Problems and LSP pull diagnostics.
 - A workspace-trust gate before running project tasks, debug adapters or
   project-specific servers.
