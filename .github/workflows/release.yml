@@ -55,6 +55,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # `macos-latest` is an arm64 image. The x86_64 artifact uses GitHub's
+        # Intel standard runner instead of silently cross-compiling on arm64;
+        # the arm64 artifact pins the explicit arm64 image so the labels cannot
+        # drift under a release.
         include:
           - name: linux-x86_64-gnu
             os: ubuntu-latest
@@ -63,10 +67,10 @@ jobs:
             os: ubuntu-latest
             target: x86_64-unknown-linux-musl
           - name: macos-x86_64
-            os: macos-latest
+            os: macos-15-intel
             target: x86_64-apple-darwin
           - name: macos-arm64
-            os: macos-latest
+            os: macos-15
             target: aarch64-apple-darwin
     runs-on: ${{ matrix.os }}
     steps:
