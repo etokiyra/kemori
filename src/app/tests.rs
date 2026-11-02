@@ -474,13 +474,13 @@ fn a_run_task_executes_and_shows_its_output() {
         "the statusline should say the task is running"
     );
 
-    // The make script finishes quickly; wait for the result overlay.
+    // The make script finishes quickly; wait for the panel to receive output.
     let deadline = Instant::now() + Duration::from_secs(30);
-    while !matches!(app.overlay, Overlay::TaskRun(_)) && Instant::now() < deadline {
+    while app.panel.output.is_none() && Instant::now() < deadline {
         app.pump_background(Duration::from_millis(50));
     }
-    match &app.overlay {
-        Overlay::TaskRun(run) => {
+    match &app.panel.output {
+        Some(run) => {
             assert!(run.success, "the task should have exited cleanly");
             assert_eq!(run.command, "make");
             assert!(
@@ -490,15 +490,17 @@ fn a_run_task_executes_and_shows_its_output() {
                 "the output should contain the make script's echo"
             );
         }
-        _ => panic!("expected the task output view"),
+        None => panic!("expected the task output view"),
     }
+    assert!(app.panel.open, "the panel should open with the output");
+    assert_eq!(app.panel.tab, super::panel::PanelTab::Output);
     assert!(!app.pending_task, "the pending flag must clear");
     fs::remove_dir_all(&dir).ok();
 }
 
 #[test]
 fn the_task_output_parser_reads_compiler_style_references() {
-    use crate::app::overlay::{TaskRunState, reference_position};
+    use crate::app::panel::{TaskRunState, reference_position};
 
     // rustc's "path:line:col" form, the most common.
     assert_eq!(
@@ -534,7 +536,7 @@ fn the_task_output_parser_reads_compiler_style_references() {
 fn the_run_state_builder_and_jump_target_work_together() {
     let dir = temp_project("task-jump-run");
     let file = dir.join("src/main.rs");
-    let run = crate::app::overlay::TaskRunState::from_output(
+    let run = crate::app::panel::TaskRunState::from_output(
         &dir,
         "Build",
         "make",
@@ -797,6 +799,145 @@ fn next_diagnostic_moves_the_cursor() {
     app.execute_command(ids::DIAGNOSTICS_NEXT);
     let cursor = app.editor.active_document().unwrap().clamped_cursor();
     assert_eq!(cursor, Position::new(0, 10));
+    fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
+fn the_bottom_panel_toggles_and_cycles_tabs() {
+    let dir = temp_project("panel-keys");
+    let file = dir.join("src/main.rs");
+    let mut app = app_with_file(&file);
+    assert!(!app.panel.open, "the panel starts hidden");
+
+    app.handle_key(KeyEvent::new(KeyCode::Char('j'), KeyModifiers::CONTROL));
+    assert!(app.panel.open);
+    assert_eq!(app.focus, Focus::Panel);
+    assert_eq!(app.panel.tab, panel::PanelTab::Problems);
+
+    app.handle_key(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE));
+    assert_eq!(app.panel.tab, panel::PanelTab::Output);
+    app.handle_key(KeyEvent::new(KeyCode::BackTab, KeyModifiers::SHIFT));
+    assert_eq!(app.panel.tab, panel::PanelTab::Problems);
+    app.handle_key(KeyEvent::new(KeyCode::Char('3'), KeyModifiers::NONE));
+    assert_eq!(app.panel.tab, panel::PanelTab::DebugConsole);
+
+    // Esc returns the keyboard to the editor without hiding the panel.
+    app.handle_key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
+    assert_eq!(app.focus, Focus::Editor);
+    assert!(app.panel.open);
+
+    // A second Ctrl+J focuses the visible panel, and a third hides it.
+    app.handle_key(KeyEvent::new(KeyCode::Char('j'), KeyModifiers::CONTROL));
+    assert_eq!(app.focus, Focus::Panel);
+    app.handle_key(KeyEvent::new(KeyCode::Char('j'), KeyModifiers::CONTROL));
+    assert!(!app.panel.open);
+    assert_eq!(app.focus, Focus::Editor);
+
+    fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
+fn ctrl_enter_also_toggles_the_panel() {
+    // Terminals without the kitty keyboard protocol report Ctrl+J as Ctrl+Enter.
+    let dir = temp_project("panel-ctrl-enter");
+    let file = dir.join("src/main.rs");
+    let mut app = app_with_file(&file);
+
+    app.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::CONTROL));
+    assert!(app.panel.open);
+    assert_eq!(app.focus, Focus::Panel);
+
+    fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
+fn the_panel_problems_tab_lists_and_reveals_diagnostics() {
+    let dir = temp_project("panel-problems");
+    let file = dir.join("src/main.rs");
+    let mut app = app_with_file(&file);
+    {
+        let doc = app.editor.active_document_mut().unwrap();
+        doc.set_diagnostics_revision(1);
+        doc.apply_diagnostics(
+            1,
+            vec![Diagnostic::new(
+                crate::language::diagnostics::TextPos::new(1, 4),
+                crate::language::diagnostics::TextPos::new(1, 9),
+                Severity::Warning,
+                "unused value",
+            )],
+        );
+        doc.move_to(Position::new(0, 0));
+    }
+
+    let problems = app.panel_problems();
+    assert_eq!(problems.len(), 1);
+    assert_eq!(problems[0].file, "main.rs");
+    assert_eq!(problems[0].position, Position::new(1, 4));
+    assert_eq!(problems[0].severity, Severity::Warning);
+
+    app.execute_command(ids::PANEL_PROBLEMS);
+    assert!(app.panel.open);
+    assert_eq!(app.focus, Focus::Panel);
+    app.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+
+    assert_eq!(app.focus, Focus::Editor, "Enter returns to the editor");
+    assert_eq!(
+        app.editor.active_document().unwrap().clamped_cursor(),
+        Position::new(1, 4)
+    );
+    fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
+fn the_panel_resizes_within_bounds() {
+    let dir = temp_project("panel-resize");
+    let mut app = App::new(Some(&dir)).unwrap();
+
+    for _ in 0..100 {
+        app.execute_command(ids::PANEL_GROW);
+    }
+    assert_eq!(app.panel.height, panel::PANEL_MAX_HEIGHT);
+
+    for _ in 0..100 {
+        app.execute_command(ids::PANEL_SHRINK);
+    }
+    assert_eq!(app.panel.height, panel::PANEL_MIN_HEIGHT);
+
+    fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
+fn clearing_the_panel_keeps_problems_but_empties_output() {
+    let dir = temp_project("panel-clear");
+    let file = dir.join("src/main.rs");
+    let mut app = app_with_file(&file);
+
+    app.panel.tab = panel::PanelTab::Output;
+    app.panel.output = Some(panel::TaskRunState::from_output(
+        &dir,
+        "Test",
+        "cargo test",
+        "success",
+        true,
+        "all good",
+    ));
+    app.execute_command(ids::PANEL_CLEAR);
+    assert!(app.panel.output.is_none());
+
+    app.debug_console("adapter started");
+    assert_eq!(app.panel.tab, panel::PanelTab::DebugConsole);
+    assert_eq!(app.panel.debug, vec!["adapter started".to_string()]);
+    app.execute_command(ids::PANEL_CLEAR);
+    assert!(app.panel.debug.is_empty());
+
+    // Problems are derived from the documents, so Clear cannot hide them.
+    app.execute_command(ids::PANEL_PROBLEMS);
+    app.execute_command(ids::PANEL_CLEAR);
+    assert_eq!(app.panel.tab, panel::PanelTab::Problems);
+    app.debug_console("still there");
+    assert_eq!(app.panel.debug.len(), 1);
+
     fs::remove_dir_all(&dir).ok();
 }
 

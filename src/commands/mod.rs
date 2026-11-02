@@ -96,6 +96,13 @@ pub mod ids {
 
     pub const TOGGLE_TREE: &str = "view.toggleTree";
     pub const FOCUS_TREE: &str = "view.focusTree";
+    pub const TOGGLE_PANEL: &str = "view.togglePanel";
+    pub const PANEL_PROBLEMS: &str = "view.panelProblems";
+    pub const PANEL_OUTPUT: &str = "view.panelOutput";
+    pub const PANEL_DEBUG_CONSOLE: &str = "view.panelDebugConsole";
+    pub const PANEL_CLEAR: &str = "view.panelClear";
+    pub const PANEL_GROW: &str = "view.panelGrow";
+    pub const PANEL_SHRINK: &str = "view.panelShrink";
     pub const TOGGLE_HIDDEN: &str = "view.toggleHidden";
     pub const TOGGLE_INLINE_DIAGNOSTICS: &str = "view.toggleInlineDiagnostics";
     pub const TOGGLE_WRAP: &str = "view.toggleWrap";
@@ -484,6 +491,25 @@ impl CommandRegistry {
                 Some("Ctrl+E"),
             )
             .describes("Move keyboard focus between the tree and the editor"),
+            Command::new(
+                TOGGLE_PANEL,
+                "Bottom Panel: Focus / Hide",
+                "View",
+                Some("Ctrl+J"),
+            )
+            .describes("Open the panel focused, or hide it when it owns the keyboard"),
+            Command::new(PANEL_PROBLEMS, "Panel: Problems", "View", None)
+                .describes("Show diagnostics across the open files"),
+            Command::new(PANEL_OUTPUT, "Panel: Output", "View", None)
+                .describes("Show the output of the last task"),
+            Command::new(PANEL_DEBUG_CONSOLE, "Panel: Debug Console", "View", None)
+                .describes("Show messages from the debug-adapter preview"),
+            Command::new(PANEL_CLEAR, "Panel: Clear", "View", None)
+                .describes("Clear the output or the debug console"),
+            Command::new(PANEL_GROW, "Panel: Grow", "View", None)
+                .describes("Make the bottom panel taller"),
+            Command::new(PANEL_SHRINK, "Panel: Shrink", "View", None)
+                .describes("Make the bottom panel shorter"),
             Command::new(TOGGLE_HIDDEN, "Toggle Hidden Files", "View", None)
                 .describes("Show or hide dotfiles and ignored directories"),
             Command::new(
@@ -568,8 +594,22 @@ pub const CONTEXT_KEYS: &[(&str, &str)] = &[
     ("d", "changed files: show the diff"),
     ("/", "file tree: filter project files"),
     (".", "file tree: toggle hidden files"),
+    (
+        "Tab / Shift+Tab",
+        "panel: cycle Problems / Output / Debug Console",
+    ),
+    (
+        "↑ / ↓, PageUp / PageDown",
+        "panel: move through problems or output",
+    ),
+    (
+        "Enter",
+        "panel: open the selection; welcome: open the chosen action",
+    ),
+    ("c", "panel: clear the current output"),
+    ("Alt+↑↓", "panel: grow or shrink"),
+    ("Esc", "panel: return to the editor"),
     ("↑ / ↓", "welcome: choose an action"),
-    ("Enter", "welcome: open the chosen action"),
     ("v", "welcome: cycle the animated scene"),
 ];
 

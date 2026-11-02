@@ -75,10 +75,17 @@ impl App {
             .or_else(|_| std::env::var("KODA_DEBUG_ADAPTER"))
             .unwrap_or_else(|_| "gdb".to_string());
         match crate::debug::launch(&adapter, &[], &breakpoints) {
-            Ok(message) => self.set_status(format!(
-                "{message} — preview only; execution will not stop on breakpoints"
-            )),
-            Err(err) => self.set_error(format!("Debug adapter preview: {err}")),
+            Ok(message) => {
+                let text =
+                    format!("{message} — preview only; execution will not stop on breakpoints");
+                self.debug_console(text.clone());
+                self.set_status(text);
+            }
+            Err(err) => {
+                let text = format!("Debug adapter preview: {err}");
+                self.debug_console(text.clone());
+                self.set_error(text);
+            }
         }
     }
 

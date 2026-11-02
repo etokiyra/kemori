@@ -826,6 +826,105 @@ fn gutter_and_statusline_show_diagnostics() {
 }
 
 #[test]
+fn renders_the_bottom_panel_with_problems() {
+    use kemori::app::panel::PanelTab;
+
+    let dir = temp_project("panel-problems-ui");
+    let file = dir.join("src/main.rs");
+    let mut app = app_with_file(&file);
+    {
+        let doc = app.editor.active_document_mut().unwrap();
+        doc.set_diagnostics_revision(1);
+        doc.apply_diagnostics(
+            1,
+            vec![Diagnostic::new(
+                TextPos::new(1, 4),
+                TextPos::new(1, 9),
+                Severity::Warning,
+                "unused value",
+            )],
+        );
+    }
+
+    let before = draw_at(&mut app, 100, 24);
+    assert!(
+        !before.contains("Problems (1)"),
+        "the panel is hidden until asked for:\n{before}"
+    );
+
+    app.execute_command(ids::PANEL_PROBLEMS);
+    assert_eq!(app.panel.tab, PanelTab::Problems);
+    let screen = draw_at(&mut app, 100, 24);
+    assert!(
+        screen.contains("Problems (1)"),
+        "the tab strip should count the problems:\n{screen}"
+    );
+    assert!(
+        screen.contains("main.rs"),
+        "the file group header should be visible:\n{screen}"
+    );
+    assert!(
+        screen.contains("unused value"),
+        "the diagnostic should be listed:\n{screen}"
+    );
+    assert!(
+        screen.contains("Esc editor"),
+        "the panel should explain its keys:\n{screen}"
+    );
+    cleanup(&dir);
+}
+
+#[test]
+fn renders_task_output_in_the_bottom_panel() {
+    use kemori::app::panel::{PanelTab, TaskRunState};
+
+    let dir = temp_project("panel-output-ui");
+    let file = dir.join("src/main.rs");
+    let mut app = app_with_file(&file);
+    app.panel.output = Some(TaskRunState::from_output(
+        &dir,
+        "Test",
+        "cargo test",
+        "success",
+        true,
+        "running 3 tests\nKEMORI_TASK_RAN",
+    ));
+    app.execute_command(ids::PANEL_OUTPUT);
+    assert_eq!(app.panel.tab, PanelTab::Output);
+
+    let screen = draw_at(&mut app, 100, 24);
+    assert!(
+        screen.contains("KEMORI_TASK_RAN"),
+        "the task output should be visible:\n{screen}"
+    );
+    assert!(
+        screen.contains("success"),
+        "the exit verdict should be visible:\n{screen}"
+    );
+    cleanup(&dir);
+}
+
+#[test]
+fn the_panel_keeps_the_editor_visible_on_a_short_terminal() {
+    let dir = temp_project("panel-short");
+    let file = dir.join("src/main.rs");
+    let mut app = app_with_file(&file);
+    app.execute_command(ids::PANEL_PROBLEMS);
+    app.panel.height = 30;
+
+    let screen = draw_at(&mut app, 70, 12);
+    assert!(
+        screen.contains("fn main"),
+        "the editor must keep a row:\n{screen}"
+    );
+    assert!(
+        screen.contains("Problems"),
+        "the panel should still show its tabs:\n{screen}"
+    );
+    cleanup(&dir);
+}
+
+#[test]
 fn diagnostics_underline_the_affected_characters() {
     let dir = temp_project("diagnostics-underline");
     let file = dir.join("src/main.rs");

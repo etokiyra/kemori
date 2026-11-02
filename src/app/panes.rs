@@ -63,7 +63,7 @@ impl App {
         } else {
             self.focus = match self.focus {
                 Focus::FileTree => Focus::Editor,
-                Focus::Editor => Focus::FileTree,
+                Focus::Editor | Focus::Panel => Focus::FileTree,
             };
         }
     }

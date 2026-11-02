@@ -18,7 +18,6 @@ impl App {
             Overlay::Settings(_) => return,
             Overlay::DirPicker(_) => return,
             Overlay::Diff(_) => return,
-            Overlay::TaskRun(_) => return,
             Overlay::NewProject(flow) => {
                 if flow.step == NewProjectStep::Name {
                     flow.name.push_str(text);
@@ -123,6 +122,16 @@ impl App {
         // Any Ctrl chord other than the completion trigger dismisses completion.
         if key.code != KeyCode::Char(' ') {
             self.completion = None;
+        }
+        // The bottom panel is contextual like the sidebar: show and focus it,
+        // close it when it already owns the keyboard, or take focus when it is
+        // merely visible. Some terminals report Ctrl+J as Ctrl+Enter.
+        if key.code == KeyCode::Char('j')
+            || key.code == KeyCode::Char('J')
+            || key.code == KeyCode::Enter
+        {
+            self.toggle_panel();
+            return true;
         }
         match key.code {
             KeyCode::Char(c) => {
@@ -239,6 +248,7 @@ impl App {
         }
         match self.focus {
             Focus::FileTree => self.handle_tree_key(key),
+            Focus::Panel => self.handle_panel_key(key),
             Focus::Editor if self.editor.is_empty() => self.handle_welcome_key(key),
             Focus::Editor => self.handle_editor_key(key),
         }
@@ -677,41 +687,6 @@ impl App {
                 KeyCode::Char('p') => {
                     diff.prev_hunk();
                     Outcome::Nothing
-                }
-                _ => Outcome::Nothing,
-            },
-            Overlay::TaskRun(run) => match key.code {
-                KeyCode::Esc | KeyCode::Char('q') => Outcome::Close,
-                KeyCode::Up => {
-                    run.select_by(-1);
-                    Outcome::Nothing
-                }
-                KeyCode::Down => {
-                    run.select_by(1);
-                    Outcome::Nothing
-                }
-                KeyCode::PageUp => {
-                    run.select_by(-16);
-                    Outcome::Nothing
-                }
-                KeyCode::PageDown => {
-                    run.select_by(16);
-                    Outcome::Nothing
-                }
-                KeyCode::Home => {
-                    run.selected = 0;
-                    Outcome::Nothing
-                }
-                KeyCode::End => {
-                    run.select_by(i64::MAX);
-                    Outcome::Nothing
-                }
-                KeyCode::Enter => {
-                    if let Some((path, position)) = run.jump_target() {
-                        Outcome::Run(PickerAction::Reveal { path, position }, None)
-                    } else {
-                        Outcome::Nothing
-                    }
                 }
                 _ => Outcome::Nothing,
             },

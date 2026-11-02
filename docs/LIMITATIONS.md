@@ -52,7 +52,15 @@ describes the current state.
   **Language Setup…** for individual tools).
 - **Run Task output is a single bounded batch.** A task runs to completion (or
   its deadline) on the background worker, and stdout and stderr are shown apart
-  when both were captured — there is no live streaming.
+  when both were captured — there is no live streaming. The batch stays in the
+  panel's **Output** tab until the next task or **Panel: Clear**.
+- **The Problems tab covers the open files only.** Diagnostics exist for
+  documents Kemori has opened and analysed; there is no workspace-wide
+  diagnostic sweep and no LSP pull diagnostics yet. The tab groups what it has
+  and says so when there is nothing.
+- **There is no integrated terminal yet.** The bottom panel reserves room for
+  it, but the **Output** tab is task output, not a PTY-backed shell. A terminal
+  needs a dependency decision and is a separate roadmap item.
 
 - **`.gitignore` discovery is capped.** At most 256 nested `.gitignore` files and
   4096 directories are read per project; in an enormous monorepo a deeper rule
@@ -200,8 +208,9 @@ describes the current state.
 - **There is no debugger yet.** **Debug Adapter Handshake (Preview)** spawns an
   adapter (`KEMORI_DEBUG_ADAPTER`, `gdb` by default), sends `initialize`,
   `launch` and `setBreakpoints`, then stops the adapter and reports that the
-  handshake completed. Execution never stops on a breakpoint; breakpoint
-  markers are visual bookmarks only. A real DAP client is a roadmap item.
+  handshake completed. Its messages appear in the panel's **Debug Console** tab.
+  Execution never stops on a breakpoint; breakpoint markers are visual bookmarks
+  only. A real DAP client is a roadmap item.
 
 ## Git
 

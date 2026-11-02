@@ -25,6 +25,7 @@ src/
 │   ├── lsp.rs              # server lifecycle + response handling
 │   ├── mouse.rs            # editor hit-testing, click and drag selection
 │   ├── overlay.rs          # picker/prompt/search state + fuzzy matching
+│   ├── panel.rs            # bottom panel: problems, output, debug console
 │   ├── panes.rs            # split panes and tabs
 │   ├── run.rs              # the main event loop
 │   ├── search.rs           # find/replace
@@ -88,8 +89,11 @@ src/
     ├── art.rs              # original ASCII art: mascot, wordmark, frames
     ├── header.rs           # identity bar / breadcrumb
     ├── tabs.rs             # tab pills
-    ├── editor.rs           # gutter, syntax, cursorline, indent guides
+    ├── editor/
+    │   ├── mod.rs          # gutter, syntax, cursorline, indent guides
+    │   └── tests.rs        # scroll and inline-note unit tests
     ├── file_tree.rs        # project sidebar
+    ├── panel.rs            # bottom panel: Problems, Output, Debug Console
     ├── status_bar.rs       # the Mellow statusline
     ├── overlay.rs          # palette, quick open, prompts, directory picker
     ├── welcome.rs          # the welcome home screen

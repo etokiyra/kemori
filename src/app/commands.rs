@@ -300,7 +300,7 @@ impl App {
             ids::DIAGNOSTICS_LIST => self.open_diagnostics_list(),
             ids::HUNK_NEXT => self.goto_hunk(1),
             ids::HUNK_PREV => self.goto_hunk(-1),
-            _ => {}
+            _ => self.panel_command(id),
         }
     }
     pub(super) fn open_command_palette(&mut self) {
@@ -894,16 +894,16 @@ impl App {
     }
 
     pub(super) fn toggle_tree(&mut self) {
-        // `Ctrl+B` is the file panel: reveal and focus it, focus it when the
-        // editor has focus, and hide it once it is focused.
+        // `Ctrl+B` is the file panel: reveal and focus it, focus it when
+        // another surface has focus, and hide it once it is focused.
         if !self.tree_visible {
             self.tree_visible = true;
             self.focus = Focus::FileTree;
-        } else if self.focus == Focus::Editor {
-            self.focus = Focus::FileTree;
-        } else {
+        } else if self.focus == Focus::FileTree {
             self.tree_visible = false;
             self.focus = Focus::Editor;
+        } else {
+            self.focus = Focus::FileTree;
         }
     }
 

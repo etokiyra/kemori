@@ -4,6 +4,7 @@
 //! commands and UI together, and translates terminal events into actions.
 
 pub mod overlay;
+pub mod panel;
 
 mod background;
 mod commands;
@@ -77,6 +78,8 @@ const AUTOCOMPLETE_DELAY: Duration = Duration::from_millis(120);
 pub enum Focus {
     Editor,
     FileTree,
+    /// The bottom panel owns the keyboard (Problems, Output, Debug Console).
+    Panel,
 }
 
 /// Which editor pane owns the cursor when the editor is split.
@@ -309,6 +312,8 @@ pub struct App {
     /// Which pane receives editing.
     pub focus_pane: Pane,
     pub focus: Focus,
+    /// The bottom panel and its per-tab state.
+    pub panel: panel::Panel,
     pub status: Status,
     /// Transient notifications shown above the statusline.
     pub toasts: Vec<Toast>,
@@ -497,6 +502,7 @@ impl App {
             pane_right: None,
             focus_pane: Pane::Primary,
             focus: Focus::Editor,
+            panel: panel::Panel::default(),
             status: Status::default(),
             toasts: Vec::new(),
             viewport_height: 20,

@@ -182,14 +182,41 @@ section covers every path and the `sudo`/`secure_path` behaviour.
 markers imply — `cargo build`/`test`, `go build`/`test`, `make`,
 `python3 -m pytest`, `mix test` and the declared `npm` scripts (lifecycle hooks
 skipped) — and runs the chosen one in the project root on the background worker
-with a deadline, a bounded output cap and no shell, then opens an output panel
-with the exit verdict. `Up`/`Down` move a row cursor and `Enter` jumps to the
-`file:line[:column]` reference on the selected line, opening the file at that
-position; the cwd the task ran in anchors relative paths.
+with a deadline, a bounded output cap and no shell. The captured result stays in
+the bottom panel's **Output** tab with the exit verdict. `Up`/`Down` move a row
+cursor and `Enter` jumps to the `file:line[:column]` reference on the selected
+line, opening the file at that position; the cwd the task ran in anchors relative
+paths.
 
 **Remaining.** More project kinds can be added where they have an unambiguous
 zero-config command (`pom.xml` → `mvn test`, `pubspec.yaml` → `flutter test`,
-`.csproj` → `dotnet build`) — one branch in the detection module each.
+`.csproj` → `dotnet build`) — one branch in the detection module each. Task
+output is still a completed batch: live streaming, cancel, rerun and history are
+part of the core IDE loop below.
+
+**Depends on:** nothing.
+
+### 8. The core IDE loop
+
+**Goal.** Run, test, search and navigate without leaving Kemori.
+
+**Done (3.x).** A bottom panel (`Ctrl+J`) holds **Problems**, **Output** and
+**Debug Console** tabs with their own state. Problems gathers diagnostics across
+the open files, groups them by file and jumps to the source; task output and
+debug-adapter messages land in their tabs instead of a modal; the panel resizes
+and leaves the editor readable on a short terminal. The full execution plan and
+acceptance criteria are in [NEXT.md](NEXT.md) Phase 1.
+
+**Remaining.**
+- An integrated terminal (PTY), with sessions, copy/paste, resize and signals.
+- Live task output with cancel, rerun and history, and references parsed into
+  Problems.
+- Workspace-wide Problems and LSP pull diagnostics.
+- Project-wide replace with preview and filters.
+- A workspace-trust gate before running project tasks, debug adapters or
+  project-specific servers.
+
+**Depends on:** nothing.
 
 ---
 

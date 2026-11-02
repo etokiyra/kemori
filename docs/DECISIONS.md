@@ -357,6 +357,16 @@ this file, and add or change a test.
   configuration is preserved; reduced motion is one keypress away.
 - **Overlays are centered and cleared** with `Clear` before drawing so they are
   readable over the editor.
+- **The bottom panel is one surface with per-tab state.** Problems, task output
+  and debug-console messages share a single keyboard-focusable panel instead of
+  separate modal views, so a jump to a reference does not destroy the output the
+  user was reading. The panel never opens focused on its own: an event may make
+  it visible, but focus moves in only through `Ctrl+J` or a palette command.
+  Problems are derived from the documents on demand rather than copied into a
+  second store, so they cannot go stale; Output and Debug Console keep their own
+  content and scroll positions. The panel is bounded at both ends (a minimum
+  that keeps it useful, a maximum that always leaves the editor readable) and
+  uses the terminal background like every other surface.
 - **Transient status messages** expire so the language/git summary returns.
 - **Welcome-first startup.** Kemori opens on the welcome home screen. A path from
   the command line is offered as an action, a saved session as a resume action,

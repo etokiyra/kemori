@@ -315,11 +315,17 @@ The editor is the heart of Kemori, and it is built for real projects.
   edits.
 - Project-wide symbol search, session persistence (open files, cursors and
   expanded folders come back next launch) and external-change detection.
+- **A bottom panel** (`Ctrl+J`) collects the development loop instead of
+  interrupting it: **Problems** lists diagnostics across the open files grouped
+  by file, **Output** keeps the last task's result, and **Debug Console** holds
+  debug-adapter messages. `Tab` cycles the tabs, `Alt+↑`/`Alt+↓` resize,
+  `Enter` opens the selected problem or `file:line` reference, `c` clears the
+  current output, and `Esc` returns to the editor.
 - **Run Task…** runs one of the project's own commands — `cargo build`/`test`,
   `go build`/`test`, `make`, `python3 -m pytest`, `mix test` or any declared
   `npm` script — detected from the project's markers with no configuration, and
-  shows its output in a bounded panel. `Up`/`Down` move a row cursor and
-  `Enter` jumps to the `file:line[:column]` reference on it.
+  keeps its output in the panel's **Output** tab. `Enter` jumps to the
+  `file:line[:column]` reference on the selected row.
 - A background worker keeps detection, diagnostics, formatting and git off the
   UI thread.
 
@@ -763,6 +769,7 @@ Kemori reports what happened rather than deleting anything.
 | Git | `Alt+[` | Previous Hunk |
 | View | `Ctrl+B` | File Panel: Focus / Hide |
 | View | `Ctrl+E` | Focus File Tree / Editor |
+| View | `Ctrl+J` | Bottom Panel: Focus / Hide |
 | View | `Alt+I` | Toggle Inline Diagnostics |
 | View | `Alt+Z` | Toggle Soft Wrap |
 | View | `Ctrl+K z` | Toggle Fold |
@@ -792,8 +799,13 @@ Kemori reports what happened rather than deleting anything.
 | Context | `d` | changed files: show the diff |
 | Context | `/` | file tree: filter project files |
 | Context | `.` | file tree: toggle hidden files |
+| Context | `Tab / Shift+Tab` | panel: cycle Problems / Output / Debug Console |
+| Context | `↑ / ↓, PageUp / PageDown` | panel: move through problems or output |
+| Context | `Enter` | panel: open the selection; welcome: open the chosen action |
+| Context | `c` | panel: clear the current output |
+| Context | `Alt+↑↓` | panel: grow or shrink |
+| Context | `Esc` | panel: return to the editor |
 | Context | `↑ / ↓` | welcome: choose an action |
-| Context | `Enter` | welcome: open the chosen action |
 | Context | `v` | welcome: cycle the animated scene |
 <!-- keymap:end -->
 

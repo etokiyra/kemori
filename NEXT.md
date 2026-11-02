@@ -1,26 +1,36 @@
 # NEXT — the working plan for turning Kemori into a full IDE
 
-**Status snapshot:** 2026-11-02, version 3.0.0, commit `dd64f6b`.
-**Verification at the time of writing:** `cargo check --all-targets`, `cargo clippy --all-targets` clean; `cargo test` green (627 library tests, 46 render tests, plus tooling suites with ignored live tests).
+**Status snapshot:** 2026-11-02, version 3.0.0, after the bottom-panel work.
+**Verification at the time of writing:** `cargo check --all-targets`, `cargo clippy --all-targets` clean; `cargo test` green (633 library tests, 49 render tests, plus tooling suites with ignored live tests).
 **Release status:** `kemori` 3.0.0 is on crates.io, docs.rs and the GitHub `v3.0.0` release. The AUR packages are prepared and validated locally; pushing them still needs the maintainer's AUR SSH key.
 
 ### What this session completed
 
-- **Phase 0 is complete except the mechanical file splits.** Folding is
-  cursor-safe and edit-aware, with LSP folding ranges and `Ctrl+K` chords; git
-  diff/patch/push/pull/fetch/GitHub and gutter markers run on the worker; debug
-  and remote are labelled honestly; the 2.1 regression gaps are covered.
+- **Phase 1's bottom panel is in place.** `Ctrl+J` opens a keyboard-focusable
+  panel with **Problems** (diagnostics across open files, grouped by file),
+  **Output** (the last task's captured result) and **Debug Console** (adapter
+  preview messages). Tabs keep their own state; `Tab` cycles them, `Alt+↑`/`↓`
+  resize, `Enter` jumps to a problem or `file:line` reference, `c` clears, and
+  `Esc` returns to the editor. Task output no longer uses a modal overlay.
+- **The editor's tiny-viewport scroll bug is fixed.** A panel that leaves one or
+  two editor rows no longer scrolls to the end of the file while the statusline
+  reports the cursor's line. `ui/editor.rs` was split into a directory module
+  (`ui/editor/mod.rs` + `ui/editor/tests.rs`), so that file is back under 800
+  lines.
+- **Phase 0 is complete except the two remaining giant files.** `tools.rs` and
+  `document.rs` still need mechanical splits.
 - **The project was renamed from Koda to Kemori.** The crate, library and
   binary are `kemori`; 3.0.0 is published on crates.io, docs.rs and GitHub. The
   old `koda-ide` crate has a 2.1.1 deprecation shim, old releases are marked
   deprecated, and existing state is imported once.
 - **The event loop moved to `src/app/run.rs`,** bringing `src/app/mod.rs` under
-  800 lines. `language/tools.rs` and `editor/document.rs` still need splits.
+  800 lines.
 - **AUR remains the one external task:** the packages are ready and validated,
   but the maintainer's AUR SSH key is not registered on this machine.
 
-> Next action: start **Phase 1 — The core IDE loop** at the bottom panel. The
-> oversized-file splits are the only Phase 0 item still open.
+> Next action: decide the PTY approach (open decision 3) and implement the
+> **integrated terminal**, then live task streaming and project-wide replace.
+> The `tools.rs`/`document.rs` splits are the only Phase 0 item still open.
 
 
 > Read `AGENTS.md`, `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`,
@@ -308,18 +318,23 @@ get lost in a fold.
 - [ ] **Start splitting oversized files.** One mechanical extraction per
       commit, suite green each time. Start with `language/tools.rs` and
       `editor/document.rs`. *Started: the event loop moved out of
-      `src/app/mod.rs`, which is now under 800 lines; the two largest files are
-      still untouched.*
+      `src/app/mod.rs` (now under 800), and `ui/editor.rs` became a directory
+      module under 800; the two largest files are still untouched.*
 
 **Exit criteria:** no false feature claims; no git subprocess on the UI thread;
 folding either correct and tested or removed; 2.1 features have tests.
 
 ### Phase 1 — The core IDE loop
 
+**Status:** in progress — bottom panel landed; terminal, live tasks, replace,
+workspace-wide problems and trust remain.
+
 **Goal:** a user can run, test, search and navigate without leaving Kemori.
 
-- [ ] **Bottom panel** with tabs: Problems, Output, Terminal, Debug Console.
-      Focus toggle, resize, scroll, clear, per-panel state.
+- [x] **Bottom panel** with tabs: Problems, Output, Debug Console. `Ctrl+J`
+      focus toggle, `Tab` to switch tabs, `Alt+↑`/`↓` resize, per-tab state,
+      scroll/selection, clear, and `Esc` back to the editor. *The Terminal tab
+      ships with the integrated terminal below.*
 - [ ] **Integrated terminal** via a PTY, rooted at the workspace. Multiple
       sessions, copy/paste, resize, signals. A dependency decision is required;
       record it in `DECISIONS.md`.
@@ -329,7 +344,8 @@ folding either correct and tested or removed; 2.1 features have tests.
 - [ ] **Project search and replace.** Full option set, include/exclude globs,
       preview, atomic writes, every changed file reported.
 - [ ] **Problems panel.** Workspace-wide diagnostics grouped by file/severity;
-      LSP pull diagnostics where supported.
+      LSP pull diagnostics where supported. *The tab currently covers the open
+      files and groups them by file.*
 - [ ] **Workspace trust and safe mode.** Ask before running project tasks,
       debug adapters or project-specific servers. Store the decision in Kemori's
       state; never require a user-maintained config file.
@@ -431,18 +447,19 @@ so "Complete" means the development loop works.
 
 ---
 
-## 5. Suggested first five commits
+## 5. Suggested next commits
 
-1. `fix(git): run push/pull/fetch/diff/patch and gutter markers on the worker`
-2. `fix(editor): make folding edit-aware and bounded, or remove it`
-3. `docs: reconcile 2.1 with LIMITATIONS, DECISIONS, ARCHITECTURE and README`
-4. `feat(app): bottom panel with Problems and live task Output`
-5. `feat(search): project-wide replace with preview and filters`
+1. `feat(terminal): PTY-backed terminal in the bottom panel`
+2. `feat(tasks): stream live output with cancel and rerun`
+3. `feat(search): project-wide replace with preview and filters`
+4. `feat(diagnostics): workspace-wide Problems and pull diagnostics`
+5. `feat(app): workspace trust before running project code`
 
-Then the terminal, then the real debugger, then language expansion.
+Then the real debugger, then language expansion.
 
-This order is deliberate: fix trust and responsiveness first; add the terminal
-and debugger before broadening the language list.
+This order is deliberate: add the terminal and live feedback, then make search
+and problems project-wide, then gate project code before the debugger can run
+it.
 
 ---
 
@@ -533,14 +550,14 @@ Keep this table current so the next session knows where to resume.
 | 0. Git off the UI thread | done | e1e7eb5 | No cancellation yet; documented |
 | 0. Folding correctness | done | e1e7eb5 | Fold-aware movement, edit remapping, `Ctrl+K` chords, LSP ranges |
 | 0. 2.1 regression tests | done | 45d099f | Folding, breakpoints, gutter, hunk patch, non-UTF-8, workspace, incremental sync, mouse, icons |
-| 0. Oversized-file splits | in progress | a5bb9ea | `app/mod.rs` split; `tools.rs` and `document.rs` remain |
+| 0. Oversized-file splits | in progress | a5bb9ea | `app/mod.rs` and `ui/editor` split; `tools.rs` and `document.rs` remain |
 | Release / identity | done | dd64f6b | Renamed to Kemori; 3.0.0 on crates.io, docs.rs and GitHub; old `koda-ide` deprecated |
 | AUR publication | prepared | dd64f6b | Packages built and validated; waiting for the maintainer's AUR SSH key |
-| 1. Bottom panel | not started | — | — |
-| 1. Integrated terminal | not started | — | — |
-| 1. Live tasks | not started | — | — |
+| 1. Bottom panel | done | pending | Problems, Output and Debug Console; `Ctrl+J`, tab switching, resize, per-tab state |
+| 1. Problems panel | partial | pending | Covers open files and groups by file; workspace-wide sweep and pull diagnostics remain |
+| 1. Integrated terminal | not started | — | Needs the PTY dependency decision (open decision 3) |
+| 1. Live tasks | not started | — | Output is a completed batch in the panel; streaming, cancel and rerun remain |
 | 1. Project search/replace | not started | — | — |
-| 1. Problems panel | not started | — | — |
 | 1. Workspace trust | not started | — | — |
 | 2. LSP depth | not started | — | — |
 | 2. Editor depth | not started | — | — |

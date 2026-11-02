@@ -5,6 +5,7 @@ pub mod editor;
 pub mod file_tree;
 pub mod header;
 pub mod overlay;
+pub mod panel;
 pub mod status_bar;
 pub mod tabs;
 pub mod theme;
@@ -28,6 +29,19 @@ pub fn render(frame: &mut Frame, app: &mut App) {
     } else {
         0
     };
+    // Leave the header, the tab strip, two editor rows, the search bar and the
+    // statusline before the panel can claim space, so a short terminal always
+    // keeps the editor readable.
+    let panel_height = if app.panel.open {
+        let available = area.height.saturating_sub(5 + search_height);
+        if available >= 3 {
+            app.panel.height.min(available)
+        } else {
+            0
+        }
+    } else {
+        0
+    };
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -35,6 +49,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
             Constraint::Length(1), // header
             Constraint::Min(1),    // body
             Constraint::Length(search_height),
+            Constraint::Length(panel_height),
             Constraint::Length(1), // status bar
         ])
         .split(area);
@@ -44,7 +59,10 @@ pub fn render(frame: &mut Frame, app: &mut App) {
     if app.search.open {
         overlay::render_search(frame, chunks[2], &app.search);
     }
-    status_bar::render(frame, chunks[3], app);
+    if panel_height >= 3 {
+        panel::render(frame, chunks[3], app);
+    }
+    status_bar::render(frame, chunks[4], app);
     // Notifications sit just above the statusline; overlays draw over them.
     overlay::render_toasts(frame, area, &app.toasts);
 
@@ -59,7 +77,6 @@ pub fn render(frame: &mut Frame, app: &mut App) {
         Overlay::DirPicker(picker) => overlay::render_dir_picker(frame, area, picker),
         Overlay::NewProject(flow) => overlay::render_new_project(frame, area, flow),
         Overlay::Diff(diff) => overlay::render_diff(frame, area, diff),
-        Overlay::TaskRun(run) => overlay::render_task_run(frame, area, run),
     }
 
     if app.overlay.is_none() {

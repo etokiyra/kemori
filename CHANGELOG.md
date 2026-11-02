@@ -8,6 +8,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Kemori was previously published as **Koda** (crate `koda-ide`, binary `koda`).
 Historical entries below retain the old name; 3.0.0 is the rename release.
 
+## [Unreleased]
+
+### Added
+- **Bottom panel.** `Ctrl+J` opens a panel under the editor with three tabs:
+  **Problems** (diagnostics across the open files, grouped by file; `Enter`
+  jumps to one), **Output** (the last task's captured output; `Enter` jumps to a
+  `file:line` reference) and **Debug Console** (messages from the adapter
+  preview). `Tab` cycles tabs, `Alt+↑`/`Alt+↓` resize, `c` clears Output or the
+  console, and `Esc` returns to the editor. Each tab keeps its own state.
+
+### Changed
+- **Task output lives in the bottom panel.** Running a task no longer opens a
+  modal view; its output stays available in the Output tab, so jumping to an
+  error does not discard the rest of the result.
+- **The debug-adapter preview writes to the Debug Console.** Its messages are
+  kept in the panel instead of only flashing in the statusline.
+
+### Fixed
+- **A very short editor viewport keeps the cursor visible.** When a panel leaves
+  one or two editor rows, scrolling no longer moves to the end of the file while
+  the statusline still reports the cursor's line.
+
 ## [3.0.0] - 2026-11-02
 
 ### Changed

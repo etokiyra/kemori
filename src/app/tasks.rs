@@ -4,7 +4,7 @@
 //! and run with bounded output — no configuration, no per-project files.
 
 use super::*;
-use crate::app::overlay::TaskRunState;
+use crate::app::panel::{PanelTab, TaskRunState};
 use crate::background::TaskRunOutcome;
 use crate::project::tasks::{self, Task};
 
@@ -80,7 +80,7 @@ impl App {
         } else {
             text
         };
-        self.overlay = Overlay::TaskRun(TaskRunState::from_output(
+        self.panel.output = Some(TaskRunState::from_output(
             self.workspace.root(),
             task.label.clone(),
             &task.command_line(),
@@ -88,5 +88,7 @@ impl App {
             success,
             &text,
         ));
+        self.open_panel(PanelTab::Output);
+        self.set_status(format!("{}: {verdict}", task.label));
     }
 }
