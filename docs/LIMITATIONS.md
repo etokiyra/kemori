@@ -10,11 +10,12 @@ describes the current state.
   settings, sessions and recents from `~/.local/state/koda` (or the
   `XDG_STATE_HOME` equivalent), never overwriting a current Kemori file. The old
   directory is left untouched, so rolling back is safe, but later changes made
-  in Kemori are not written back to it.
+  in Kemori are not written back to it. The importer is retained through 3.x.
 - **Old environment variables survive for one release.** `KEMORI_REMOTE` and
   `KEMORI_DEBUG_ADAPTER` are preferred; `KODA_REMOTE` and
-  `KODA_DEBUG_ADAPTER` still work as fallbacks. They will be removed in a later
-  release.
+  `KODA_DEBUG_ADAPTER` still work as fallbacks. Both the state import and these
+  fallbacks are scheduled for removal no earlier than 4.0, potentially as a
+  final end-of-project cleanup; see [ROADMAP.md](../ROADMAP.md#very-late-end-of-project).
 
 ---
 

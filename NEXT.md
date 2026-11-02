@@ -1,8 +1,27 @@
 # NEXT — the working plan for turning Kemori into a full IDE
 
-**Status snapshot:** 2026-11-02, version 3.0.0, commit `15dc93d`.
+**Status snapshot:** 2026-11-02, version 3.0.0, commit `dd64f6b`.
 **Verification at the time of writing:** `cargo check --all-targets`, `cargo clippy --all-targets` clean; `cargo test` green (627 library tests, 46 render tests, plus tooling suites with ignored live tests).
 **Release status:** `kemori` 3.0.0 is on crates.io, docs.rs and the GitHub `v3.0.0` release. The AUR packages are prepared and validated locally; pushing them still needs the maintainer's AUR SSH key.
+
+### What this session completed
+
+- **Phase 0 is complete except the mechanical file splits.** Folding is
+  cursor-safe and edit-aware, with LSP folding ranges and `Ctrl+K` chords; git
+  diff/patch/push/pull/fetch/GitHub and gutter markers run on the worker; debug
+  and remote are labelled honestly; the 2.1 regression gaps are covered.
+- **The project was renamed from Koda to Kemori.** The crate, library and
+  binary are `kemori`; 3.0.0 is published on crates.io, docs.rs and GitHub. The
+  old `koda-ide` crate has a 2.1.1 deprecation shim, old releases are marked
+  deprecated, and existing state is imported once.
+- **The event loop moved to `src/app/run.rs`,** bringing `src/app/mod.rs` under
+  800 lines. `language/tools.rs` and `editor/document.rs` still need splits.
+- **AUR remains the one external task:** the packages are ready and validated,
+  but the maintainer's AUR SSH key is not registered on this machine.
+
+> Next action: start **Phase 1 — The core IDE loop** at the bottom panel. The
+> oversized-file splits are the only Phase 0 item still open.
+
 
 > Read `AGENTS.md`, `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`,
 > `docs/DECISIONS.md`, `docs/LIMITATIONS.md` and
@@ -64,6 +83,10 @@ Do not rewrite these; build on them.
 ---
 
 ## 2. Current reality: 2.1.0 is broad but partly shallow
+
+> **Historical context.** This section records the pre-Phase-0 state that
+> justified the work. Phase 0 addressed these findings; see the progress log at
+> the end of this file. Do not re-open an item here without checking the code.
 
 These are verified findings. They are the reason Phase 0 exists.
 
@@ -258,6 +281,8 @@ matrix have gaps in formatters, run/test tasks and debugging. Fill those first.
 ## 4. Roadmap
 
 ### Phase 0 — Make 2.1 honest and non-blocking
+
+**Status:** complete except the oversized-file splits.
 
 **Goal:** every claim matches the code, no UI-thread subprocess, no cursor can
 get lost in a fold.
@@ -509,6 +534,8 @@ Keep this table current so the next session knows where to resume.
 | 0. Folding correctness | done | e1e7eb5 | Fold-aware movement, edit remapping, `Ctrl+K` chords, LSP ranges |
 | 0. 2.1 regression tests | done | 45d099f | Folding, breakpoints, gutter, hunk patch, non-UTF-8, workspace, incremental sync, mouse, icons |
 | 0. Oversized-file splits | in progress | a5bb9ea | `app/mod.rs` split; `tools.rs` and `document.rs` remain |
+| Release / identity | done | dd64f6b | Renamed to Kemori; 3.0.0 on crates.io, docs.rs and GitHub; old `koda-ide` deprecated |
+| AUR publication | prepared | dd64f6b | Packages built and validated; waiting for the maintainer's AUR SSH key |
 | 1. Bottom panel | not started | — | — |
 | 1. Integrated terminal | not started | — | — |
 | 1. Live tasks | not started | — | — |

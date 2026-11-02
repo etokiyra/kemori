@@ -230,6 +230,24 @@ Real, but deferred; none of them is required for the core promise.
 
 ---
 
+## Very late (end of project)
+
+Deliberately deferred. These are not forgotten work for the next phase; they are
+cleanup for after the migration window has clearly closed, potentially at the
+very end of the project.
+
+- **Remove legacy Koda compatibility.** Delete the one-time
+  `~/.local/state/koda` importer, its `.migrated-from-koda` marker, and the
+  `KODA_REMOTE` / `KODA_DEBUG_ADAPTER` fallbacks. *Acceptance:* the 3.x
+  migration window is over (not before 4.0), no runtime code reads the old path
+  or variables, and the removal is recorded in `CHANGELOG.md`. Historical
+  changelog entries, old release notes and immutable crates.io versions stay as
+  they are; only the compatibility code goes.
+- **Retire the old `koda-ide` deprecation shim** from any future tooling or
+  packaging references once its redirect value is gone.
+
+---
+
 ## Non-goals
 
 These are out of scope by design, not merely unscheduled:
@@ -255,3 +273,6 @@ Setup, git integration, session persistence, CI, and prebuilt release binaries.
 2.1 added code folding, git gutter markers and hunk application, read-only
 non-UTF-8 opening with explicit conversion, project switching with session
 restore, incremental LSP sync, partial mouse support and file icons.
+3.0 renamed the project to **Kemori**, fixed the Phase 0 correctness and
+responsiveness gaps, and published `kemori` 3.0.0 on crates.io, docs.rs and
+GitHub; the old `koda-ide` crate is deprecated.

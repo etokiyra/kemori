@@ -414,6 +414,31 @@ this file, and add or change a test.
 
 ---
 
+## Brand and rename
+
+- **Koda became Kemori in 3.0.** The name "Koda" is shared by several unrelated
+  terminal and AI coding projects, including a commercial AI assistant and a
+  separate Rust coding agent. Search results and AI overviews merged the
+  entities. A unique name is the only durable fix; author metadata cannot
+  disambiguate a shared product name.
+- **The public identity is the crate, library, binary, repository, docs and
+  package name together.** Kemori uses `kemori` for all of them. Do not
+  reintroduce a split like `koda-ide`/`koda`, which made the old entity harder
+  to resolve.
+- **History is not rewritten.** Old changelog entries, old release notes, old
+  tags and immutable crates.io versions keep the old name as a historical
+  record. The current README carries the deprecation notice, the 3.0.0
+  changelog entry explains the rename, and the latest old-crate release is a
+  deprecation shim.
+- **Compatibility is narrow and temporary.** The only runtime references to the
+  old name are the one-time `~/.local/state/koda` import and the
+  `KODA_REMOTE`/`KODA_DEBUG_ADAPTER` fallbacks. Removing them is deliberately
+  deferred to a very late stage, not before 4.0 and potentially to the end of
+  the project; removing them earlier would lose user state or silently break
+  configured environments.
+
+---
+
 ## Splitting `src/app/mod.rs`
 
 `src/app/mod.rs` was 8876 lines of state, an `impl App` and its tests. It has
