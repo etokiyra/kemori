@@ -431,23 +431,27 @@ distributed a little further so every production file is under 800 lines:
 
 | Module | Contents | Lines |
 | --- | --- | --- |
-| `mod.rs` | state types, constructor, event loop, small helpers | 775 |
-| `background.rs` | worker-event application, external-change polling, pumping | 295 |
-| `commands.rs` | command dispatch, palette, language setup, prompts, quick open | 708 |
-| `completion.rs` | completion popup and hover | 360 |
+| `mod.rs` | state types, constructor, small helpers | 783 |
+| `background.rs` | worker-event application, external-change polling, pumping | 426 |
+| `commands.rs` | command dispatch, palette, language setup, prompts, quick open | 971 |
+| `completion.rs` | completion popup and hover | 366 |
 | `diagnostics.rs` | diagnostics polling, navigation and list | 187 |
-| `editor.rs` | cursor moves, clipboard/kill-ring, comment, matching bracket | 222 |
-| `files.rs` | save/close/revert and file create/rename/copy/delete | 356 |
-| `git.rs` | diff, changed files, staging, commit | 171 |
-| `keys.rs` | key dispatch (global, editor, tree, overlay, search, completion) | 763 |
-| `language.rs` | navigation, symbols, rename, code actions, formatting | 618 |
-| `lsp.rs` | server lifecycle and response handling | 769 |
+| `editor.rs` | cursor moves, clipboard/kill-ring, comment, matching bracket | 276 |
+| `files.rs` | save/close/revert and file create/rename/copy/delete | 370 |
+| `git.rs` | diff, changed files, staging, commit | 257 |
+| `keys.rs` | key dispatch (global, editor, tree, overlay, search, completion) | 871 |
+| `language.rs` | navigation, symbols, rename, code actions, formatting | 643 |
+| `lsp.rs` | server lifecycle and response handling | 884 |
+| `mouse.rs` | editor hit-testing, click and drag selection | 82 |
 | `panes.rs` | split panes and tabs | 170 |
+| `run.rs` | the main event loop | 86 |
 | `search.rs` | find/replace | 202 |
-| `session.rs` | session persistence, workspace and welcome actions | 396 |
+| `session.rs` | session persistence, workspace and welcome actions | 480 |
 | `status.rs` | statusline messages and toasts | 103 |
-| `view.rs` | tree/diagnostic/wrap toggles and reveal | 79 |
+| `tasks.rs` | task picker and bounded run output | 92 |
+| `view.rs` | tree/diagnostic/wrap/fold toggles and reveal | 108 |
 
-`app/tests.rs` (2901 lines) is the deliberately single test module moved whole
-from `mod.rs`; the production modules are all under 800. `app/overlay.rs`
-(833 lines) predates this work and is not part of the split.
+`app/tests.rs` is the deliberately single test module moved whole from `mod.rs`.
+`app/commands.rs`, `app/keys.rs`, `app/lsp.rs` and `app/overlay.rs` have grown
+past 800 since the split and are candidates for the next mechanical
+extractions; new work should not make them longer.

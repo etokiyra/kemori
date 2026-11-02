@@ -23,8 +23,10 @@ src/
 │   ├── keys.rs             # key dispatch (global, editor, tree, overlay, search)
 │   ├── language.rs         # navigation, symbols, rename, code actions, formatting
 │   ├── lsp.rs              # server lifecycle + response handling
+│   ├── mouse.rs            # editor hit-testing, click and drag selection
 │   ├── overlay.rs          # picker/prompt/search state + fuzzy matching
 │   ├── panes.rs            # split panes and tabs
+│   ├── run.rs              # the main event loop
 │   ├── search.rs           # find/replace
 │   ├── session.rs          # session persistence, workspace + welcome actions
 │   ├── settings.rs         # Settings screen + live application of preferences

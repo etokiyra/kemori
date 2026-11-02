@@ -1,7 +1,7 @@
 # NEXT — the working plan for turning Koda into a full IDE
 
-**Status snapshot:** 2026-11-02, version 2.1.0, commit `e1e7eb5`.
-**Verification at the time of writing:** `cargo check --all-targets`, `cargo clippy --all-targets` clean; `cargo test` green (620 library tests, 45 render tests, plus tooling suites with ignored live tests).
+**Status snapshot:** 2026-11-02, version 2.1.0, commit `45d099f`.
+**Verification at the time of writing:** `cargo check --all-targets`, `cargo clippy --all-targets` clean; `cargo test` green (626 library tests, 46 render tests, plus tooling suites with ignored live tests).
 
 > Read `AGENTS.md`, `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`,
 > `docs/DECISIONS.md`, `docs/LIMITATIONS.md` and
@@ -162,21 +162,23 @@ This violates the product principle "Be honest".
 | File | Lines |
 | --- | ---: |
 | `src/language/tools.rs` | 7,037 |
-| `src/editor/document.rs` | 2,993 |
-| `src/app/tests.rs` | 3,515 |
+| `src/app/tests.rs` | 3,614 |
+| `src/editor/document.rs` | 2,984 |
 | `src/ui/overlay.rs` | 1,475 |
-| `src/language/lsp/mod.rs` | 1,166 |
+| `src/language/lsp/mod.rs` | 1,143 |
 | `src/app/overlay.rs` | 1,127 |
 | `src/language/web/mod.rs` | 1,123 |
-| `src/app/commands.rs` | 967 |
+| `src/git/mod.rs` | 983 |
+| `src/app/commands.rs` | 971 |
 | `src/project/create.rs` | 953 |
-| `src/git/mod.rs` | 929 |
-| `src/app/mod.rs` | 916 |
-| `src/app/keys.rs` | 842 |
+| `src/app/lsp.rs` | 884 |
+| `src/app/keys.rs` | 871 |
 | `src/ui/editor.rs` | 830 |
 
-Some are test files or predate the rule, but new work must not grow them.
-Plan mechanical splits with the suite green after every commit.
+`src/app/mod.rs` is back under the limit (783) after the event loop moved to
+`src/app/run.rs`. Some remaining files are tests or predate the rule, but new
+work must not grow them. Plan mechanical splits with the suite green after every
+commit.
 
 ### 2.9 New 2.1 features lack tests
 
@@ -274,14 +276,14 @@ get lost in a fold.
       fold-aware. Remap fold headers on edits. Add `za`/`zo`/`zc`/`zR`/`zM`
       (or a documented conventional binding). Consume LSP folding ranges.
       Add tests.
-- [ ] **Add 2.1 regression tests.** Folding, breakpoints, gutter markers, hunk
+- [x] **Add 2.1 regression tests.** Folding, breakpoints, gutter markers, hunk
       apply/revert, non-UTF-8 conversion, workspace switching, incremental
-      sync, mouse, icons. *Folding, gutter markers, hunk apply/revert,
-      non-UTF-8 conversion and workspace switching are covered now; breakpoints,
-      incremental sync, mouse and icons still need deterministic tests.*
+      sync, mouse, icons.
 - [ ] **Start splitting oversized files.** One mechanical extraction per
       commit, suite green each time. Start with `language/tools.rs` and
-      `editor/document.rs`.
+      `editor/document.rs`. *Started: the event loop moved out of
+      `src/app/mod.rs`, which is now under 800 lines; the two largest files are
+      still untouched.*
 
 **Exit criteria:** no false feature claims; no git subprocess on the UI thread;
 folding either correct and tested or removed; 2.1 features have tests.
@@ -500,12 +502,12 @@ Keep this table current so the next session knows where to resume.
 
 | Phase | Status | Last commit | Notes |
 | --- | --- | --- | --- |
-| 0. Docs truth pass | done | e1e7eb5 | ARCHITECTURE, DECISIONS, LIMITATIONS, README, ROADMAP, CHANGELOG |
+| 0. Docs truth pass | done | 48bf5ec | ARCHITECTURE, DECISIONS, LIMITATIONS, README, ROADMAP, CHANGELOG |
 | 0. Gate/remove DAP + remote | done | e1e7eb5 | Debug command is an explicit preview; `KODA_REMOTE` is internal |
 | 0. Git off the UI thread | done | e1e7eb5 | No cancellation yet; documented |
 | 0. Folding correctness | done | e1e7eb5 | Fold-aware movement, edit remapping, `Ctrl+K` chords, LSP ranges |
-| 0. 2.1 regression tests | in progress | e1e7eb5 | Folding, gutter, hunk patch, non-UTF-8, workspace covered |
-| 0. Oversized-file splits | not started | — | — |
+| 0. 2.1 regression tests | done | 45d099f | Folding, breakpoints, gutter, hunk patch, non-UTF-8, workspace, incremental sync, mouse, icons |
+| 0. Oversized-file splits | in progress | a5bb9ea | `app/mod.rs` split; `tools.rs` and `document.rs` remain |
 | 1. Bottom panel | not started | — | — |
 | 1. Integrated terminal | not started | — | — |
 | 1. Live tasks | not started | — | — |
