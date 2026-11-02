@@ -27,6 +27,7 @@ src/
 │   ├── overlay.rs          # picker/prompt/search state + fuzzy matching
 │   ├── panel.rs            # bottom panel: problems, output, debug console
 │   ├── panes.rs            # split panes and tabs
+│   ├── project_search.rs   # project search/replace state, keys and hand-off
 │   ├── run.rs              # the main event loop
 │   ├── search.rs           # find/replace
 │   ├── session.rs          # session persistence, workspace + welcome actions
@@ -94,6 +95,7 @@ src/
     │   └── tests.rs        # scroll and inline-note unit tests
     ├── file_tree.rs        # project sidebar
     ├── panel.rs            # bottom panel: Problems, Output, Debug Console
+    ├── project_search.rs   # project search and replace overlay
     ├── status_bar.rs       # the Mellow statusline
     ├── overlay.rs          # palette, quick open, prompts, directory picker
     ├── welcome.rs          # the welcome home screen

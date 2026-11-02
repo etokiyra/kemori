@@ -6,6 +6,7 @@ pub mod file_tree;
 pub mod header;
 pub mod overlay;
 pub mod panel;
+pub mod project_search;
 pub mod status_bar;
 pub mod tabs;
 pub mod theme;
@@ -77,6 +78,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
         Overlay::DirPicker(picker) => overlay::render_dir_picker(frame, area, picker),
         Overlay::NewProject(flow) => overlay::render_new_project(frame, area, flow),
         Overlay::Diff(diff) => overlay::render_diff(frame, area, diff),
+        Overlay::ProjectSearch(state) => project_search::render(frame, area, state),
     }
 
     if app.overlay.is_none() {

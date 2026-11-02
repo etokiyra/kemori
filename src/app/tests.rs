@@ -1711,6 +1711,53 @@ fn workspace_symbols_lists_definitions_across_files() {
 }
 
 #[test]
+fn project_replace_requires_confirmation_before_deleting_matches() {
+    use crate::search::SearchMatch;
+
+    let dir = temp_project("project-replace-confirm");
+    let file = dir.join("src/main.rs");
+    fs::write(&file, "needle\n").unwrap();
+    let mut app = app_with_file(&file);
+    app.execute_command(ids::PROJECT_SEARCH);
+    if let Overlay::ProjectSearch(state) = &mut app.overlay {
+        state.query = "needle".to_string();
+        state.results = vec![SearchMatch {
+            path: file.clone(),
+            line: 0,
+            col: 0,
+            text: "needle".to_string(),
+            count: 1,
+            preview: Some(String::new()),
+        }];
+    }
+
+    // An empty replacement is a delete: the first press asks, it does not act.
+    app.handle_project_search_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::ALT));
+    assert!(app.pending_project_replace.is_none());
+    let Overlay::ProjectSearch(state) = &app.overlay else {
+        panic!("expected the project search form");
+    };
+    assert!(state.confirm_empty);
+    assert!(
+        state
+            .status
+            .as_deref()
+            .is_some_and(|status| status.contains("again"))
+    );
+    assert_eq!(fs::read_to_string(&file).unwrap(), "needle\n");
+
+    // Typing a replacement clears the pending confirmation.
+    app.handle_project_search_key(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE));
+    app.handle_project_search_key(KeyEvent::new(KeyCode::Char('x'), KeyModifiers::NONE));
+    let Overlay::ProjectSearch(state) = &app.overlay else {
+        panic!("expected the project search form");
+    };
+    assert!(!state.confirm_empty);
+    assert_eq!(fs::read_to_string(&file).unwrap(), "needle\n");
+    fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
 fn project_search_lists_matches_across_files() {
     let dir = temp_project("project-search");
     let a = dir.join("src/main.rs");
@@ -1720,21 +1767,108 @@ fn project_search_lists_matches_across_files() {
 
     let mut app = app_with_file(&a);
     app.execute_command(ids::PROJECT_SEARCH);
-    assert!(matches!(app.overlay, Overlay::Prompt(_)));
-    app.submit_prompt(PromptKind::ProjectSearch, "needle".to_string());
+    let Overlay::ProjectSearch(state) = &mut app.overlay else {
+        panic!("expected the project search form");
+    };
+    assert!(state.query.is_empty());
+    state.query = "needle".to_string();
+    app.run_project_search();
 
     let deadline = Instant::now() + Duration::from_secs(15);
-    while Instant::now() < deadline {
+    while app.pending_project_search.is_some() && Instant::now() < deadline {
         app.apply_background_events();
-        if matches!(app.overlay, Overlay::Picker(_)) {
-            break;
-        }
         std::thread::sleep(Duration::from_millis(5));
     }
-    let Overlay::Picker(picker) = &app.overlay else {
-        panic!("expected search results");
+    let Overlay::ProjectSearch(state) = &app.overlay else {
+        panic!("the search form should stay open");
     };
-    assert!(picker.filtered.len() >= 2, "expected both files to match");
+    assert_eq!(state.results.len(), 2, "expected both files to match");
+    assert_eq!(state.file_count(), 2);
+    assert!(
+        state
+            .status
+            .as_deref()
+            .is_some_and(|s| s.contains("2 match"))
+    );
+    fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
+fn project_replace_updates_clean_files_and_skips_dirty_ones() {
+    let dir = temp_project("project-replace");
+    let clean = dir.join("src/main.rs");
+    let dirty = dir.join("src/lib.rs");
+    fs::write(&clean, "fn main() { needle(); }\n").unwrap();
+    fs::write(&dirty, "pub fn needle() {}\n").unwrap();
+
+    let mut app = app_with_file(&clean);
+    app.open_path(dirty.clone());
+    app.editor
+        .active_document_mut()
+        .unwrap()
+        .insert_text("// unsaved\n");
+    assert!(app.editor.active_document().unwrap().is_dirty());
+
+    app.execute_command(ids::PROJECT_SEARCH);
+    let Overlay::ProjectSearch(state) = &mut app.overlay else {
+        panic!("expected the project search form");
+    };
+    state.query = "needle".to_string();
+    state.replacement = "value".to_string();
+    app.run_project_search();
+    let deadline = Instant::now() + Duration::from_secs(15);
+    while app.pending_project_search.is_some() && Instant::now() < deadline {
+        app.apply_background_events();
+        std::thread::sleep(Duration::from_millis(5));
+    }
+
+    // Alt+Enter starts the replacement; the dirty open buffer is reported and
+    // left untouched.
+    let replace = KeyEvent::new(KeyCode::Enter, KeyModifiers::ALT);
+    app.handle_project_search_key(replace);
+    while app.pending_project_replace.is_some() && Instant::now() < deadline {
+        app.apply_background_events();
+        std::thread::sleep(Duration::from_millis(5));
+    }
+
+    assert_eq!(
+        fs::read_to_string(&clean).unwrap(),
+        "fn main() { value(); }\n"
+    );
+    let reloaded = app
+        .editor
+        .documents
+        .iter()
+        .find(|doc| doc.buffer.path.as_deref() == Some(clean.as_path()))
+        .expect("clean file is open");
+    assert!(
+        reloaded.buffer.text().contains("value()"),
+        "a clean open buffer should reload immediately"
+    );
+    assert_eq!(
+        fs::read_to_string(&dirty).unwrap(),
+        "pub fn needle() {}\n",
+        "a dirty buffer must never be overwritten on disk"
+    );
+    let Overlay::ProjectSearch(state) = &app.overlay else {
+        panic!("the search form should stay open");
+    };
+    assert!(
+        state
+            .status
+            .as_deref()
+            .is_some_and(|status| status.contains("skipped 1")),
+        "the skipped file should be reported: {:?}",
+        state.status
+    );
+    assert!(
+        state
+            .status
+            .as_deref()
+            .is_some_and(|status| status.contains("main.rs")),
+        "every changed file should be named: {:?}",
+        state.status
+    );
     fs::remove_dir_all(&dir).ok();
 }
 

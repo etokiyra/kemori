@@ -204,15 +204,17 @@ part of the core IDE loop below.
 **Debug Console** tabs with their own state. Problems gathers diagnostics across
 the open files, groups them by file and jumps to the source; task output and
 debug-adapter messages land in their tabs instead of a modal; the panel resizes
-and leaves the editor readable on a short terminal. The full execution plan and
-acceptance criteria are in [NEXT.md](NEXT.md) Phase 1.
+and leaves the editor readable on a short terminal. Project-wide search and
+replace (`Ctrl+Shift+F`) supports literal or regex queries, case/word toggles,
+include/exclude globs, grouped results, a replacement preview, atomic writes
+that skip unsaved buffers, and immediate reload of clean open files. The full
+execution plan and acceptance criteria are in [NEXT.md](NEXT.md) Phase 1.
 
 **Remaining.**
 - An integrated terminal (PTY), with sessions, copy/paste, resize and signals.
 - Live task output with cancel, rerun and history, and references parsed into
   Problems.
 - Workspace-wide Problems and LSP pull diagnostics.
-- Project-wide replace with preview and filters.
 - A workspace-trust gate before running project tasks, debug adapters or
   project-specific servers.
 

@@ -587,28 +587,28 @@ pub const EDITOR_KEYS: &[(&str, &str)] = &[
 pub const CONTEXT_KEYS: &[(&str, &str)] = &[
     (
         "Alt+C / Alt+W / Alt+R",
-        "find: toggle case / whole word / regex",
+        "find / project search: toggle case / whole word / regex",
     ),
-    ("Alt+Enter", "find: replace every match"),
+    ("Alt+Enter", "find / project search: replace every match"),
     ("Space", "changed files: stage or unstage"),
     ("d", "changed files: show the diff"),
     ("/", "file tree: filter project files"),
     (".", "file tree: toggle hidden files"),
     (
         "Tab / Shift+Tab",
-        "panel: cycle Problems / Output / Debug Console",
+        "panel: cycle tabs; project search: next / previous field",
     ),
     (
         "↑ / ↓, PageUp / PageDown",
-        "panel: move through problems or output",
+        "panel / project search: move through results",
     ),
     (
         "Enter",
-        "panel: open the selection; welcome: open the chosen action",
+        "panel / project search: open or search; welcome: open",
     ),
     ("c", "panel: clear the current output"),
     ("Alt+↑↓", "panel: grow or shrink"),
-    ("Esc", "panel: return to the editor"),
+    ("Esc", "panel / project search: close"),
     ("↑ / ↓", "welcome: choose an action"),
     ("v", "welcome: cycle the animated scene"),
 ];

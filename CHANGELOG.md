@@ -11,6 +11,13 @@ Historical entries below retain the old name; 3.0.0 is the rename release.
 ## [Unreleased]
 
 ### Added
+- **Project-wide search and replace.** `Ctrl+Shift+F` opens a search form with
+  literal or regular-expression matching, case and whole-word toggles,
+  include/exclude globs, results grouped by file, and a per-line replacement
+  preview. `Alt+Enter` replaces every match atomically, skips open files with
+  unsaved edits, names the changed files and reloads clean open buffers
+  immediately. An empty replacement asks for a second confirmation before
+  deleting matches.
 - **Bottom panel.** `Ctrl+J` opens a panel under the editor with three tabs:
   **Problems** (diagnostics across the open files, grouped by file; `Enter`
   jumps to one), **Output** (the last task's captured output; `Enter` jumps to a

@@ -826,6 +826,71 @@ fn gutter_and_statusline_show_diagnostics() {
 }
 
 #[test]
+fn renders_project_search_with_a_replacement_preview() {
+    use kemori::search::SearchMatch;
+
+    let dir = temp_project("project-search-ui");
+    let file = dir.join("src/main.rs");
+    let mut app = app_with_file(&file);
+    app.execute_command(ids::PROJECT_SEARCH);
+    if let Overlay::ProjectSearch(state) = &mut app.overlay {
+        state.query = "Name".to_string();
+        state.replacement = "value".to_string();
+        state.options.case_sensitive = true;
+        state.set_results(vec![SearchMatch {
+            path: file.clone(),
+            line: 0,
+            col: 0,
+            text: "Name".to_string(),
+            count: 1,
+            preview: Some("value".to_string()),
+        }]);
+    } else {
+        panic!("expected the project search overlay");
+    }
+
+    let screen = draw_at(&mut app, 120, 30);
+    assert!(
+        screen.contains("Search in Project"),
+        "the overlay title should be visible:\n{screen}"
+    );
+    assert!(
+        screen.contains("Find"),
+        "the form should be visible:\n{screen}"
+    );
+    assert!(
+        screen.contains("src/main.rs"),
+        "the result should use a project-relative path:\n{screen}"
+    );
+    assert!(
+        screen.contains("Name"),
+        "the matching line should be visible:\n{screen}"
+    );
+    assert!(
+        screen.contains("-> value"),
+        "the replacement preview should be visible:\n{screen}"
+    );
+    assert!(
+        screen.contains("Alt+Enter replace"),
+        "the footer should explain the replace key:\n{screen}"
+    );
+    cleanup(&dir);
+}
+
+#[test]
+fn project_search_keeps_its_form_on_a_small_terminal() {
+    let dir = temp_project("project-search-small");
+    let file = dir.join("src/main.rs");
+    let mut app = app_with_file(&file);
+    app.execute_command(ids::PROJECT_SEARCH);
+
+    let screen = draw_at(&mut app, 60, 14);
+    assert!(screen.contains("Search in Project"));
+    assert!(screen.contains("Find"));
+    cleanup(&dir);
+}
+
+#[test]
 fn renders_the_bottom_panel_with_problems() {
     use kemori::app::panel::PanelTab;
 

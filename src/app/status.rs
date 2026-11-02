@@ -2,6 +2,29 @@
 
 use super::*;
 
+/// A short-lived status message.
+#[derive(Default)]
+pub struct Status {
+    pub message: String,
+    pub error: bool,
+    expires_at: Option<Instant>,
+}
+
+/// The tone of a notification.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ToastKind {
+    Info,
+    Success,
+    Error,
+}
+
+/// A short-lived notification shown above the statusline.
+pub struct Toast {
+    pub message: String,
+    pub kind: ToastKind,
+    created: Instant,
+}
+
 impl App {
     /// Post a notification that lingers briefly above the statusline.
     ///
@@ -75,6 +98,8 @@ impl App {
             Some("searching symbols")
         } else if self.pending_project_search.is_some() {
             Some("searching project")
+        } else if self.pending_project_replace.is_some() {
+            Some("replacing in project")
         } else if self.pending_install.is_some() {
             Some("installing")
         } else if self.pending_commit {

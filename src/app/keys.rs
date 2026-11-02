@@ -18,6 +18,12 @@ impl App {
             Overlay::Settings(_) => return,
             Overlay::DirPicker(_) => return,
             Overlay::Diff(_) => return,
+            Overlay::ProjectSearch(state) => {
+                for ch in text.chars().filter(|ch| *ch != '\n' && *ch != '\r') {
+                    state.push_char(ch);
+                }
+                return;
+            }
             Overlay::NewProject(flow) => {
                 if flow.step == NewProjectStep::Name {
                     flow.name.push_str(text);
@@ -125,13 +131,20 @@ impl App {
         }
         // The bottom panel is contextual like the sidebar: show and focus it,
         // close it when it already owns the keyboard, or take focus when it is
-        // merely visible. Some terminals report Ctrl+J as Ctrl+Enter.
-        if key.code == KeyCode::Char('j')
-            || key.code == KeyCode::Char('J')
-            || key.code == KeyCode::Enter
-        {
+        // merely visible.
+        if key.code == KeyCode::Char('j') || key.code == KeyCode::Char('J') {
             self.toggle_panel();
             return true;
+        }
+        // Some terminals without the kitty keyboard protocol report Ctrl+J as
+        // Ctrl+Enter. Only treat that as the panel shortcut when no overlay owns
+        // the keyboard, so project search can use Ctrl+Enter to replace.
+        if key.code == KeyCode::Enter {
+            if self.overlay.is_none() && !self.search.open {
+                self.toggle_panel();
+                return true;
+            }
+            return false;
         }
         match key.code {
             KeyCode::Char(c) => {
@@ -430,6 +443,10 @@ impl App {
             self.handle_settings_key(key);
             return;
         }
+        if matches!(self.overlay, Overlay::ProjectSearch(_)) {
+            self.handle_project_search_key(key);
+            return;
+        }
         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
 
         enum Outcome {
@@ -646,6 +663,7 @@ impl App {
             },
             // Handled before this match; the arm keeps the match exhaustive.
             Overlay::Settings(_) => Outcome::Nothing,
+            Overlay::ProjectSearch(_) => Outcome::Nothing,
             Overlay::Diff(diff) => match key.code {
                 KeyCode::Esc | KeyCode::Char('q') => Outcome::Close,
                 KeyCode::Up => {

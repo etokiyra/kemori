@@ -7,6 +7,7 @@ pub mod overlay;
 pub mod panel;
 
 pub use settings::{SETTINGS_ROWS, SettingsRow, SettingsState};
+pub use status::{Status, Toast, ToastKind};
 
 mod background;
 mod commands;
@@ -20,6 +21,7 @@ mod language;
 mod lsp;
 mod mouse;
 mod panes;
+pub mod project_search;
 mod run;
 mod search;
 mod session;
@@ -56,7 +58,6 @@ use crate::language::{Capability, LanguageId, LanguageService, WorkspaceSymbol};
 use crate::project::Workspace;
 use crate::project::create::{self, CreateOutcome};
 use crate::recent::Recent;
-use crate::search::SearchMatch;
 use crate::session::Session;
 use crate::terminal;
 use crate::ui;
@@ -157,14 +158,6 @@ struct LspJob {
     failed: Option<String>,
 }
 
-/// A short-lived status message.
-#[derive(Default)]
-pub struct Status {
-    pub message: String,
-    pub error: bool,
-    expires_at: Option<Instant>,
-}
-
 /// The region produced by the last paste, used by yank-pop.
 #[derive(Clone, Copy)]
 struct Yank {
@@ -210,21 +203,6 @@ impl PendingDocRequest {
             .find(|doc| same_file(doc.buffer.path.as_deref(), &self.path))
             .is_some_and(|doc| doc.buffer.version == self.version)
     }
-}
-
-/// The tone of a notification.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ToastKind {
-    Info,
-    Success,
-    Error,
-}
-
-/// A short-lived notification shown above the statusline.
-pub struct Toast {
-    pub message: String,
-    pub kind: ToastKind,
-    created: Instant,
 }
 
 /// An action offered on the welcome screen.
@@ -362,6 +340,10 @@ pub struct App {
     project_search_seq: u64,
     /// The project search awaiting a result, if any.
     pending_project_search: Option<u64>,
+    /// Monotonic id for project replacements.
+    project_replace_seq: u64,
+    /// The project replacement awaiting a result, if any.
+    pending_project_replace: Option<u64>,
     /// Animation frame, advanced while something on screen animates.
     pub anim_phase: usize,
     /// When the animation frame last advanced.
@@ -529,6 +511,8 @@ impl App {
             ws_lsp_pending: false,
             project_search_seq: 0,
             pending_project_search: None,
+            project_replace_seq: 0,
+            pending_project_replace: None,
             anim_phase: 0,
             anim_last: Instant::now(),
             motion: true,

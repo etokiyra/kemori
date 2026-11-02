@@ -1,11 +1,16 @@
 # NEXT — the working plan for turning Kemori into a full IDE
 
 **Status snapshot:** 2026-11-02, version 3.0.0, commit `3f1083e`.
-**Verification at the time of writing:** `cargo check --all-targets`, `cargo clippy --all-targets` clean; `cargo test` green (633 library tests, 49 render tests, plus tooling suites with ignored live tests).
+**Verification at the time of writing:** `cargo check --all-targets`, `cargo clippy --all-targets` clean; `cargo test` green (641 library tests, 51 render tests, plus tooling suites with ignored live tests).
 **Release status:** `kemori` 3.0.0 is on crates.io, docs.rs and the GitHub `v3.0.0` release. The AUR packages are prepared and validated locally; pushing them still needs the maintainer's AUR SSH key.
 
 ### What this session completed
 
+- **Project-wide search and replace.** `Ctrl+Shift+F` now opens a form with
+  literal or regex matching, case/whole-word toggles, include/exclude globs,
+  grouped results and a per-line replacement preview. `Alt+Enter` replaces
+  atomically on the worker, skips unsaved open files, names every changed file,
+  reloads clean open buffers and asks twice before deleting matches.
 - **Phase 1's bottom panel is in place.** `Ctrl+J` opens a keyboard-focusable
   panel with **Problems** (diagnostics across open files, grouped by file),
   **Output** (the last task's captured result) and **Debug Console** (adapter
@@ -29,8 +34,8 @@
   but the maintainer's AUR SSH key is not registered on this machine.
 
 > Next action: decide the PTY approach (open decision 3) and implement the
-> **integrated terminal**, then live task streaming and project-wide replace.
-> The `tools.rs`/`document.rs` splits are the only Phase 0 item still open.
+> **integrated terminal**, then live task streaming. The
+> `tools.rs`/`document.rs` splits are the only Phase 0 item still open.
 
 
 > Read `AGENTS.md`, `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`,
@@ -341,8 +346,9 @@ workspace-wide problems and trust remain.
 - [ ] **Live tasks.** Stream stdout/stderr into Output; cancel, rerun, history.
       Parse `file:line[:col]` references into Problems. Add "Run Active File"
       for standalone scripts.
-- [ ] **Project search and replace.** Full option set, include/exclude globs,
-      preview, atomic writes, every changed file reported.
+- [x] **Project search and replace.** Literal/regex, case, whole word,
+      include/exclude globs, results grouped by file, replacement preview,
+      atomic writes, unsaved-buffer safety and every changed file named.
 - [ ] **Problems panel.** Workspace-wide diagnostics grouped by file/severity;
       LSP pull diagnostics where supported. *The tab currently covers the open
       files and groups them by file.*
@@ -451,15 +457,13 @@ so "Complete" means the development loop works.
 
 1. `feat(terminal): PTY-backed terminal in the bottom panel`
 2. `feat(tasks): stream live output with cancel and rerun`
-3. `feat(search): project-wide replace with preview and filters`
-4. `feat(diagnostics): workspace-wide Problems and pull diagnostics`
-5. `feat(app): workspace trust before running project code`
+3. `feat(diagnostics): workspace-wide Problems and pull diagnostics`
+4. `feat(app): workspace trust before running project code`
 
 Then the real debugger, then language expansion.
 
-This order is deliberate: add the terminal and live feedback, then make search
-and problems project-wide, then gate project code before the debugger can run
-it.
+This order is deliberate: add the terminal and live feedback, then make problems
+project-wide, then gate project code before the debugger can run it.
 
 ---
 
@@ -557,7 +561,7 @@ Keep this table current so the next session knows where to resume.
 | 1. Problems panel | partial | 3f1083e | Covers open files and groups by file; workspace-wide sweep and pull diagnostics remain |
 | 1. Integrated terminal | not started | — | Needs the PTY dependency decision (open decision 3) |
 | 1. Live tasks | not started | — | Output is a completed batch in the panel; streaming, cancel and rerun remain |
-| 1. Project search/replace | not started | — | — |
+| 1. Project search/replace | done | pending | Form overlay, literals/regex, globs, preview, atomic replace, unsaved-buffer safety |
 | 1. Workspace trust | not started | — | — |
 | 2. LSP depth | not started | — | — |
 | 2. Editor depth | not started | — | — |

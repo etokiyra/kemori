@@ -72,6 +72,7 @@ impl App {
         self.pending_workspace_symbols = None;
         self.pending_workspace_symbols_query = None;
         self.pending_project_search = None;
+        self.pending_project_replace = None;
         self.pending_rename = None;
         self.pending_code_actions.clear();
         self.pending_git_op = None;

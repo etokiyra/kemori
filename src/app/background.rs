@@ -306,13 +306,11 @@ impl App {
                 self.open_workspace_symbol_picker(symbols);
                 true
             }
-            BackgroundEvent::SearchResults { revision, matches } => {
-                if self.pending_project_search != Some(revision) {
-                    return false;
-                }
-                self.pending_project_search = None;
-                self.open_project_search_picker(matches);
-                true
+            BackgroundEvent::SearchResults { revision, result } => {
+                self.apply_project_search(revision, result)
+            }
+            BackgroundEvent::ProjectReplaced { revision, result } => {
+                self.apply_project_replace(revision, result)
             }
             BackgroundEvent::Tools(registry) => {
                 self.tools = Some(registry);

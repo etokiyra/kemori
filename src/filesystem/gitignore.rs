@@ -226,6 +226,14 @@ fn dir_prefix(pattern: &str, relative: &str) -> bool {
 }
 
 /// Match a slash-separated glob (supporting `**`) against a slash path.
+/// Match one glob pattern against a slash-separated path.
+///
+/// Project search reuses the `.gitignore` matcher for its include/exclude
+/// filters, so both understand the same `*`, `?`, `**` and class syntax.
+pub(crate) fn glob_matches(pattern: &str, text: &str) -> bool {
+    glob_paths(pattern, text)
+}
+
 fn glob_paths(pattern: &str, text: &str) -> bool {
     let pattern: Vec<&str> = pattern.split('/').collect();
     let text: Vec<&str> = text.split('/').collect();

@@ -158,21 +158,6 @@ impl App {
                     Err(err) => self.set_error(format!("Copy failed: {err}")),
                 }
             }
-            PromptKind::ProjectSearch => {
-                if input.is_empty() {
-                    self.set_error("No search text provided");
-                    return;
-                }
-                self.project_search_seq += 1;
-                let revision = self.project_search_seq;
-                self.pending_project_search = Some(revision);
-                self.background.search_project(
-                    self.workspace.root().to_path_buf(),
-                    input.clone(),
-                    revision,
-                );
-                self.set_status(format!("Searching for \"{input}\"…"));
-            }
             PromptKind::CommitMessage => {
                 if input.is_empty() {
                     self.set_error("No commit message provided");

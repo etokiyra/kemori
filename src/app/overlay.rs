@@ -3,6 +3,7 @@
 use std::path::{Path, PathBuf};
 
 use super::SettingsState;
+use super::project_search::ProjectSearchState;
 use crate::editor::Position;
 use crate::filesystem;
 use crate::language::completion::Completion;
@@ -205,7 +206,6 @@ pub enum PromptKind {
     Rename,
     NewFile,
     RenameFile,
-    ProjectSearch,
     CommitMessage,
     CopyFile,
 }
@@ -252,6 +252,8 @@ pub enum Overlay {
     NewProject(NewProject),
     /// A read-only unified diff.
     Diff(DiffState),
+    /// Project-wide search and replace.
+    ProjectSearch(ProjectSearchState),
 }
 
 impl Overlay {

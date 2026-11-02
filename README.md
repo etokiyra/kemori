@@ -310,9 +310,13 @@ The editor is the heart of Kemori, and it is built for real projects.
 - **Partial mouse support.** The wheel scrolls, a left click places the cursor
   and a drag selects text; everything else stays keyboard-first.
 - Quick open (`Ctrl+P`), inline fuzzy file filtering in the sidebar (`/`),
-  find/replace with case, whole-word and regex options, project-wide text
-  search (`Ctrl+Shift+F`), go-to-line, and **Revert File** to discard local
-  edits.
+  in-file find/replace with case, whole-word and regex options, go-to-line, and
+  **Revert File** to discard local edits.
+- **Search and replace across the project** (`Ctrl+Shift+F`): literal or
+  regular-expression queries, case and whole-word toggles, include/exclude
+  globs, results grouped by file, and a per-line replacement preview.
+  `Alt+Enter` applies the replacement atomically, skips open files with unsaved
+  edits, names every changed file, and reloads clean open buffers immediately.
 - Project-wide symbol search, session persistence (open files, cursors and
   expanded folders come back next launch) and external-change detection.
 - **A bottom panel** (`Ctrl+J`) collects the development loop instead of
@@ -793,18 +797,18 @@ Kemori reports what happened rather than deleting anything.
 | Editor | `PageUp / PageDown` | scroll a page |
 | Editor | `F3 / Shift+F3` | find next / previous |
 | Editor | `Ctrl+PageUp/Down` | previous / next tab |
-| Context | `Alt+C / Alt+W / Alt+R` | find: toggle case / whole word / regex |
-| Context | `Alt+Enter` | find: replace every match |
+| Context | `Alt+C / Alt+W / Alt+R` | find / project search: toggle case / whole word / regex |
+| Context | `Alt+Enter` | find / project search: replace every match |
 | Context | `Space` | changed files: stage or unstage |
 | Context | `d` | changed files: show the diff |
 | Context | `/` | file tree: filter project files |
 | Context | `.` | file tree: toggle hidden files |
-| Context | `Tab / Shift+Tab` | panel: cycle Problems / Output / Debug Console |
-| Context | `↑ / ↓, PageUp / PageDown` | panel: move through problems or output |
-| Context | `Enter` | panel: open the selection; welcome: open the chosen action |
+| Context | `Tab / Shift+Tab` | panel: cycle tabs; project search: next / previous field |
+| Context | `↑ / ↓, PageUp / PageDown` | panel / project search: move through results |
+| Context | `Enter` | panel / project search: open or search; welcome: open |
 | Context | `c` | panel: clear the current output |
 | Context | `Alt+↑↓` | panel: grow or shrink |
-| Context | `Esc` | panel: return to the editor |
+| Context | `Esc` | panel / project search: close |
 | Context | `↑ / ↓` | welcome: choose an action |
 | Context | `v` | welcome: cycle the animated scene |
 <!-- keymap:end -->

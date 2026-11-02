@@ -5,6 +5,7 @@
 //! results as they arrive, so expensive operations stay off the render path and
 //! one slow formatter or installer cannot stall unrelated editor services.
 
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex};
@@ -20,6 +21,7 @@ use crate::language::format::FormatOutcome;
 use crate::language::id::LanguageId;
 use crate::language::tools::{Tool, ToolRegistry};
 use crate::project::tasks::Task;
+use crate::search::{ReplaceOutcome, SearchMatch, SearchOptions};
 
 /// Work sent to the background thread.
 enum Request {
@@ -47,7 +49,20 @@ enum Request {
     SearchProject {
         root: PathBuf,
         query: String,
+        options: SearchOptions,
+        /// A replacement used only to build the per-line preview.
+        replacement: Option<String>,
         revision: u64,
+    },
+    /// Replace a query across a project.
+    ReplaceProject {
+        root: PathBuf,
+        query: String,
+        options: SearchOptions,
+        replacement: String,
+        revision: u64,
+        /// Open files with unsaved edits, which must not be overwritten.
+        skip: Vec<PathBuf>,
     },
     /// Probe for the external tools Kemori can drive.
     DiscoverTools,
@@ -127,7 +142,12 @@ pub enum Event {
     /// The result of a project-wide text search.
     SearchResults {
         revision: u64,
-        matches: Vec<crate::search::SearchMatch>,
+        result: Result<Vec<SearchMatch>, String>,
+    },
+    /// The result of a project-wide replacement.
+    ProjectReplaced {
+        revision: u64,
+        result: Result<ReplaceOutcome, String>,
     },
     /// The result of probing for external tools.
     Tools(ToolRegistry),
@@ -315,11 +335,40 @@ impl Background {
     }
 
     /// Ask for a project-wide text search.
-    pub fn search_project(&self, root: PathBuf, query: String, revision: u64) {
+    pub fn search_project(
+        &self,
+        root: PathBuf,
+        query: String,
+        options: SearchOptions,
+        replacement: Option<String>,
+        revision: u64,
+    ) {
         let _ = self.requests.send(Request::SearchProject {
             root,
             query,
+            options,
+            replacement,
             revision,
+        });
+    }
+
+    /// Ask for a project-wide replacement.
+    pub fn replace_project(
+        &self,
+        root: PathBuf,
+        query: String,
+        options: SearchOptions,
+        replacement: String,
+        revision: u64,
+        skip: Vec<PathBuf>,
+    ) {
+        let _ = self.requests.send(Request::ReplaceProject {
+            root,
+            query,
+            options,
+            replacement,
+            revision,
+            skip,
         });
     }
 
@@ -474,10 +523,26 @@ fn handle_request(request: Request, language: &LanguageService, events: &Sender<
         Request::SearchProject {
             root,
             query,
+            options,
+            replacement,
             revision,
         } => {
-            let matches = crate::search::search_project(&root, &query, 500);
-            let _ = events.send(Event::SearchResults { revision, matches });
+            let result =
+                crate::search::search_project(&root, &query, &options, replacement.as_deref(), 500);
+            let _ = events.send(Event::SearchResults { revision, result });
+        }
+        Request::ReplaceProject {
+            root,
+            query,
+            options,
+            replacement,
+            revision,
+            skip,
+        } => {
+            let skip: HashSet<PathBuf> = skip.into_iter().collect();
+            let result =
+                crate::search::replace_project(&root, &query, &options, &replacement, &skip);
+            let _ = events.send(Event::ProjectReplaced { revision, result });
         }
         Request::DiscoverTools => {
             let _ = events.send(Event::Tools(ToolRegistry::discover_cached()));

@@ -61,6 +61,17 @@ describes the current state.
 - **There is no integrated terminal yet.** The bottom panel reserves room for
   it, but the **Output** tab is task output, not a PTY-backed shell. A terminal
   needs a dependency decision and is a separate roadmap item.
+- **Project search is bounded and literal in its replacement.** At most 500
+  matching lines are listed (replace-all still covers every file), and queries
+  use either literal matching or the small regex subset (no groups,
+  alternation or `{n,m}`). Replacement text is literal: `$1`-style capture
+  references are not expanded. Include/exclude globs reuse the `.gitignore`
+  matcher.
+- **Project replace refuses unsaved buffers.** A file open with unsaved edits
+  is skipped and reported instead of being overwritten on disk, so the user can
+  save or close it and replace again. Files edited on disk between the search
+  and the replace are replaced using their current contents, not the searched
+  snapshot.
 
 - **`.gitignore` discovery is capped.** At most 256 nested `.gitignore` files and
   4096 directories are read per project; in an enormous monorepo a deeper rule

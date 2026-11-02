@@ -312,6 +312,16 @@ this file, and add or change a test.
   only a shebang or its content would reveal is not counted by the project scan
   (opening it still detects it normally).
 
+- **Search and replace share one matcher, and replacement is a background job.**
+  Project search and project replace compile the same query (literal, whole-word
+  or the small built-in regex) with the same include/exclude globs, so the
+  preview and the write cannot disagree. The scan runs on the worker; replace
+  re-reads each file, writes through the atomic file helper and reports every
+  changed file. Open buffers with unsaved edits are skipped and named rather
+  than overwritten, and clean open buffers reload immediately after the write.
+  Replacement text is literal (the regex engine has no groups). An empty
+  replacement is treated as a delete and requires a second confirmation.
+
 - **Deterministic project scaffolding.** `project/create.rs` writes conventional
   project files directly instead of invoking `cargo`, `go` or `pip`, so
   creation is instant, offline and toolchain-independent. It never deletes a

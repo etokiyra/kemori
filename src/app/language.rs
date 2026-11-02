@@ -390,40 +390,6 @@ impl App {
         prompt.input = word;
         self.overlay = Overlay::Prompt(prompt);
     }
-    /// Show the matches from a project-wide search.
-    pub(super) fn open_project_search_picker(&mut self, matches: Vec<SearchMatch>) {
-        if matches.is_empty() {
-            self.set_status("No matches in project");
-            return;
-        }
-        let total = matches.len();
-        let root = self.workspace.root().to_path_buf();
-        let items = matches
-            .into_iter()
-            .map(|entry| {
-                let relative = entry
-                    .path
-                    .strip_prefix(&root)
-                    .unwrap_or(&entry.path)
-                    .display()
-                    .to_string();
-                let detail = format!("{relative}:{}", entry.line + 1);
-                PickerItem::new(
-                    entry.text,
-                    detail,
-                    PickerAction::Reveal {
-                        path: entry.path,
-                        position: Position::new(entry.line, entry.col),
-                    },
-                )
-            })
-            .collect();
-        let mut picker = Picker::new("Search Results", "Filter results…", items);
-        picker.refilter();
-        self.overlay = Overlay::Picker(picker);
-        self.set_status(format!("{total} match(es)"));
-    }
-
     /// Ask for project-wide symbols, optionally with a pre-applied query.
     ///
     /// `F12` uses a query so a definition that is not in the current file can
@@ -452,28 +418,6 @@ impl App {
     /// built-in scan as an immediate, always-available fallback.
     pub(super) fn open_workspace_symbols(&mut self) {
         self.open_workspace_symbols_with(None);
-    }
-
-    /// Prompt for a project-wide text query.
-    pub(super) fn open_project_search(&mut self) {
-        let mut prompt = Prompt::new(
-            PromptKind::ProjectSearch,
-            "Search in project",
-            "text to find",
-        );
-        // Prefill from a single-line selection, so searching for the word under
-        // the cursor is one keystroke.
-        if let Some(text) = self
-            .editor
-            .active_document()
-            .and_then(|doc| doc.selected_text())
-        {
-            let trimmed = text.trim();
-            if !trimmed.is_empty() && !trimmed.contains('\n') {
-                prompt.input = trimmed.to_string();
-            }
-        }
-        self.overlay = Overlay::Prompt(prompt);
     }
 
     pub(super) fn open_workspace_symbol_picker(&mut self, symbols: Vec<WorkspaceSymbol>) {
