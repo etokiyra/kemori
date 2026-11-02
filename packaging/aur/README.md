@@ -41,7 +41,7 @@ cp ~/Projects/kemori/packaging/aur/kemori/PKGBUILD /tmp/aur-kemori/
 cp ~/Projects/kemori/packaging/aur/kemori/.SRCINFO /tmp/aur-kemori/
 cd /tmp/aur-kemori
 git add PKGBUILD .SRCINFO
-git commit -m "Initial import: kemori 0.1.2"
+git commit -m "Initial import: kemori 3.0.0"
 git push
 ```
 
