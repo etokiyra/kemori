@@ -11,6 +11,11 @@ Historical entries below retain the old name; 3.0.0 is the rename release.
 ## [Unreleased]
 
 ### Added
+- **Project-wide built-in diagnostics.** Opening **Problems** scans every
+  unopened file in the project with its provider's structural diagnostics, up
+  to 4,000 files and 2,000 problems, and groups the result with the live
+  document and task problems. `r` refreshes the scan; `c` clears task and
+  project problems while live document diagnostics stay.
 - **Run Active File.** A standalone script in Python, Shell, JavaScript, Ruby,
   PHP, Lua, Perl, Go, Dart or Elixir can be run from the palette with its
   interpreter/toolchain (`python3 file.py`, `go run file.go`, …). It uses the

@@ -48,7 +48,7 @@ pub mod tools;
 pub mod web;
 pub mod yaml;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub use id::LanguageId;
 pub use provider::{
@@ -137,8 +137,67 @@ impl LanguageService {
             .collect()
     }
 
-    /// Scan a project for named definitions, up to `limit` symbols.
+    /// Run the built-in diagnostics for every project file a provider can
+    /// analyse, up to `file_limit` files and `diagnostic_limit` diagnostics.
     ///
+    /// This is a *built-in* workspace pass: language servers only publish
+    /// diagnostics for documents they have been sent, so their problems remain
+    /// limited to the open files. Files the caller already has open are skipped
+    /// (their live diagnostics are authoritative), and binary, non-UTF-8 and
+    /// oversized files are ignored so the scan stays predictable.
+    pub fn project_diagnostics(
+        &self,
+        root: &Path,
+        skip: &[PathBuf],
+        file_limit: usize,
+        diagnostic_limit: usize,
+    ) -> Vec<crate::language::diagnostics::FileDiagnostics> {
+        const MAX_FILE_BYTES: u64 = 1024 * 1024;
+        let mut found = Vec::new();
+        let mut total = 0;
+        for path in crate::filesystem::collect_files(root, file_limit) {
+            if skip.iter().any(|open| open == &path) {
+                continue;
+            }
+            let Some(extension) = path.extension().and_then(|extension| extension.to_str()) else {
+                continue;
+            };
+            let Some(language) = self.language_for_extension(extension) else {
+                continue;
+            };
+            let provider = self.provider(language);
+            if !provider.capabilities().contains(&Capability::Diagnostics) {
+                continue;
+            }
+            let Ok(metadata) = std::fs::metadata(&path) else {
+                continue;
+            };
+            if metadata.len() > MAX_FILE_BYTES {
+                continue;
+            }
+            let Ok(bytes) = std::fs::read(&path) else {
+                continue;
+            };
+            if bytes.contains(&0) {
+                continue;
+            }
+            let text = String::from_utf8_lossy(&bytes);
+            let mut diagnostics = provider.diagnostics(&text);
+            if diagnostics.is_empty() {
+                continue;
+            }
+            let remaining = diagnostic_limit.saturating_sub(total);
+            diagnostics.truncate(remaining);
+            total += diagnostics.len();
+            found.push(crate::language::diagnostics::FileDiagnostics { path, diagnostics });
+            if total >= diagnostic_limit {
+                break;
+            }
+        }
+        found
+    }
+
+    /// Scan a project for named definitions, up to `limit` symbols.    ///
     /// Intended for the background worker: it reads each source file once and
     /// reuses the providers' symbol scanners.
     pub fn workspace_symbols(&self, root: &Path, limit: usize) -> Vec<WorkspaceSymbol> {
@@ -232,6 +291,26 @@ mod tests {
         fs::write(dir.join("node_modules/pkg/index.ts"), "export {};\n").unwrap();
         let service = LanguageService::builtin();
         assert!(service.detect_project_languages(&dir, 100).is_empty());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn project_diagnostics_finds_broken_files_and_skips_open_ones() {
+        let dir = temp_dir("diagnostics");
+        fs::write(dir.join("broken.rs"), "fn main() {\n").unwrap();
+        fs::write(dir.join("clean.rs"), "fn main() {}\n").unwrap();
+        let service = LanguageService::builtin();
+
+        let found = service.project_diagnostics(&dir, &[], 100, 100);
+        assert_eq!(found.len(), 1, "only the unbalanced file should report");
+        assert!(found[0].path.ends_with("broken.rs"));
+        assert!(!found[0].diagnostics.is_empty());
+
+        let skipped = service.project_diagnostics(&dir, &[dir.join("broken.rs")], 100, 100);
+        assert!(
+            skipped.is_empty(),
+            "open files are left to their live state"
+        );
         let _ = fs::remove_dir_all(&dir);
     }
 

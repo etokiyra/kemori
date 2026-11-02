@@ -10,7 +10,16 @@
 //! in characters, never terminal colours or editor types. Rendering decides how
 //! they look.
 
+use std::path::PathBuf;
+
 use crate::language::provider::{HighlightState, LanguageProvider, TokenKind};
+
+/// Diagnostics for one project file, produced by a workspace scan.
+#[derive(Clone, Debug)]
+pub struct FileDiagnostics {
+    pub path: PathBuf,
+    pub diagnostics: Vec<Diagnostic>,
+}
 
 /// How serious a diagnostic is. Ordering runs from least to most severe so a
 /// caller can pick the worst diagnostic on a line with `max`.

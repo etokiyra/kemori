@@ -329,6 +329,9 @@ impl App {
                 self.project_languages = Some(languages);
                 true
             }
+            BackgroundEvent::ProjectDiagnostics { revision, problems } => {
+                self.apply_project_diagnostics(revision, problems)
+            }
             BackgroundEvent::TaskOutput { stream: _, text } => {
                 self.append_task_output(&text);
                 true

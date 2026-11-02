@@ -343,6 +343,15 @@ this file, and add or change a test.
   with the project root as its working directory, and an unsaved buffer is
   refused because the child reads the file on disk.
 
+- **Workspace diagnostics are a bounded built-in snapshot.** Opening Problems
+  asks the worker for one scan of the unopened project files. The scan is
+  extension-detected, `.gitignore`-aware, capped by files and problems, and runs
+  only providers that declare structural diagnostics; open files are skipped
+  because their live diagnostics are authoritative. The result is a snapshot,
+  not a file watcher: `r` refreshes it. LSP diagnostics stay limited to open
+  documents until pull diagnostics are implemented, and the UI says so rather
+  than implying a full type-check of the project.
+
 - **Deterministic project scaffolding.** `project/create.rs` writes conventional
   project files directly instead of invoking `cargo`, `go` or `pip`, so
   creation is instant, offline and toolchain-independent. It never deletes a
@@ -497,27 +506,34 @@ distributed a little further so every production file is under 800 lines:
 
 | Module | Contents | Lines |
 | --- | --- | --- |
-| `mod.rs` | state types, constructor, small helpers | 783 |
-| `background.rs` | worker-event application, external-change polling, pumping | 426 |
-| `commands.rs` | command dispatch, palette, language setup, prompts, quick open | 971 |
+| `mod.rs` | state types, constructor, small helpers | 789 |
+| `availability.rs` | command availability and format checks | 167 |
+| `background.rs` | worker-event application, external-change polling, pumping | 431 |
+| `commands.rs` | command dispatch, palette, prompts, quick open | 468 |
 | `completion.rs` | completion popup and hover | 366 |
 | `diagnostics.rs` | diagnostics polling, navigation and list | 187 |
-| `editor.rs` | cursor moves, clipboard/kill-ring, comment, matching bracket | 276 |
+| `editor.rs` | cursor moves, clipboard/kill-ring, comment, matching bracket | 286 |
 | `files.rs` | save/close/revert and file create/rename/copy/delete | 370 |
 | `git.rs` | diff, changed files, staging, commit | 257 |
-| `keys.rs` | key dispatch (global, editor, tree, overlay, search, completion) | 871 |
-| `language.rs` | navigation, symbols, rename, code actions, formatting | 643 |
+| `keys.rs` | key dispatch (global, editor, tree, overlay, search, completion) | 864 |
+| `language.rs` | navigation, symbols, rename, code actions, formatting | 587 |
 | `lsp.rs` | server lifecycle and response handling | 884 |
 | `mouse.rs` | editor hit-testing, click and drag selection | 82 |
+| `overlay.rs` | picker, prompt, search and settings state | 916 |
+| `panel.rs` | bottom panel state, task output and problem extraction | 650 |
 | `panes.rs` | split panes and tabs | 170 |
+| `project_search.rs` | project search/replace state, keys and hand-off | 547 |
 | `run.rs` | the main event loop | 86 |
 | `search.rs` | find/replace | 202 |
-| `session.rs` | session persistence, workspace and welcome actions | 480 |
-| `status.rs` | statusline messages and toasts | 103 |
-| `tasks.rs` | task picker and bounded run output | 92 |
+| `session.rs` | session persistence, workspace and welcome actions | 484 |
+| `settings.rs` | Settings screen and preference application | 211 |
+| `setup.rs` | tool installation, project setup plans and tool actions | 369 |
+| `status.rs` | statusline messages and toasts | 132 |
+| `tasks.rs` | task picker, streaming task output and Run Active File | 228 |
 | `view.rs` | tree/diagnostic/wrap/fold toggles and reveal | 108 |
 
 `app/tests.rs` is the deliberately single test module moved whole from `mod.rs`.
-`app/commands.rs`, `app/keys.rs`, `app/lsp.rs` and `app/overlay.rs` have grown
-past 800 since the split and are candidates for the next mechanical
-extractions; new work should not make them longer.
+`app/keys.rs`, `app/lsp.rs` and `app/overlay.rs` are still over 800 and are
+candidates for the next mechanical extractions; new work should not make them
+longer. `commands.rs` was brought back under 800 by moving availability into
+`availability.rs` and tool/project setup into `setup.rs`.

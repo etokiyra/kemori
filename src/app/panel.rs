@@ -92,6 +92,10 @@ pub struct Panel {
     pub debug_selected: usize,
     /// Problems extracted from the last task's output.
     pub task_problems: Vec<ProblemEntry>,
+    /// Built-in diagnostics from the last workspace scan.
+    pub workspace_problems: Vec<ProblemEntry>,
+    /// Whether a workspace scan has produced a result for this workspace.
+    pub problems_scanned: bool,
     /// Completed task outputs from this session, oldest first.
     pub history: Vec<TaskRunState>,
 }
@@ -107,6 +111,8 @@ impl Default for Panel {
             debug: Vec::new(),
             debug_selected: 0,
             task_problems: Vec::new(),
+            workspace_problems: Vec::new(),
+            problems_scanned: false,
             history: Vec::new(),
         }
     }
@@ -162,7 +168,71 @@ impl App {
     /// Open a specific tab, leaving keyboard focus alone.
     pub(super) fn open_panel(&mut self, tab: PanelTab) {
         self.panel.open = true;
+        self.switch_panel_tab(tab);
+    }
+
+    /// Select a tab, running the one-time workspace scan when Problems is first
+    /// shown in this workspace.
+    fn switch_panel_tab(&mut self, tab: PanelTab) {
         self.panel.tab = tab;
+        if tab == PanelTab::Problems && !self.panel.problems_scanned {
+            self.refresh_project_problems();
+        }
+    }
+
+    /// Ask the worker for the built-in diagnostics of unopened project files.
+    pub(super) fn refresh_project_problems(&mut self) {
+        if self.pending_project_diagnostics.is_some() {
+            return;
+        }
+        self.project_diagnostics_seq += 1;
+        let revision = self.project_diagnostics_seq;
+        self.pending_project_diagnostics = Some(revision);
+        self.panel.problems_scanned = true;
+        let skip = self
+            .editor
+            .documents
+            .iter()
+            .filter_map(|doc| doc.buffer.path.clone())
+            .collect();
+        self.background
+            .project_diagnostics(self.workspace.root().to_path_buf(), skip, revision);
+        self.set_status("Scanning project problems…");
+    }
+
+    /// Apply the result of a workspace diagnostics scan.
+    pub(super) fn apply_project_diagnostics(
+        &mut self,
+        revision: u64,
+        problems: Vec<crate::language::diagnostics::FileDiagnostics>,
+    ) -> bool {
+        if self.pending_project_diagnostics != Some(revision) {
+            return false;
+        }
+        self.pending_project_diagnostics = None;
+        let root = self.workspace.root().to_path_buf();
+        let mut entries = Vec::new();
+        for file in problems {
+            let display = project_relative(&root, &file.path);
+            for diagnostic in file.diagnostics {
+                entries.push(ProblemEntry {
+                    path: file.path.clone(),
+                    file: display.clone(),
+                    position: Position::new(diagnostic.start.line, diagnostic.start.col),
+                    severity: diagnostic.severity,
+                    message: diagnostic.message,
+                });
+            }
+        }
+        let count = entries.len();
+        self.panel.workspace_problems = entries;
+        self.panel.problems_scanned = true;
+        if count > 0 {
+            self.set_status(format!("{count} project problem(s)"));
+        } else {
+            self.set_status("No project problems found");
+        }
+        true
     }
 
     /// Open a specific tab and move keyboard focus into the panel.
@@ -195,6 +265,18 @@ impl App {
             }
         }
         problems.extend(self.panel.task_problems.iter().cloned());
+        problems.extend(self.panel.workspace_problems.iter().cloned());
+        // The same problem can arrive from a live document and a workspace
+        // scan; keep one copy so the count is honest.
+        let mut seen = std::collections::HashSet::new();
+        problems.retain(|problem| {
+            seen.insert((
+                problem.path.clone(),
+                problem.position.row,
+                problem.position.col,
+                problem.message.clone(),
+            ))
+        });
         // Group by file, then position, so the panel never repeats a header.
         problems.sort_by(|a, b| {
             a.path
@@ -222,11 +304,11 @@ impl App {
         }
         match key.code {
             KeyCode::Esc | KeyCode::Char('q') => self.focus = Focus::Editor,
-            KeyCode::Tab => self.panel.tab = self.panel.tab.next(),
-            KeyCode::BackTab => self.panel.tab = self.panel.tab.previous(),
-            KeyCode::Char('1') => self.panel.tab = PanelTab::Problems,
-            KeyCode::Char('2') => self.panel.tab = PanelTab::Output,
-            KeyCode::Char('3') => self.panel.tab = PanelTab::DebugConsole,
+            KeyCode::Tab => self.switch_panel_tab(self.panel.tab.next()),
+            KeyCode::BackTab => self.switch_panel_tab(self.panel.tab.previous()),
+            KeyCode::Char('1') => self.switch_panel_tab(PanelTab::Problems),
+            KeyCode::Char('2') => self.switch_panel_tab(PanelTab::Output),
+            KeyCode::Char('3') => self.switch_panel_tab(PanelTab::DebugConsole),
             KeyCode::Up => self.move_panel_selection(-1),
             KeyCode::Down => self.move_panel_selection(1),
             KeyCode::PageUp => self.move_panel_selection(-PANEL_PAGE),
@@ -237,6 +319,9 @@ impl App {
             KeyCode::Char('c') => self.clear_panel(),
             KeyCode::Char('x') if self.panel.tab == PanelTab::Output => self.cancel_task(),
             KeyCode::Char('r') if self.panel.tab == PanelTab::Output => self.rerun_task(),
+            KeyCode::Char('r') if self.panel.tab == PanelTab::Problems => {
+                self.refresh_project_problems()
+            }
             KeyCode::Char('h') if self.panel.tab == PanelTab::Output => self.open_task_history(),
             _ => {}
         }
@@ -323,13 +408,16 @@ impl App {
     pub(super) fn clear_panel(&mut self) {
         match self.panel.tab {
             PanelTab::Problems => {
-                if self.panel.task_problems.is_empty() {
+                let had_task = !self.panel.task_problems.is_empty();
+                let had_workspace = !self.panel.workspace_problems.is_empty();
+                self.panel.task_problems.clear();
+                self.panel.workspace_problems.clear();
+                if had_task || had_workspace {
+                    self.set_status("Task and project problems cleared");
+                } else {
                     self.set_status(
                         "Problems follow the open files; close or fix a file to clear it",
                     );
-                } else {
-                    self.panel.task_problems.clear();
-                    self.set_status("Task problems cleared");
                 }
             }
             PanelTab::Output => {

@@ -1,11 +1,16 @@
 # NEXT — the working plan for turning Kemori into a full IDE
 
 **Status snapshot:** 2026-11-02, version 3.0.0, commit `04845d4`.
-**Verification at the time of writing:** `cargo check --all-targets`, `cargo clippy --all-targets` clean; `cargo test` green (651 library tests, 51 render tests, plus tooling suites with ignored live tests).
+**Verification at the time of writing:** `cargo check --all-targets`, `cargo clippy --all-targets` clean; `cargo test` green (653 library tests, 51 render tests, plus tooling suites with ignored live tests).
 **Release status:** `kemori` 3.0.0 is on crates.io, docs.rs and the GitHub `v3.0.0` release. The AUR packages are prepared and validated locally; pushing them still needs the maintainer's AUR SSH key.
 
 ### What this session completed
 
+- **Project-wide built-in diagnostics.** **Problems** now scans every unopened
+  project file with its provider's structural checks (4,000 files / 2,000
+  problems), deduplicates against live document diagnostics, and groups
+  everything by file. `r` refreshes the snapshot; `c` clears task and project
+  problems while live document problems stay. LSP pull diagnostics remain.
 - **Project-wide search and replace.** `Ctrl+Shift+F` now opens a form with
   literal or regex matching, case/whole-word toggles, include/exclude globs,
   grouped results and a per-line replacement preview. `Alt+Enter` replaces
@@ -358,9 +363,11 @@ workspace-wide problems and trust remain.
 - [x] **Project search and replace.** Literal/regex, case, whole word,
       include/exclude globs, results grouped by file, replacement preview,
       atomic writes, unsaved-buffer safety and every changed file named.
-- [ ] **Problems panel.** Workspace-wide diagnostics grouped by file/severity;
-      LSP pull diagnostics where supported. *The tab currently covers the open
-      files and groups them by file.*
+- [x] **Problems panel (built-in).** Workspace scan of unopened files grouped
+      by file/severity, combined with live diagnostics and task problems;
+      refreshed with `r`.
+- [ ] **LSP pull diagnostics.** Workspace-wide type diagnostics from a language
+      server where it advertises `textDocument/diagnostic`.
 - [ ] **Workspace trust and safe mode.** Ask before running project tasks,
       debug adapters or project-specific servers. Store the decision in Kemori's
       state; never require a user-maintained config file.
@@ -465,7 +472,7 @@ so "Complete" means the development loop works.
 ## 5. Suggested next commits
 
 1. `feat(terminal): PTY-backed terminal in the bottom panel`
-2. `feat(diagnostics): workspace-wide Problems and pull diagnostics`
+2. `feat(lsp): workspace pull diagnostics`
 3. `feat(app): workspace trust before running project code`
 
 Then the real debugger, then language expansion.
@@ -571,6 +578,8 @@ Keep this table current so the next session knows where to resume.
 | 1. Integrated terminal | not started | — | Needs the PTY dependency decision (open decision 3) |
 | 1. Live tasks | done | 03d5362 | Streaming, follow-tail, cancel and rerun |
 | 1. Task depth | done | 04845d4 | Session history, references in Problems and Run Active File |
+| 1. Problems panel | done | pending | Built-in scan of unopened files plus live and task problems |
+| 1. LSP pull diagnostics | not started | — | Workspace-wide type diagnostics from a server |
 | 1. Project search/replace | done | 9be6382 | Form overlay, literals/regex, globs, preview, atomic replace, unsaved-buffer safety |
 | 1. Workspace trust | not started | — | — |
 | 2. LSP depth | not started | — | — |

@@ -1086,6 +1086,46 @@ fn the_panel_problems_tab_lists_and_reveals_diagnostics() {
 }
 
 #[test]
+fn the_problems_tab_scans_unopened_project_files() {
+    let dir = temp_project("problems-workspace");
+    let open = dir.join("src/main.rs");
+    let broken = dir.join("src/broken.rs");
+    fs::write(&broken, "fn main() {\n").unwrap();
+
+    let mut app = app_with_file(&open);
+    app.execute_command(ids::PANEL_PROBLEMS);
+    let deadline = Instant::now() + Duration::from_secs(15);
+    while app.pending_project_diagnostics.is_some() && Instant::now() < deadline {
+        app.pump_background(Duration::from_millis(20));
+    }
+
+    assert!(
+        app.panel
+            .workspace_problems
+            .iter()
+            .any(|problem| problem.path.ends_with("broken.rs")),
+        "the unopened broken file should be reported"
+    );
+    assert!(
+        app.panel
+            .workspace_problems
+            .iter()
+            .all(|problem| problem.path != open),
+        "open files keep their live diagnostics and are skipped by the scan"
+    );
+    assert!(
+        app.panel_problems()
+            .iter()
+            .any(|problem| problem.path.ends_with("broken.rs"))
+    );
+
+    app.panel.tab = super::panel::PanelTab::Problems;
+    app.execute_command(ids::PANEL_CLEAR);
+    assert!(app.panel.workspace_problems.is_empty());
+    fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
 fn the_panel_resizes_within_bounds() {
     let dir = temp_project("panel-resize");
     let mut app = App::new(Some(&dir)).unwrap();

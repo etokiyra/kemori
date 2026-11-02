@@ -14,7 +14,8 @@ src/
 ├── app/
 │   ├── mod.rs              # App state, constructor, event loop, small helpers
 │   ├── background.rs       # applying worker events, external-change polling
-│   ├── commands.rs         # command dispatch, palette, language setup, prompts
+│   ├── availability.rs     # command availability and format checks
+│   ├── commands.rs         # command dispatch, palette, prompts, quick open
 │   ├── completion.rs       # completion popup + hover
 │   ├── diagnostics.rs      # diagnostics polling, navigation, list
 │   ├── editor.rs           # cursor moves, clipboard, comment, matching bracket
@@ -32,6 +33,7 @@ src/
 │   ├── search.rs           # find/replace
 │   ├── session.rs          # session persistence, workspace + welcome actions
 │   ├── settings.rs         # Settings screen + live application of preferences
+│   ├── setup.rs            # tool installation, project setup, tool actions
 │   ├── status.rs           # statusline messages and toasts
 │   ├── tasks.rs            # task picker and bounded run output
 │   ├── tests.rs            # the app-level integration tests

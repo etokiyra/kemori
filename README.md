@@ -320,11 +320,12 @@ The editor is the heart of Kemori, and it is built for real projects.
 - Project-wide symbol search, session persistence (open files, cursors and
   expanded folders come back next launch) and external-change detection.
 - **A bottom panel** (`Ctrl+J`) collects the development loop instead of
-  interrupting it: **Problems** lists diagnostics across the open files grouped
-  by file, **Output** keeps the last task's result, and **Debug Console** holds
-  debug-adapter messages. `Tab` cycles the tabs, `Alt+↑`/`Alt+↓` resize,
-  `Enter` opens the selected problem or `file:line` reference, `c` clears the
-  current output, and `Esc` returns to the editor.
+  interrupting it: **Problems** lists diagnostics across the open files plus a
+  built-in scan of unopened project files, grouped by file; **Output** keeps
+  the last task's result; and **Debug Console** holds debug-adapter messages.
+  `Tab` cycles the tabs, `Alt+↑`/`Alt+↓` resize, `Enter` opens the selected
+  problem or `file:line` reference, `r` refreshes or reruns, `x` cancels a
+  task, `h` shows task history, `c` clears, and `Esc` returns to the editor.
 - **Run Task…** runs one of the project's own commands — `cargo build`/`test`,
   `go build`/`test`, `make`, `python3 -m pytest`, `mix test` or any declared
   `npm` script — detected from the project's markers with no configuration.
@@ -811,8 +812,9 @@ Kemori reports what happened rather than deleting anything.
 | Context | `Tab / Shift+Tab` | panel: cycle tabs; project search: next / previous field |
 | Context | `↑ / ↓, PageUp / PageDown` | panel / project search: move through results |
 | Context | `Enter` | panel / project search: open or search; welcome: open |
-| Context | `c` | panel: clear the current output |
-| Context | `r / x / h` | panel Output: rerun / cancel / history |
+| Context | `c` | panel: clear task and project problems, or the current output |
+| Context | `r` | panel: refresh project problems (Problems) / rerun the last task (Output) |
+| Context | `x / h` | panel Output: cancel the running task / task history |
 | Context | `Alt+↑↓` | panel: grow or shrink |
 | Context | `Esc` | panel / project search: close |
 | Context | `↑ / ↓` | welcome: choose an action |

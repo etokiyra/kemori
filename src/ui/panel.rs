@@ -75,6 +75,10 @@ fn keys_line(app: &App) -> Line<'static> {
         spans.push(Span::styled("·", theme::dim()));
         spans.push(Span::styled(" Enter open ", theme::muted()));
     }
+    if app.panel.tab == PanelTab::Problems {
+        spans.push(Span::styled("·", theme::dim()));
+        spans.push(Span::styled(" r refresh ", theme::muted()));
+    }
     if app.panel.tab == PanelTab::Output {
         spans.push(Span::styled("·", theme::dim()));
         spans.push(Span::styled(" r rerun ", theme::muted()));

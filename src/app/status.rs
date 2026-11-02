@@ -102,6 +102,8 @@ impl App {
             Some("replacing in project")
         } else if self.pending_task {
             Some("running task")
+        } else if self.pending_project_diagnostics.is_some() {
+            Some("scanning problems")
         } else if self.pending_install.is_some() {
             Some("installing")
         } else if self.pending_commit {

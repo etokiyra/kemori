@@ -17,7 +17,7 @@ use crate::git::GitInfo;
 use crate::language::LanguageService;
 use crate::language::WorkspaceSymbol;
 use crate::language::detection::Confidence;
-use crate::language::diagnostics::Diagnostic;
+use crate::language::diagnostics::{Diagnostic, FileDiagnostics};
 use crate::language::format::FormatOutcome;
 use crate::language::id::LanguageId;
 use crate::language::tools::{Tool, ToolRegistry};
@@ -48,6 +48,12 @@ enum Request {
     WorkspaceSymbols { root: PathBuf, revision: u64 },
     /// Detect the languages present in a project, for project setup.
     ProjectLanguages { root: PathBuf },
+    /// Run the built-in workspace diagnostics, skipping the open files.
+    ProjectDiagnostics {
+        root: PathBuf,
+        skip: Vec<PathBuf>,
+        revision: u64,
+    },
     /// Search a project for a text query.
     SearchProject {
         root: PathBuf,
@@ -142,6 +148,11 @@ pub enum Event {
     },
     /// The languages detected in a project, for project setup.
     ProjectLanguages(Vec<LanguageId>),
+    /// Built-in diagnostics for unopened project files.
+    ProjectDiagnostics {
+        revision: u64,
+        problems: Vec<FileDiagnostics>,
+    },
     /// The result of a project-wide text search.
     SearchResults {
         revision: u64,
@@ -321,6 +332,15 @@ impl Background {
     /// Ask for the languages present in a project, for project setup.
     pub fn detect_project_languages(&self, root: PathBuf) {
         let _ = self.requests.send(Request::ProjectLanguages { root });
+    }
+
+    /// Ask for the built-in diagnostics of every unopened project file.
+    pub fn project_diagnostics(&self, root: PathBuf, skip: Vec<PathBuf>, revision: u64) {
+        let _ = self.requests.send(Request::ProjectDiagnostics {
+            root,
+            skip,
+            revision,
+        });
     }
 
     /// Ask for a project-wide text search.
@@ -519,6 +539,14 @@ fn handle_request(
         Request::ProjectLanguages { root } => {
             let languages = language.detect_project_languages(&root, PROJECT_SCAN_LIMIT);
             let _ = events.send(Event::ProjectLanguages(languages));
+        }
+        Request::ProjectDiagnostics {
+            root,
+            skip,
+            revision,
+        } => {
+            let problems = language.project_diagnostics(&root, &skip, PROJECT_SCAN_LIMIT, 2000);
+            let _ = events.send(Event::ProjectDiagnostics { revision, problems });
         }
         Request::SearchProject {
             root,

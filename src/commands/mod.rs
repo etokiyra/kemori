@@ -75,6 +75,7 @@ pub mod ids {
     pub const DIAGNOSTICS_NEXT: &str = "diagnostics.next";
     pub const DIAGNOSTICS_PREV: &str = "diagnostics.previous";
     pub const DIAGNOSTICS_LIST: &str = "diagnostics.list";
+    pub const REFRESH_PROBLEMS: &str = "diagnostics.refreshProject";
 
     pub const WORKSPACE_SYMBOLS: &str = "project.symbols";
     pub const PROJECT_SEARCH: &str = "project.search";
@@ -429,6 +430,13 @@ impl CommandRegistry {
             .describes("List every problem in open files")
             .needs_doc(),
             Command::new(
+                REFRESH_PROBLEMS,
+                "Refresh Project Problems",
+                "Diagnostics",
+                None,
+            )
+            .describes("Run built-in diagnostics over every unopened project file"),
+            Command::new(
                 WORKSPACE_SYMBOLS,
                 "Go to Symbol in Workspace…",
                 "Project",
@@ -619,8 +627,18 @@ pub const CONTEXT_KEYS: &[(&str, &str)] = &[
         "Enter",
         "panel / project search: open or search; welcome: open",
     ),
-    ("c", "panel: clear the current output"),
-    ("r / x / h", "panel Output: rerun / cancel / history"),
+    (
+        "c",
+        "panel: clear task and project problems, or the current output",
+    ),
+    (
+        "r",
+        "panel: refresh project problems (Problems) / rerun the last task (Output)",
+    ),
+    (
+        "x / h",
+        "panel Output: cancel the running task / task history",
+    ),
     ("Alt+↑↓", "panel: grow or shrink"),
     ("Esc", "panel / project search: close"),
     ("↑ / ↓", "welcome: choose an action"),

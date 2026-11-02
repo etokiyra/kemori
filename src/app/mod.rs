@@ -9,6 +9,7 @@ pub mod panel;
 pub use settings::{SETTINGS_ROWS, SettingsRow, SettingsState};
 pub use status::{Status, Toast, ToastKind};
 
+mod availability;
 mod background;
 mod commands;
 mod completion;
@@ -26,6 +27,7 @@ mod run;
 mod search;
 mod session;
 mod settings;
+mod setup;
 mod status;
 mod tasks;
 mod view;
@@ -345,6 +347,10 @@ pub struct App {
     project_replace_seq: u64,
     /// The project replacement awaiting a result, if any.
     pending_project_replace: Option<u64>,
+    /// Monotonic id for built-in workspace diagnostics.
+    project_diagnostics_seq: u64,
+    /// The workspace diagnostics scan awaiting a result, if any.
+    pending_project_diagnostics: Option<u64>,
     /// Animation frame, advanced while something on screen animates.
     pub anim_phase: usize,
     /// When the animation frame last advanced.
@@ -516,6 +522,8 @@ impl App {
             pending_project_search: None,
             project_replace_seq: 0,
             pending_project_replace: None,
+            project_diagnostics_seq: 0,
+            pending_project_diagnostics: None,
             anim_phase: 0,
             anim_last: Instant::now(),
             motion: true,

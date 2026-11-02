@@ -67,10 +67,12 @@ describes the current state.
   languages are refused with a reason instead of guessing a build. The file must
   be saved first, because the task runs the bytes on disk, not the buffer.
 - **A task can run to its ten-minute deadline if it is never cancelled.**
-- **The Problems tab covers the open files only.** Diagnostics exist for
-  documents Kemori has opened and analysed; there is no workspace-wide
-  diagnostic sweep and no LSP pull diagnostics yet. The tab groups what it has
-  and says so when there is nothing.
+- **The Problems tab mixes live and built-in workspace diagnostics.** Open
+  documents use their live provider/LSP diagnostics. Files Kemori has not
+  opened are scanned with the provider's built-in structural checks (up to 4,000
+  files and 2,000 problems), not with a language server: there is no
+  workspace-wide LSP pull-diagnostics pass yet, so type errors in unopened files
+  are not reported. The scan is a snapshot refreshed with `r`.
 - **There is no integrated terminal yet.** The bottom panel reserves room for
   it, but the **Output** tab is task output, not a PTY-backed shell. A terminal
   needs a dependency decision and is a separate roadmap item.
