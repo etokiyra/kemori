@@ -401,22 +401,6 @@ pub fn formatting_edits(value: &Value) -> Vec<TextEdit> {
     parse_edits(value).unwrap_or_default()
 }
 
-/// Parse a `textDocument/foldingRange` result into `(header, last hidden)`
-/// zero-based line pairs. Ranges that hide nothing are discarded.
-pub fn folding_ranges(value: &Value) -> Vec<(usize, usize)> {
-    let Some(ranges) = value.as_array() else {
-        return Vec::new();
-    };
-    ranges
-        .iter()
-        .filter_map(|range| {
-            let start = range.get("startLine")?.as_u64()? as usize;
-            let end = range.get("endLine")?.as_u64()? as usize;
-            (end > start).then_some((start, end))
-        })
-        .collect()
-}
-
 /// One overload from a `textDocument/signatureHelp` response.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Signature {
@@ -776,17 +760,6 @@ mod tests {
             end,
             new_text: new_text.to_string(),
         }
-    }
-
-    #[test]
-    fn folding_ranges_keep_only_ranges_that_hide_lines() {
-        let value = json!([
-            { "startLine": 2, "endLine": 6 },
-            { "startLine": 4, "startCharacter": 1, "endLine": 4, "endCharacter": 9 },
-            { "startLine": 8, "endLine": 7 }
-        ]);
-        assert_eq!(folding_ranges(&value), vec![(2, 6)]);
-        assert!(folding_ranges(&json!(null)).is_empty());
     }
 
     #[test]

@@ -133,6 +133,19 @@ fn folded_block_hides_its_lines_and_marks_the_header() {
 }
 
 #[test]
+fn breakpoint_marker_is_rendered_in_the_gutter() {
+    let dir = temp_project("breakpoint");
+    let file = dir.join("src/main.rs");
+    let mut app = app_with_file(&file);
+    app.execute_command(ids::TOGGLE_BREAKPOINT);
+
+    let screen = draw(&mut app);
+    assert!(screen.contains('●'), "breakpoint marker missing:\n{screen}");
+
+    cleanup(&dir);
+}
+
+#[test]
 fn renders_the_signature_help_popup() {
     use koda::app::overlay::SignatureState;
     use koda::language::lsp::convert::{Signature, SignatureHelp};

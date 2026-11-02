@@ -334,3 +334,17 @@ fn truncate(text: &str, max: usize) -> String {
     out.push('…');
     out
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn file_icons_cover_known_extensions_and_fall_back() {
+        crate::ui::theme::set_color_depth(crate::ui::theme::ColorDepth::Full);
+        assert_eq!(file_icon("main.rs"), "R");
+        assert_eq!(file_icon("app.tsx"), "T");
+        assert_eq!(file_icon("Makefile"), "·");
+        assert_eq!(file_icon("unknown.zzz"), "·");
+    }
+}

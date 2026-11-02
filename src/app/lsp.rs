@@ -869,7 +869,7 @@ impl App {
                 if !request.is_current(self, language, id) {
                     return;
                 }
-                let ranges = convert::folding_ranges(&value);
+                let ranges = crate::language::lsp::folding::ranges(&value);
                 if let Some(doc) = self
                     .editor
                     .documents

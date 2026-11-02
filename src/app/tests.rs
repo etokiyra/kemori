@@ -1694,6 +1694,54 @@ fn space_in_changed_files_stages_the_selected_file() {
 }
 
 #[test]
+fn mouse_click_and_drag_map_to_editor_positions() {
+    use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
+
+    let dir = temp_project("mouse");
+    let file = dir.join("src/main.rs");
+    let mut app = app_with_file(&file);
+    app.editor_body_rect = Some(ratatui::layout::Rect::new(0, 0, 80, 20));
+    app.show_line_numbers = true;
+
+    // Gutter is one digit plus two columns; screen row 1 is document line 0.
+    let down = MouseEvent {
+        kind: MouseEventKind::Down(MouseButton::Left),
+        column: 5,
+        row: 2,
+        modifiers: KeyModifiers::NONE,
+    };
+    assert!(app.handle_mouse(down));
+    let doc = app.editor.active_document().unwrap();
+    assert_eq!((doc.cursor.row, doc.cursor.col), (1, 2));
+    assert_eq!(app.mouse_drag_anchor, Some(Position::new(1, 2)));
+
+    let drag = MouseEvent {
+        kind: MouseEventKind::Drag(MouseButton::Left),
+        column: 3,
+        row: 1,
+        modifiers: KeyModifiers::NONE,
+    };
+    assert!(app.handle_mouse(drag));
+    let doc = app.editor.active_document().unwrap();
+    assert_eq!((doc.cursor.row, doc.cursor.col), (0, 0));
+    assert_eq!(
+        doc.selection.map(|sel| sel.anchor),
+        Some(Position::new(1, 2))
+    );
+
+    let up = MouseEvent {
+        kind: MouseEventKind::Up(MouseButton::Left),
+        column: 3,
+        row: 1,
+        modifiers: KeyModifiers::NONE,
+    };
+    assert!(!app.handle_mouse(up));
+    assert!(app.mouse_drag_anchor.is_none());
+
+    fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
 fn ctrl_k_chord_folds_and_unfolds() {
     let dir = temp_project("fold-chord");
     let file = dir.join("src/main.rs");

@@ -10,7 +10,9 @@
 //! keeps using its built-in heuristic providers, so an offline machine still
 //! has syntax highlighting, structural diagnostics, symbols and formatting.
 
+pub mod change;
 pub mod convert;
+pub mod folding;
 pub mod jsonrpc;
 
 use std::collections::HashMap;
@@ -411,50 +413,8 @@ impl Server {
         }
         let version = self.next_version(path);
         let old = self.documents.get(path).cloned().unwrap_or_default();
-        let incremental = self.capabilities.sync == TextDocumentSyncKind::Incremental;
-        let content_changes = if incremental {
-            // Send the smallest possible change: common prefix/suffix are left
-            // untouched, only the middle is replaced.
-            let old_chars: Vec<char> = old.chars().collect();
-            let new_chars: Vec<char> = text.chars().collect();
-            let mut prefix = 0usize;
-            while prefix < old_chars.len()
-                && prefix < new_chars.len()
-                && old_chars[prefix] == new_chars[prefix]
-            {
-                prefix += 1;
-            }
-            let mut suffix = 0usize;
-            while suffix < old_chars.len().saturating_sub(prefix)
-                && suffix < new_chars.len().saturating_sub(prefix)
-                && old_chars[old_chars.len() - 1 - suffix]
-                    == new_chars[new_chars.len() - 1 - suffix]
-            {
-                suffix += 1;
-            }
-            let start_line = old_chars[..prefix].iter().filter(|c| **c == '\n').count();
-            let start_col = old_chars[..prefix]
-                .iter()
-                .rev()
-                .take_while(|c| **c != '\n')
-                .count();
-            let end_old = old_chars.len() - suffix;
-            let end_line = old_chars[..end_old].iter().filter(|c| **c == '\n').count();
-            let end_col = old_chars[..end_old]
-                .iter()
-                .rev()
-                .take_while(|c| **c != '\n')
-                .count();
-            let changed_text: String = new_chars[prefix..new_chars.len().saturating_sub(suffix)]
-                .iter()
-                .collect();
-            json!([{
-                "range": {
-                    "start": { "line": start_line, "character": start_col },
-                    "end": { "line": end_line, "character": end_col }
-                },
-                "text": changed_text
-            }])
+        let content_changes = if self.capabilities.sync == TextDocumentSyncKind::Incremental {
+            change::incremental(&old, text)
         } else {
             json!([ { "text": text } ])
         };

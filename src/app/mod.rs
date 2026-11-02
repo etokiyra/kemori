@@ -15,6 +15,7 @@ mod git;
 mod keys;
 mod language;
 mod lsp;
+mod mouse;
 mod panes;
 mod search;
 mod session;
@@ -638,78 +639,8 @@ impl App {
                         needs_redraw = true;
                     }
                     Event::Resize(..) => needs_redraw = true,
-                    Event::Mouse(mouse) => {
-                        use crossterm::event::{MouseButton, MouseEventKind};
-                        // Helper closure to map a screen cell to a document position.
-                        let map = |app: &Self,
-                                   rect: ratatui::layout::Rect,
-                                   column: u16,
-                                   row: u16|
-                         -> Option<Position> {
-                            let doc = app.editor.active_document()?;
-                            let total_lines = doc.buffer.len_lines();
-                            let number_width = if app.show_line_numbers {
-                                total_lines.max(1).to_string().len()
-                            } else {
-                                0
-                            };
-                            let gutter = number_width + 2;
-                            let r = (row as usize)
-                                .saturating_sub(rect.y as usize + 1)
-                                .saturating_add(doc.scroll_top);
-                            let c = (column as usize)
-                                .saturating_sub(rect.x as usize + gutter)
-                                .saturating_add(doc.scroll_left);
-                            let r = r.min(total_lines.saturating_sub(1));
-                            Some(Position::new(r, c))
-                        };
-                        match mouse.kind {
-                            MouseEventKind::ScrollUp => {
-                                self.with_doc(|doc| doc.move_up(false));
-                                needs_redraw = true;
-                            }
-                            MouseEventKind::ScrollDown => {
-                                self.with_doc(|doc| doc.move_down(false));
-                                needs_redraw = true;
-                            }
-                            MouseEventKind::Down(MouseButton::Left) => {
-                                if let Some(rect) = self.editor_body_rect
-                                    && mouse.column >= rect.x
-                                    && mouse.column < rect.x + rect.width
-                                    && mouse.row > rect.y
-                                    && mouse.row < rect.y + rect.height
-                                    && let Some(pos) = map(self, rect, mouse.column, mouse.row)
-                                {
-                                    self.mouse_drag_anchor = Some(pos);
-                                    self.with_doc(|d| {
-                                        d.selection = None;
-                                        d.move_to(pos);
-                                    });
-                                    self.focus = Focus::Editor;
-                                    needs_redraw = true;
-                                }
-                            }
-                            MouseEventKind::Drag(MouseButton::Left) => {
-                                if let Some(anchor) = self.mouse_drag_anchor
-                                    && let Some(rect) = self.editor_body_rect
-                                    && mouse.column >= rect.x
-                                    && mouse.column < rect.x + rect.width
-                                    && mouse.row > rect.y
-                                    && mouse.row < rect.y + rect.height
-                                    && let Some(pos) = map(self, rect, mouse.column, mouse.row)
-                                {
-                                    self.with_doc(|d| {
-                                        d.selection = Some(Selection::new(anchor));
-                                        d.cursor = pos;
-                                    });
-                                    needs_redraw = true;
-                                }
-                            }
-                            MouseEventKind::Up(MouseButton::Left) => {
-                                self.mouse_drag_anchor = None;
-                            }
-                            _ => {}
-                        }
+                    Event::Mouse(mouse) if self.handle_mouse(mouse) => {
+                        needs_redraw = true;
                     }
                     _ => {}
                 }
