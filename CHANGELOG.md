@@ -10,6 +10,29 @@ first release; it is written from the code's final state — superseded interim
 entries have been collapsed rather than kept as a blow-by-blow — and is dated
 when it is tagged.
 
+## [Unreleased]
+
+### Added
+- **Fold-aware editing.** Cursor movement, selection and jumps stay on visible
+  rows; edits above a fold shift its header and an edit that swallows a header
+  drops it. `Ctrl+K z`/`c`/`o`/`0`/`j` toggle, close, open, fold all and unfold
+  all, and a language server's `textDocument/foldingRange` is preferred over
+  indentation when it advertises folding.
+
+### Changed
+- **Git work runs on the worker.** Diff, hunk apply/revert, push, pull, fetch,
+  GitHub repository creation and per-document gutter markers no longer spawn
+  `git` on the UI thread; the statusline reports progress and results.
+- **Debugging is labelled honestly.** **Start Debugging** is now **Debug Adapter
+  Handshake (Preview)**, and its description and status message state that it
+  performs a DAP handshake only — execution does not stop on breakpoints yet.
+  **Toggle Breakpoint** is described as a visual marker. `docs/LIMITATIONS.md`
+  states the real state.
+- **The remote runner is no longer presented as remote development.**
+  `KODA_REMOTE` remains an internal, experimental seam for git status only; the
+  file tree, editor, language servers and tasks stay local. The limitation is
+  documented instead of advertised.
+
 ## [2.1.0] - 2026-10-31
 
 ### Added
@@ -53,14 +76,17 @@ when it is tagged.
   reverting (`r`) the current hunk and moving between hunks (`n`/`p`).
 - **Breakpoint toggle.** A new `Toggle Breakpoint` command marks lines in the
   editor gutter, a first step toward debug adapter support.
-- **Debug adapter scaffold.** A minimal DAP client launches an adapter (via
-  `KODA_DEBUG_ADAPTER`), runs initialize/launch/setBreakpoints, and reports
-  the result.
+- **Debug adapter scaffold (preview).** A minimal DAP client launches an
+  adapter (via `KODA_DEBUG_ADAPTER`), runs initialize/launch/setBreakpoints,
+  and reports the result. It does not debug execution; breakpoints are visual
+  markers only.
 - **Plugin/provider extension point.** `ProviderRegistry::register` (and
   `register_provider`) are documented as the public extension point for new
   language providers.
-- **Remote command runner.** A `CommandRunner` trait now backs git status, with
-  a local implementation and an SSH-backed one selected via `KODA_REMOTE`.
+- **Experimental command runner.** A `CommandRunner` trait backs git status,
+  with a local implementation and an SSH-backed one selected via
+  `KODA_REMOTE`. Only git status is routed; this is an internal seam, not
+  remote development.
 - **Code folding.** `Toggle Fold` collapses and expands an indented block at
   the cursor; folded lines are hidden and the gutter shows a fold marker.
 

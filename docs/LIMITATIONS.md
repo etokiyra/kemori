@@ -8,14 +8,18 @@ describes the current state.
 
 ## Editor
 
-- **Non-UTF-8 files are refused.** Loading rejects binary, non-UTF-8 and
-  oversized files rather than replacing bytes with U+FFFD and writing them back.
-  There is no read-only or explicit-conversion path yet.
+- **Non-UTF-8 files open read-only.** A file that is not valid UTF-8 (but is not
+  binary) is decoded lossily and opened read-only; saving is blocked until the
+  user runs **Convert to UTF-8**. This keeps the original bytes intact rather
+  than writing replacement characters back. Binary and oversized files are still
+  refused.
 - **`perf` is untested at the extremes.** There is no budget test for a 50 MB
   file or for startup time; large-file behaviour is only known to be
   rope-backed, not measured.
-- **Folding is not implemented.** Soft wrap is display-only; there is no code
-  folding.
+- **Folding is not persisted.** Folds are recomputed from indentation (or a
+  language server's folding ranges) and are not saved in sessions, so reopening
+  a file starts unfolded. Undo/redo and reloading a file clear its folds rather
+  than guessing where an old header now points; ordinary edits remap them.
 
 ## Search and project
 
@@ -45,13 +49,15 @@ describes the current state.
 
 ## LSP
 
-- **Incremental sync is not implemented.** Koda always sends whole-document
-  changes, which the protocol permits as the safe fallback even for servers that
-  prefer incremental updates.
+- **Document sync follows the server.** Koda sends incremental `didChange`
+  ranges when a server asks for incremental sync and a full-document
+  replacement otherwise (which the protocol permits as the safe fallback).
 - **A server is launched per language, not per workspace root.** One server per
   `LanguageId` is tracked; a monorepo with several roots of the same language
   shares one server.
-- **Code folding over LSP is not implemented** (see Editor).
+- **Folding ranges are best-effort.** A server's `textDocument/foldingRange` is
+  used when it advertises folding ranges; otherwise Koda falls back to
+  indentation-based folding.
 
 ## Provisioning
 
@@ -126,10 +132,11 @@ describes the current state.
   automatic completion) writes one global store. There is no project-level
   settings file, no arbitrary keybinding configuration, and the preference list
   is fixed rather than extensible.
-- **Bundled themes only.** Mellow (default), Midnight and Daylight ship and are
-  selectable at runtime; users cannot supply their own theme. The light theme is
-  covered by deterministic render tests but has **not** been viewed on a real
-  light terminal, so its readability is argued from contrast, not verified.
+- **Bundled themes only.** Mellow (default), Midnight, Daylight and Ansi ship
+  and are selectable at runtime; users cannot supply their own theme. The light
+  theme is covered by deterministic render tests but has **not** been viewed on
+  a real light terminal, so its readability is argued from contrast, not
+  verified.
 - **Terminal coverage is partial.** Colour support is detected once at startup
   (`NO_COLOR`, `COLORTERM`, `TERM`): a 16-colour terminal gets the bundled
   **Ansi** theme unless the user stored a choice, and `NO_COLOR` suppresses
@@ -139,10 +146,11 @@ describes the current state.
   reachable through the command palette. Still open: an interactive check on a
   real light terminal (the Daylight theme is covered by deterministic render
   tests only).
-- **No file iconography.** The tree uses text only.
-- **No interactive diff/merge view.** The git diff is a read-only overlay; a
-  conflicting-file merge view does not exist.
-- **No mouse support.** Everything is keyboard-driven.
+- **No interactive diff/merge view.** The git diff is a read-only overlay that
+  can apply or revert a hunk; a conflicting-file merge view does not exist.
+- **Mouse support is partial.** The wheel scrolls the editor, a left click
+  places the cursor and a drag selects text; there is no mouse-driven tree,
+  tab, menu or scrollbar interaction.
 
 ## Language support
 
@@ -174,10 +182,25 @@ describes the current state.
   editing, highlighting, diagnostics, symbols, completion and navigation are
   fully offline.
 
+## Debugging
+
+- **There is no debugger yet.** **Debug Adapter Handshake (Preview)** spawns an
+  adapter (`KODA_DEBUG_ADAPTER`, `gdb` by default), sends `initialize`,
+  `launch` and `setBreakpoints`, then stops the adapter and reports that the
+  handshake completed. Execution never stops on a breakpoint; breakpoint
+  markers are visual bookmarks only. A real DAP client is a roadmap item.
+
 ## Git
 
 - **No merge tool and no hunk staging.** The changed-files list stages whole
-  files; there is no per-hunk staging or gutter diff.
+  files. The diff overlay can apply or revert the hunk under the cursor, but it
+  cannot stage or unstage a single hunk, and there is no merge-conflict view.
+- **The SSH command runner is experimental.** `KODA_REMOTE` routes only git
+  status through `ssh`; the file tree, editor, language servers and tasks stay
+  local. It is an internal seam, not remote development.
+- **Git operations are not cancellable.** Push, pull, fetch, diff, hunk
+  apply/revert and GitHub creation run on the worker and report progress, so the
+  UI stays responsive, but there is no cancel action once one has started.
 - **A non-UTF-8 path may not round-trip.** Recent/session stores serialize paths
   lossily.
 

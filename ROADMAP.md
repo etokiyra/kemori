@@ -45,7 +45,6 @@ download, staging cleanup and failed-promotion restore.
   Justified in `docs/DECISIONS.md` and `docs/LIMITATIONS.md`.
 - Rollback is per `Extract` step: a plan that installs A and fails on B may
   leave A. Decide whether a whole-plan transaction is worth it.
-- Add an explicit offline/air-gapped message and a cache eviction policy.
 
 **Acceptance for the remaining work.** No floating install input without a
 documented reason; a multi-step plan leaves no misleading partial state and
@@ -71,12 +70,13 @@ Assembly and clangd platform limits are scoped. A test fails when a registered
 language has no matrix row.
 
 **Remaining.**
-- Surface the per-language state inside Koda: `Language Setup` lists tools, not
-  "what can I realistically expect for this language".
 - Keep the matrix in sync as servers and platforms change.
+- Add format/run/test/debug checks to the contract so "Complete" means the
+  development loop works, not only that a server attaches.
 
-**Direction.** Item 5 (project setup) consumes this contract; the in-app view
-should be generated from the same data rather than a second hand-written table.
+**Direction.** The in-app **Language Support…** view now reads the same support
+classes as the matrix; keep it generated from one source rather than growing a
+second hand-written table.
 
 **Depends on:** item 1 (so gaps can be closed, not just documented).
 
@@ -92,9 +92,9 @@ immediately and can be reset to the defaults; a settings file is written on quit
 only once something changed, so a fresh install still needs no file. The store
 lives under Koda's state directory, tolerates a missing or malformed file (the
 broken file is preserved as `settings.json.corrupt`), and ignores unknown
-fields. Three bundled themes — **Mellow** (the default), a high-contrast dark
-**Midnight**, and a light **Daylight** — are data-driven from one role set and
-selectable at runtime.
+fields. Four bundled themes — **Mellow** (the default), a high-contrast dark
+**Midnight**, a light **Daylight** and the 16-colour **Ansi** fallback — are
+data-driven from one role set and selectable at runtime.
 
 **Remaining.**
 - **Keybindings are intentionally not user-configurable.** Koda keeps a
@@ -197,8 +197,6 @@ zero-config command (`pom.xml` → `mvn test`, `pubspec.yaml` → `flutter test`
 
 Valuable, but not what defines the first impression.
 
-- **Code folding.** *Goal:* collapse and expand ranges (`za`/`zo`/`zc`).
-  *Acceptance:* ranges fold from LSP or blank-line heuristics and survive edits.
 - **Managed-tool lifecycle.** *Goal:* keep provisioned tools current safely.
   *Acceptance:* Update re-resolves the pinned version, an optional auto-update
   preference exists, and Remove never touches a user/system install.
@@ -207,14 +205,9 @@ Valuable, but not what defines the first impression.
 - **Performance budgets.** *Goal:* Koda stays fast on real files.
   *Acceptance:* budget tests assert startup time and opening a 50 MB file, and
   regressions fail CI.
-- **Non-UTF-8 files.** *Goal:* open them instead of refusing. *Acceptance:* a
-  non-UTF-8 file opens read-only, with an explicit conversion option.
 - **Descriptor-driven provisioning.** *Goal:* add a language without new
   bespoke branches. *Acceptance:* a language's tooling is declared as data; the
   editor, UI and provisioning code need no per-language changes.
-- **Git gutter.** *Goal:* see changes in the margin. *Acceptance:* added,
-  modified and removed markers plus next/previous hunk, computed off the UI
-  thread.
 
 ---
 
@@ -222,13 +215,13 @@ Valuable, but not what defines the first impression.
 
 Real, but deferred; none of them is required for the core promise.
 
-- **Multi-project workspace.** Open and navigate several projects independently.
-- **LSP incremental sync.** Send incremental changes when a server prefers them.
-- **Mouse support** (optional, never required): click, drag, wheel, tab/tree clicks.
-- **File iconography** that respects monochrome terminals.
+- **Real multi-root workspace.** Persisted roots with one unified tree, search
+  and problems list; today Koda switches between projects and keeps each
+  session, but does not present several roots at once.
 - **Interactive diff/merge** for conflicting files.
 - **Remote development over SSH.**
-- **Debug adapter support.**
+- **Debug adapter support.** The current command is an explicit handshake preview
+  only (see [docs/LIMITATIONS.md](docs/LIMITATIONS.md#debugging)).
 - **Highlighting engine comparison.** Measure the hand-written tokenizers
   against tree-sitter and record a recommendation in
   [docs/DECISIONS.md](docs/DECISIONS.md); do not migrate without an explicit OK.
@@ -258,5 +251,7 @@ See [docs/PRODUCT.md](docs/PRODUCT.md#non-goals) for the longer statement.
 Shipped work lives in [CHANGELOG.md](CHANGELOG.md). Highlights: the rope editor
 and UI, language detection and built-in providers, the LSP client and
 server-backed features, pinned and verified tool provisioning with Language
-Setup, git integration, session persistence, CI, and prebuilt 0.1.0 release
-binaries.
+Setup, git integration, session persistence, CI, and prebuilt release binaries.
+2.1 added code folding, git gutter markers and hunk application, read-only
+non-UTF-8 opening with explicit conversion, project switching with session
+restore, incremental LSP sync, partial mouse support and file icons.

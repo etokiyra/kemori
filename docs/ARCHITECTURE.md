@@ -29,13 +29,16 @@ src/
 │   ├── session.rs          # session persistence, workspace + welcome actions
 │   ├── settings.rs         # Settings screen + live application of preferences
 │   ├── status.rs           # statusline messages and toasts
+│   ├── tasks.rs            # task picker and bounded run output
 │   ├── tests.rs            # the app-level integration tests
-│   └── view.rs             # tree/diagnostic/wrap toggles and reveal
+│   └── view.rs             # tree/diagnostic/wrap/fold toggles and reveal
 ├── background.rs           # worker pool for detection, LSP, git, formatting
 ├── commands/mod.rs         # command registry (ids, titles, shortcuts)
+├── debug.rs                # DAP handshake preview (not a debugger yet)
 ├── editor/
 │   ├── buffer.rs           # rope-backed text buffer
 │   ├── document.rs         # buffer + cursor + selection + undo + highlight cache
+│   ├── folding.rs          # visible-row folding, movement and edit remapping
 │   ├── history.rs          # undo/redo edits
 │   ├── layout.rs           # tab expansion + soft-wrap segments
 │   ├── position.rs         # Position / Selection / Cursor
@@ -44,12 +47,19 @@ src/
 │   ├── mod.rs              # fs helpers (sorted reads, atomic writes, walking)
 │   └── gitignore.rs        # .gitignore matcher
 ├── git/mod.rs              # branch + file status via the `git` binary
+├── github.rs               # `gh` repository creation (delegated auth)
 ├── language/
 │   ├── id.rs               # LanguageId
 │   ├── mod.rs              # LanguageService facade + Capability
 │   ├── symbols.rs          # workspace symbol scan
 │   ├── format.rs           # formatter pipeline (stdin/stdout tools)
 │   ├── tools.rs            # discovery + trusted provisioning
+│   ├── setup.rs            # project setup plan (what is missing)
+│   ├── support.rs          # support class surfaced in-app
+│   ├── data.rs             # shared keyword/builtin data
+│   ├── completion.rs       # completion candidate types
+│   ├── diagnostics.rs      # Diagnostic types
+│   ├── hover.rs            # hover data
 │   ├── detection/          # engine, signals, confidence
 │   ├── provider/           # LanguageProvider trait + ProviderRegistry
 │   ├── lsp/                # JSON-RPC client, lifecycle, result conversion
@@ -57,13 +67,16 @@ src/
 │   │   ├── jsonrpc.rs
 │   │   └── convert.rs      # the char ↔ LSP position boundary
 │   └── <name>/mod.rs       # one provider per language (rust, go, …)
+├── privileges.rs           # root/sudo safety boundary helpers
 ├── process.rs              # wait_captured: bounded, pipe-draining subprocess
 ├── project/
 │   ├── mod.rs              # Project detection + Workspace
 │   ├── create.rs           # deterministic, offline project templates
-│   └── file_tree.rs        # lazily loaded tree
+│   ├── file_tree.rs        # lazily loaded tree
+│   └── tasks.rs            # zero-config run/test task detection
 ├── recent.rs               # recent projects and files for the welcome screen
 ├── regex.rs                # a small regex engine for search
+├── remote.rs               # experimental command-runner seam (git only)
 ├── search.rs               # project-wide text search
 ├── session.rs              # per-project session persistence
 ├── settings.rs             # global user preferences + atomic JSON persistence

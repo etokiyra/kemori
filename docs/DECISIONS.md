@@ -45,14 +45,21 @@ this file, and add or change a test.
   Wrapping never edits the buffer, so undo/redo, diagnostics, LSP positions and
   multiple cursors are unaffected; turning it off restores horizontal scrolling.
 - **Saves are atomic and lossless.** Writes go to a sibling temporary file that
-  is flushed and renamed over the original, preserving permissions. Loading
-  refuses binary, non-UTF-8 and oversized files rather than replacing bytes with
-  U+FFFD and writing them back, and filesystem rename/copy never overwrite an
-  existing destination.
+  is flushed and renamed over the original, preserving permissions. Binary and
+  oversized files are refused; a non-UTF-8 text file opens read-only as lossy
+  text and cannot be written back until the user converts it to UTF-8, so the
+  original bytes are never silently replaced. Filesystem rename/copy never
+  overwrite an existing destination.
 - **Split editor.** The editor keeps a single active document; a split stores
   one document index per pane and `editor.active` follows the focused pane, so
   every existing editing path keeps working unchanged. Panes share the tab
   strip, and closing a pane's file collapses the split.
+- **Folding is a view over visible rows.** A fold is a header row plus the
+  hidden range below it; the text is never removed. Cursor movement, selections
+  and jumps only land on visible rows, and every edit remaps or drops fold
+  headers so a header cannot slide onto unrelated text. Folding starts from the
+  file's indentation (zero-config) and prefers language-server folding ranges
+  when a server publishes them.
 
 ---
 
@@ -333,9 +340,9 @@ this file, and add or change a test.
 - **Centralised, data-driven themes + art.** All colour flows through
   `ui/theme.rs`; all ASCII personality through `ui/art.rs`. Widgets render
   semantic roles (accent, text, selection, panel, border, syntax…), never
-  literal colours. Three themes are built from those roles — **Mellow** (the
-  default), **Midnight** and **Daylight** — and the active `ThemeId` is a
-  thread-local so a swap reaches every widget without threading a `Theme`
+  literal colours. Four themes are built from those roles — **Mellow** (the
+  default), **Midnight**, **Daylight** and **Ansi** — and the active `ThemeId`
+  is a thread-local so a swap reaches every widget without threading a `Theme`
   through the whole render tree or churning call sites. Adding a theme means
   adding one `Theme` value and one `ThemeId`, nothing else. This keeps Koda
   recognisable and easy to evolve.

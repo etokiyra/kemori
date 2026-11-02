@@ -288,6 +288,21 @@ The editor is the heart of Koda, and it is built for real projects.
   scrolling sideways. Up/Down move by visual row and keep a stable display
   column; character positions, selections, diagnostics, multiple cursors and
   undo are untouched.
+- **Code folding.** `Ctrl+K z` toggles the fold at the cursor, `Ctrl+K c`/`o`
+  close and open it, and `Ctrl+K 0`/`j` fold or unfold everything. Folds follow
+  indentation or the language server's folding ranges, stay out of the cursor's
+  way and survive edits above them.
+- **Git gutter markers.** Added, modified and removed lines are marked in the
+  gutter; **Next Hunk**/**Previous Hunk** jump between them, and the diff
+  overlay can apply or revert the current hunk.
+- **Non-UTF-8 files open read-only** as lossy text instead of being refused.
+  **Convert to UTF-8** makes the file writable without ever writing replacement
+  bytes back over the original.
+- **Several projects at once.** Opening another project keeps the previous one
+  available; **Switch Workspace…** swaps between them and restores each
+  project's open tabs.
+- **Partial mouse support.** The wheel scrolls, a left click places the cursor
+  and a drag selects text; everything else stays keyboard-first.
 - Quick open (`Ctrl+P`), inline fuzzy file filtering in the sidebar (`/`),
   find/replace with case, whole-word and regex options, project-wide text
   search (`Ctrl+Shift+F`), go-to-line, and **Revert File** to discard local
