@@ -50,12 +50,18 @@ describes the current state.
 - **Project setup is offered once per workspace.** After **Later** it does not
   re-prompt; reopen it with **Set Up Project…** in the command palette (or from
   **Language Setup…** for individual tools).
-- **Task output streams, but history is single-slot.** A task's stdout/stderr is
+- **Task output streams, with session-only history.** A task's stdout/stderr is
   appended to the panel's **Output** tab live and the view follows the tail
-  until the user scrolls up. `x` cancels and `r` reruns the last task. Only the
-  most recent task is kept: there is no output history, and the display cannot
-  retroactively reorder stdout and stderr — the final batch separates them.
-  A task can still run to its ten-minute deadline if it is never cancelled.
+  until the user scrolls up. `x` cancels, `r` reruns the last task and `h`
+  reopens one of the last ten completed runs; the list is not persisted across
+  launches. The display cannot retroactively reorder stdout and stderr — the
+  final batch separates them.
+- **Task references are a heuristic.** The Problems tab extracts up to 200
+  `file:line[:col]` references from the last task's output, keeps only paths that
+  exist, and infers severity from the words `error`/`warning` in the line. A
+  compiler or test runner with an unusual format may not produce entries; the
+  raw Output tab is always authoritative.
+- **A task can run to its ten-minute deadline if it is never cancelled.**
 - **The Problems tab covers the open files only.** Diagnostics exist for
   documents Kemori has opened and analysed; there is no workspace-wide
   diagnostic sweep and no LSP pull diagnostics yet. The tab groups what it has

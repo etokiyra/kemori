@@ -47,6 +47,8 @@ pub enum PickerAction {
     },
     /// Run one of the project's own tasks in the project root.
     RunTask(crate::project::tasks::Task),
+    /// Show one historical task output by index.
+    ShowTaskOutput(usize),
     /// Override the active document's language.
     SetLanguage(crate::language::id::LanguageId),
     /// Switch to an already-open workspace by index.

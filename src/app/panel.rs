@@ -90,6 +90,10 @@ pub struct Panel {
     pub debug: Vec<String>,
     /// The selected debug-console message; the view scrolls to keep it visible.
     pub debug_selected: usize,
+    /// Problems extracted from the last task's output.
+    pub task_problems: Vec<ProblemEntry>,
+    /// Completed task outputs from this session, oldest first.
+    pub history: Vec<TaskRunState>,
 }
 
 impl Default for Panel {
@@ -102,6 +106,8 @@ impl Default for Panel {
             output: None,
             debug: Vec::new(),
             debug_selected: 0,
+            task_problems: Vec::new(),
+            history: Vec::new(),
         }
     }
 }
@@ -171,12 +177,13 @@ impl App {
     /// documents, not a second diagnostics store. Unsaved buffers are skipped
     /// because they have no path to jump back to.
     pub fn panel_problems(&self) -> Vec<ProblemEntry> {
+        let root = self.workspace.root();
         let mut problems = Vec::new();
         for doc in &self.editor.documents {
             let Some(path) = doc.buffer.path.clone() else {
                 continue;
             };
-            let file = doc.file_name();
+            let file = project_relative(root, &path);
             for diagnostic in doc.diagnostics() {
                 problems.push(ProblemEntry {
                     path: path.clone(),
@@ -187,6 +194,14 @@ impl App {
                 });
             }
         }
+        problems.extend(self.panel.task_problems.iter().cloned());
+        // Group by file, then position, so the panel never repeats a header.
+        problems.sort_by(|a, b| {
+            a.path
+                .cmp(&b.path)
+                .then_with(|| a.position.row.cmp(&b.position.row))
+                .then_with(|| a.position.col.cmp(&b.position.col))
+        });
         problems
     }
 
@@ -222,6 +237,7 @@ impl App {
             KeyCode::Char('c') => self.clear_panel(),
             KeyCode::Char('x') if self.panel.tab == PanelTab::Output => self.cancel_task(),
             KeyCode::Char('r') if self.panel.tab == PanelTab::Output => self.rerun_task(),
+            KeyCode::Char('h') if self.panel.tab == PanelTab::Output => self.open_task_history(),
             _ => {}
         }
     }
@@ -302,12 +318,19 @@ impl App {
 
     /// Clear the current tab's content where that is meaningful.
     ///
-    /// Problems are derived from live diagnostics, so there is nothing of the
-    /// panel's own to clear; saying so is more honest than hiding real errors.
+    /// Document diagnostics are live data and cannot be cleared; a task's
+    /// extracted problems can be, while the document problems stay visible.
     pub(super) fn clear_panel(&mut self) {
         match self.panel.tab {
             PanelTab::Problems => {
-                self.set_status("Problems follow the open files; close or fix a file to clear it")
+                if self.panel.task_problems.is_empty() {
+                    self.set_status(
+                        "Problems follow the open files; close or fix a file to clear it",
+                    );
+                } else {
+                    self.panel.task_problems.clear();
+                    self.set_status("Task problems cleared");
+                }
             }
             PanelTab::Output => {
                 self.panel.output = None;
@@ -335,12 +358,78 @@ impl App {
     }
 }
 
+/// A path relative to the project root, for display.
+fn project_relative(root: &Path, path: &Path) -> String {
+    path.strip_prefix(root)
+        .unwrap_or(path)
+        .display()
+        .to_string()
+}
+
+/// Extract `file:line[:col]` problems from a task's output.
+///
+/// Compiler output is not a protocol, so this is deliberately conservative:
+/// only the first whitespace-delimited token of a line is considered, the file
+/// must exist, and duplicates at the same position are dropped. The whole line
+/// keeps its context as the message.
+pub(super) fn task_problems(root: &Path, text: &str) -> Vec<ProblemEntry> {
+    let mut problems: Vec<ProblemEntry> = Vec::new();
+    for line in text.lines() {
+        if problems.len() >= 200 {
+            break;
+        }
+        let Some((path, row, col)) = reference_position(line) else {
+            continue;
+        };
+        let path = PathBuf::from(path);
+        let path = if path.is_absolute() {
+            path
+        } else {
+            root.join(path)
+        };
+        if !path.is_file() {
+            continue;
+        }
+        let position = Position::new(row.saturating_sub(1), col.unwrap_or(1).saturating_sub(1));
+        if problems
+            .iter()
+            .any(|problem| problem.path == path && problem.position == position)
+        {
+            continue;
+        }
+        let lower = line.to_ascii_lowercase();
+        let severity = if lower.contains("error") {
+            Severity::Error
+        } else if lower.contains("warning") {
+            Severity::Warning
+        } else {
+            Severity::Info
+        };
+        let message = line
+            .trim()
+            .split_once(' ')
+            .map(|(_, rest)| rest.trim())
+            .filter(|rest| !rest.is_empty())
+            .unwrap_or_else(|| line.trim())
+            .to_string();
+        problems.push(ProblemEntry {
+            file: project_relative(root, &path),
+            path,
+            position,
+            severity,
+            message,
+        });
+    }
+    problems
+}
+
 /// The captured output of a run task: plain text with a known exit result.
 ///
 /// Output arrives in one bounded batch from the background worker, so the view
 /// is a read-only panel — the task is abstracted by Kemori, not streamed live.
 /// `Up`/`Down` move a row cursor instead of scrolling freely, because the row
 /// the user is on is what `Enter` can turn into a source jump.
+#[derive(Clone)]
 pub struct TaskRunState {
     pub title: String,
     /// The task's command line, shown in the header.

@@ -80,6 +80,8 @@ fn keys_line(app: &App) -> Line<'static> {
         spans.push(Span::styled(" r rerun ", theme::muted()));
         spans.push(Span::styled("·", theme::dim()));
         spans.push(Span::styled(" x cancel ", theme::muted()));
+        spans.push(Span::styled("·", theme::dim()));
+        spans.push(Span::styled(" h history ", theme::muted()));
     }
     spans.push(Span::styled("·", theme::dim()));
     spans.push(Span::styled(" c clear ", theme::muted()));

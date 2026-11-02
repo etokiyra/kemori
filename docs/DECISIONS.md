@@ -333,7 +333,11 @@ this file, and add or change a test.
   timeout. The panel follows the tail while the user has not scrolled up, and
   the final batch replaces the live view with stdout and stderr separated (the
   live interleaving is arrival order, not a claim about the child's write
-  order). Only one task runs at a time.
+  order). Only one task runs at a time. Completed outputs are kept for the
+  session (the last ten) so the user can reopen one without rerunning it, and
+  `file:line[:col]` references are extracted into Problems using the same
+  conservative parser as the output jump; that extraction is a heuristic, and
+  the raw output stays authoritative.
 
 - **Deterministic project scaffolding.** `project/create.rs` writes conventional
   project files directly instead of invoking `cargo`, `go` or `pip`, so

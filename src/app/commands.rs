@@ -23,6 +23,7 @@ impl App {
             PickerAction::DeletePath(path) => self.delete_path(&path),
             PickerAction::ShowDiff { path, staged } => self.show_diff(path, Some(staged)),
             PickerAction::RunTask(task) => self.run_task(task),
+            PickerAction::ShowTaskOutput(index) => self.show_task_history(index),
             PickerAction::SetLanguage(language) => self.set_language(language),
             PickerAction::SwitchWorkspace(index) => self.switch_workspace(index),
         }
@@ -235,6 +236,7 @@ impl App {
             ids::RUN_TASKS => self.open_task_picker(),
             ids::CANCEL_TASK => self.cancel_task(),
             ids::RERUN_TASK => self.rerun_task(),
+            ids::TASK_HISTORY => self.open_task_history(),
             ids::CHANGED_FILES => self.open_changed_files(),
             ids::GIT_COMMIT => self.commit_changes(),
             ids::GIT_TOGGLE_STAGE => self.toggle_stage_target(),
@@ -746,6 +748,9 @@ impl App {
             }
             ids::RERUN_TASK if self.last_task.is_none() => {
                 (false, Some("run a task first".to_string()))
+            }
+            ids::TASK_HISTORY if self.panel.history.is_empty() => {
+                (false, Some("no task history yet".to_string()))
             }
             ids::GIT_COMMIT if self.workspace.git.files.is_empty() => {
                 (false, Some("nothing to commit".to_string()))

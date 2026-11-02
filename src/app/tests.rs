@@ -552,6 +552,102 @@ fn a_running_task_can_be_cancelled() {
 }
 
 #[test]
+fn task_output_references_become_problems() {
+    let dir = temp_project("task-problems-parse");
+    let file = dir.join("src/main.rs");
+    fs::write(&file, "fn main() {\n    let x = 1;\n}\n").unwrap();
+
+    let problems = super::panel::task_problems(
+        &dir,
+        "src/main.rs:2:5: error: boom\n\
+         not a reference\n\
+         src/main.rs:2:5: error: duplicate\n\
+         src/missing.rs:1:1: error: ignored",
+    );
+    assert_eq!(
+        problems.len(),
+        1,
+        "duplicates and missing files are dropped"
+    );
+    assert_eq!(problems[0].file, "src/main.rs");
+    assert_eq!(problems[0].position, Position::new(1, 4));
+    assert_eq!(problems[0].severity, Severity::Error);
+    assert_eq!(problems[0].message, "error: boom");
+    fs::remove_dir_all(&dir).ok();
+}
+
+#[cfg(unix)]
+#[test]
+fn a_finished_task_adds_its_errors_to_the_problems_tab() {
+    let dir = temp_project("task-problems-live");
+    let file = dir.join("src/main.rs");
+    let mut app = app_with_file(&file);
+
+    app.run_task(Task {
+        label: "Check".to_string(),
+        program: "sh".to_string(),
+        args: vec![
+            "-c".to_string(),
+            "printf 'src/main.rs:2:7: error: boom\\n'".to_string(),
+        ],
+    });
+    let deadline = Instant::now() + Duration::from_secs(15);
+    while app.pending_task && Instant::now() < deadline {
+        app.pump_background(Duration::from_millis(20));
+    }
+
+    let problem = app
+        .panel_problems()
+        .into_iter()
+        .find(|problem| problem.message.contains("boom"))
+        .expect("the task error should appear in Problems");
+    assert_eq!(problem.severity, Severity::Error);
+    assert_eq!(problem.position, Position::new(1, 6));
+
+    app.panel.tab = super::panel::PanelTab::Problems;
+    app.execute_command(ids::PANEL_CLEAR);
+    assert!(app.panel.task_problems.is_empty());
+
+    fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
+fn task_history_reopens_a_completed_run() {
+    use crate::app::panel::TaskRunState;
+
+    let dir = temp_project("task-history");
+    let file = dir.join("src/main.rs");
+    let mut app = app_with_file(&file);
+
+    let build = TaskRunState::from_output(&dir, "Build", "make", "success", true, "done");
+    let test =
+        TaskRunState::from_output(&dir, "Test", "cargo test", "exit code 1", false, "failed");
+    app.panel.history.push(build);
+    app.panel.history.push(test);
+    app.panel.output = None;
+
+    app.execute_command(ids::TASK_HISTORY);
+    let Overlay::Picker(picker) = &app.overlay else {
+        panic!("expected the task history picker");
+    };
+    assert_eq!(picker.title, "Task Output History");
+    assert_eq!(picker.filtered.len(), 2);
+    assert!(
+        picker
+            .item(0)
+            .is_some_and(|item| item.label.contains("Test")),
+        "the newest run is listed first"
+    );
+
+    app.overlay = Overlay::None;
+    app.show_task_history(0);
+    let run = app.panel.output.as_ref().expect("output");
+    assert_eq!(run.command, "make");
+    assert_eq!(app.panel.tab, super::panel::PanelTab::Output);
+    fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
 fn the_task_output_parser_reads_compiler_style_references() {
     use crate::app::panel::{TaskRunState, reference_position};
 
@@ -925,7 +1021,7 @@ fn the_panel_problems_tab_lists_and_reveals_diagnostics() {
 
     let problems = app.panel_problems();
     assert_eq!(problems.len(), 1);
-    assert_eq!(problems[0].file, "main.rs");
+    assert_eq!(problems[0].file, "src/main.rs");
     assert_eq!(problems[0].position, Position::new(1, 4));
     assert_eq!(problems[0].severity, Severity::Warning);
 

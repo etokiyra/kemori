@@ -4,7 +4,7 @@
 //! and run with bounded output — no configuration, no per-project files.
 
 use super::*;
-use crate::app::panel::{PanelTab, TaskRunState};
+use crate::app::panel::{PanelTab, TaskRunState, task_problems};
 use crate::background::TaskRunOutcome;
 use crate::project::tasks::{self, Task};
 
@@ -44,6 +44,17 @@ impl App {
         }
         self.pending_task = true;
         self.last_task = Some(task.clone());
+        self.panel.task_problems.clear();
+        // The previous result moves to history rather than disappearing when
+        // the next task starts.
+        if let Some(previous) = self.panel.output.take()
+            && previous.outcome != "running"
+        {
+            self.panel.history.push(previous);
+            if self.panel.history.len() > 10 {
+                self.panel.history.remove(0);
+            }
+        }
         // Start the Output tab immediately so streaming is visible from the
         // first chunk instead of arriving only when the task exits.
         self.panel.output = Some(TaskRunState::from_output(
@@ -87,6 +98,45 @@ impl App {
             Some(task) => self.run_task(task),
             None => self.set_status("No task to rerun"),
         }
+    }
+
+    /// Open the completed task outputs from this session.
+    pub(super) fn open_task_history(&mut self) {
+        if self.panel.history.is_empty() {
+            self.set_status("No task history yet");
+            return;
+        }
+        let items = self
+            .panel
+            .history
+            .iter()
+            .enumerate()
+            .rev()
+            .map(|(index, run)| {
+                let detail = run
+                    .lines
+                    .first()
+                    .cloned()
+                    .unwrap_or_else(|| run.command.clone());
+                PickerItem::new(
+                    format!("{} · {}", run.title, run.outcome),
+                    detail,
+                    PickerAction::ShowTaskOutput(index),
+                )
+            })
+            .collect();
+        let mut picker = Picker::new("Task Output History", "Choose a task run…", items);
+        picker.refilter();
+        self.overlay = Overlay::Picker(picker);
+    }
+
+    /// Show a historical task output in the Output tab.
+    pub(super) fn show_task_history(&mut self, index: usize) {
+        let Some(run) = self.panel.history.get(index).cloned() else {
+            return;
+        };
+        self.panel.output = Some(run);
+        self.open_panel(PanelTab::Output);
     }
 
     /// Show the final result of a finished task.
@@ -133,6 +183,7 @@ impl App {
         } else {
             text
         };
+        self.panel.task_problems = task_problems(self.workspace.root(), &text);
         let follow = self.panel.output.as_ref().is_some_and(|run| run.follow);
         let mut run = TaskRunState::from_output(
             self.workspace.root(),

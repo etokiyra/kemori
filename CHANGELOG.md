@@ -29,8 +29,13 @@ Historical entries below retain the old name; 3.0.0 is the rename release.
 - **Task output streams into the bottom panel.** Running a task opens the
   **Output** tab immediately and appends stdout/stderr as it arrives, following
   the tail until the user scrolls up. `x` in the tab cancels the running task,
-  `r` reruns the last one, and the final result still separates stdout from
-  stderr. Running a task no longer opens a modal view.
+  `r` reruns the last one, and `h` reopens a completed run from this session's
+  history. The final result still separates stdout from stderr. Running a task
+  no longer opens a modal view.
+- **Task output feeds the Problems tab.** `file:line[:col]` references in the
+  last task's output become Problems with a severity inferred from the line;
+  `Enter` opens the file and `c` clears the task problems while document
+  diagnostics stay visible.
 - **The debug-adapter preview writes to the Debug Console.** Its messages are
   kept in the panel instead of only flashing in the statusline.
 

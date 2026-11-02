@@ -81,6 +81,7 @@ pub mod ids {
     pub const RUN_TASKS: &str = "project.tasks";
     pub const CANCEL_TASK: &str = "project.cancelTask";
     pub const RERUN_TASK: &str = "project.rerunTask";
+    pub const TASK_HISTORY: &str = "project.taskHistory";
     pub const OPEN_PROJECT: &str = "project.openDir";
     pub const SWITCH_WORKSPACE: &str = "project.switchWorkspace";
     pub const NEW_PROJECT: &str = "project.new";
@@ -454,6 +455,8 @@ impl CommandRegistry {
                 .describes("Stop the task that is currently running"),
             Command::new(RERUN_TASK, "Rerun Last Task", "Project", None)
                 .describes("Run the last project task again"),
+            Command::new(TASK_HISTORY, "Task Output History…", "Project", None)
+                .describes("Reopen a completed task's output from this session"),
             Command::new(CHANGED_FILES, "Changed Files…", "Git", Some("Ctrl+Shift+G"))
                 .describes("List the files changed in the working tree"),
             Command::new(GIT_COMMIT, "Commit Changes…", "Git", Some("Ctrl+Shift+C"))
@@ -613,10 +616,7 @@ pub const CONTEXT_KEYS: &[(&str, &str)] = &[
         "panel / project search: open or search; welcome: open",
     ),
     ("c", "panel: clear the current output"),
-    (
-        "r / x",
-        "panel Output: rerun the last task / cancel the running one",
-    ),
+    ("r / x / h", "panel Output: rerun / cancel / history"),
     ("Alt+↑↓", "panel: grow or shrink"),
     ("Esc", "panel / project search: close"),
     ("↑ / ↓", "welcome: choose an action"),
