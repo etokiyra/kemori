@@ -105,6 +105,20 @@ keep you productive **offline**.
 - **Navigation** — `F12` go-to-definition and `Shift+F12` find-references,
   across files when a server is attached; without one, `F12` falls back to a
   project-wide symbol search so it still works offline.
+- **Document highlights** — when the server supports them, occurrences of the
+  symbol under the cursor are painted with a subtle background as you move.
+- **Inlay hints** — servers that provide type/parameter hints show them as dim
+  virtual text inline; they are never inserted into the buffer.
+- **Code lens** — server-provided lens titles appear at the end of their line;
+  `Ctrl+Shift+.` opens a picker that runs their commands.
+- **Selection ranges** — `Shift+Alt+→` grows the selection to the next
+  server-provided enclosing range and `Shift+Alt+←` shrinks it.
+- **Call and type hierarchy** — **Incoming Calls…**, **Outgoing Calls…**,
+  **Supertypes…** and **Subtypes…** list related symbols in jumpable pickers.
+- **Implementation and type definition** — palette commands jump to the
+  server's implementation or declared type of the symbol under the cursor.
+- **Document links** — **Document Links…** lists server-extracted targets;
+  file links open at their position and other links are copied.
 - **Symbols** — `Ctrl+Shift+O` for the file, `Ctrl+T` for the whole workspace
   (from the language server when attached, with Kemori's built-in scan as the
   instant, offline fallback).
@@ -154,9 +168,13 @@ project) plans and installs a whole project's missing tooling in one step;
 **Language Setup…** lists every tool Kemori knows about and installs a missing one
 with a single `Enter`. The per-language table below names
 each server and how it is obtained. Formatting runs the language's trusted tool —
-`rustfmt`, `gofmt`, `prettier`, `clang-format`, `shfmt`, `perltidy`, or the
-managed `dart format` and `mix format` — on a buffer snapshot, so unsaved edits
-format in place.
+`rustfmt`, `gofmt`, `prettier`, `clang-format`, `shfmt`, `perltidy`, `ruff
+format`/`black`, `stylua`, `swift-format`, `google-java-format`, `rubocop`,
+`ktlint`, `sqlfluff`, `php-cs-fixer`, `csharpier`, or the managed
+`dart format` and `mix format` — on a buffer snapshot, so unsaved edits format
+in place. Python's debug adapter is provisioned the same way: a pinned
+`debugpy==1.8.22` is installed into an isolated environment and its
+`debugpy-adapter` console script is used automatically.
 
 ### Managed toolchains
 
@@ -309,6 +327,38 @@ The editor is the heart of Kemori, and it is built for real projects.
   project's open tabs.
 - **Partial mouse support.** The wheel scrolls, a left click places the cursor
   and a drag selects text; everything else stays keyboard-first.
+- **Line ending and whitespace tools.** The palette can convert a file to **LF**
+  or **CRLF** (applied on save without destroying undo), **Trim Trailing
+  Whitespace** as one undo step, and **Ensure Final Newline**. The statusline
+  always shows the file's current line ending.
+- **Format on save** is a Settings preference. It saves, formats with the
+  language server or built-in formatter, and writes the result again; the first
+  save is kept if formatting fails.
+- **Built-in snippets.** **Insert Snippet…** offers language-owned templates;
+  Tab/Shift+Tab walk their placeholders and Escape leaves snippet mode.
+- **Find and replace can be scoped to the selection.** **Find in Selection** and
+  **Replace in Selection** from the palette restrict matches to the active
+  contiguous selection; the bar shows `[selection]` and `Alt+S` returns to the
+  whole file. The whole-file `Ctrl+F`/`Ctrl+H` flows are unchanged.
+- **Replace preview.** `Alt+P` in the replace field previews every affected line
+  as `- old` / `+ new`; `Enter` or `a` applies the replacement as one undo step,
+  and `Esc` cancels without editing.
+- **Large-file mode.** Files of one million characters or more open with syntax
+  highlighting, diagnostics, completion, language-server sync and git markers
+  disabled, while editing, saving, search and undo keep working. The statusline
+  shows `large file`.
+- **Read-only mode.** **Toggle Read-Only Mode** (`Ctrl+Alt+R`) blocks editing,
+  cut, paste, undo, formatting, search/replace and saving for the active
+  document while leaving navigation and copying available. The statusline shows
+  `read-only`.
+- **Rectangular (column) selection.** `Ctrl+Alt+Shift+←/→/↑/↓` start or
+  extend a column selection; once active, plain `Shift+←/→/↑/↓` keep extending
+  it. Copy joins the selected slices with newlines, typing replaces the same
+  column span on every row, and the whole block is one undo step. Rows shorter
+  than the rectangle contribute only the characters they have.
+- **Persistent undo.** Clean files keep up to 100 undo steps in their project
+  session and restore them when the project is reopened, provided the file's
+  bytes still match; an externally changed file starts with fresh history.
 - Quick open (`Ctrl+P`), inline fuzzy file filtering in the sidebar (`/`),
   in-file find/replace with case, whole-word and regex options, go-to-line, and
   **Revert File** to discard local edits.
@@ -321,11 +371,39 @@ The editor is the heart of Kemori, and it is built for real projects.
   expanded folders come back next launch) and external-change detection.
 - **A bottom panel** (`Ctrl+J`) collects the development loop instead of
   interrupting it: **Problems** lists diagnostics across the open files plus a
-  built-in scan of unopened project files, grouped by file; **Output** keeps
-  the last task's result; and **Debug Console** holds debug-adapter messages.
-  `Tab` cycles the tabs, `Alt+↑`/`Alt+↓` resize, `Enter` opens the selected
-  problem or `file:line` reference, `r` refreshes or reruns, `x` cancels a
-  task, `h` shows task history, `c` clears, and `Esc` returns to the editor.
+  built-in scan of unopened project files and language-server pull diagnostics,
+  grouped by file; **Output** keeps the last task's result; **Terminal** runs a
+  real shell; and **Debug Console** holds debugger state and adapter output. `Tab` cycles
+  the tabs, `Alt+↑`/`Alt+↓` resize, `Enter` opens the selected problem or
+  `file:line` reference, `r` refreshes or reruns, `x` cancels a task, `h` shows
+  task history, `c` clears, and `Esc` returns to the editor.
+- **An integrated terminal** (`Ctrl+Shift+T`) runs your `$SHELL` under a real
+  Unix PTY in the project root. It keeps several sessions (`Alt+1…9`), follows
+  live output, scrolls back (`Shift+PageUp`/`Down`), copies and pastes
+  (`Ctrl+Shift+C`/`Ctrl+Shift+V`), resizes with the panel, and closes the whole
+  process group on exit. `Ctrl+C` and full-screen programs work because keys are
+  encoded as a terminal sends them.
+- **Workspace trust** asks once per project root before running its tasks,
+  opening a shell or starting the debugger; editing, search and language
+  intelligence never need it. The answer is stored in Kemori's state directory,
+  outside the repository, and can be revoked from the palette.
+- **A real debugger.** **Start Debugging** speaks the Debug Adapter Protocol,
+  sends the breakpoints of every open file and follows the stopped program:
+  stack frames, scopes, variables and watch values land in **Debug Console**,
+  `F5` continues, `F10`/`F11`/`Shift+F11` step over/into/out, `Shift+F5` stops,
+  and the palette jumps to a stack frame, lists variables and adds watches.
+  Breakpoints can carry a condition or become logpoints (a diamond in the
+  gutter). Python uses a provisioned `debugpy`; Go uses a provisioned `dlv` over
+  its TCP DAP socket; JS/TS use the provisioned `js-debug` bundle with managed
+  Node.js; C# uses provisioned `netcoredbg` and the built project assembly;
+  Dart uses the managed SDK's debug adapter; Java uses the pinned java-debug
+  extension hosted by the running JDT LS; Ruby uses the provisioned `debug` gem's
+  `rdbg` over TCP; PHP uses the provisioned Xdebug DAP bridge; Rust, C and C++
+  prefer a discovered `lldb-dap` and fall back to `gdb -i=dap`; any other adapter
+  can be named with `KEMORI_DEBUG_ADAPTER`.
+- **Attach to a running debuggee** with **Debug: Attach to Debugger…**: enter a
+  process id or `host:port` and Kemori uses the active language's adapter attach
+  request. Java and Ruby attach are explicitly not wired yet.
 - **Run Task…** runs one of the project's own commands — `cargo build`/`test`,
   `go build`/`test`, `make`, `python3 -m pytest`, `mix test` or any declared
   `npm` script — detected from the project's markers with no configuration.
@@ -395,13 +473,20 @@ directory once, so sessions and settings are not lost.
 sudo "$(command -v kemori)" /etc/nixos/configuration.nix
 ```
 
-For an ordinary `sudo kemori`, use the AUR package, a `.deb`/`.rpm`, or
-`make install` below.
+For an ordinary `sudo kemori`, use a `.deb`/`.rpm` or `make install` below.
+The AUR packages are temporarily unavailable; see the note in the Arch section.
 
 ### Arch Linux (AUR)
 
-The AUR packages install `/usr/bin/kemori`, so `sudo kemori` resolves through the
-default `secure_path`:
+> **AUR installation is currently unavailable.** AUR account registration has
+> been disabled since the AUR incident a few months ago, so the `kemori` and
+> `kemori-git` packages cannot be published yet. Use `cargo install kemori`, a
+> `.deb`/`.rpm`, or `make install` until registration reopens. The packaging
+> sources remain in [`packaging/aur/`](packaging/aur/) and are ready to refresh
+> once the AUR accepts new packages again.
+
+Once the packages are published they will install `/usr/bin/kemori`, so
+`sudo kemori` resolves through the default `secure_path`:
 
 ```bash
 yay -S kemori        # tagged release
@@ -737,6 +822,8 @@ Kemori reports what happened rather than deleting anything.
 | Edit | `Ctrl+A` | Select All |
 | Edit | `Ctrl+D` | Select Next Occurrence |
 | Edit | `Ctrl+Shift+L` | Select All Occurrences |
+| Edit | `Shift+Alt+→` | Expand Selection |
+| Edit | `Shift+Alt+←` | Shrink Selection |
 | Edit | `Ctrl+Alt+↓` | Add Cursor Below |
 | Edit | `Ctrl+Alt+↑` | Add Cursor Above |
 | Edit | `Ctrl+C` | Copy |
@@ -749,6 +836,7 @@ Kemori reports what happened rather than deleting anything.
 | Edit | `Alt+Enter` | Replace All |
 | Edit | `Ctrl+G` | Go to Line… |
 | Edit | `Ctrl+/` | Toggle Comment |
+| Edit | `Ctrl+Alt+R` | Toggle Read-Only Mode |
 | Edit | `Tab` | Indent |
 | Edit | `Shift+Tab` | Outdent |
 | Edit | `Alt+↑` | Move Line Up |
@@ -757,6 +845,10 @@ Kemori reports what happened rather than deleting anything.
 | Edit | `Ctrl+Shift+K` | Delete Line |
 | Edit | `Alt+M` | Go to Matching Bracket |
 | Debug | `F9` | Toggle Breakpoint |
+| Debug | `F10` | Debug: Step Over |
+| Debug | `F11` | Debug: Step Into |
+| Debug | `Shift+F11` | Debug: Step Out |
+| Debug | `Shift+F5` | Debug: Stop |
 | Language | `Ctrl+Shift+I` | Format Document |
 | Language | `Ctrl+Shift+H` | Hover |
 | Language | `F12` | Go to Definition |
@@ -764,6 +856,7 @@ Kemori reports what happened rather than deleting anything.
 | Language | `Ctrl+Shift+O` | Go to Symbol… |
 | Language | `F2` | Rename Symbol |
 | Language | `Ctrl+.` | Code Actions |
+| Language | `Ctrl+Shift+.` | Code Lens… |
 | Diagnostics | `F8` | Next Diagnostic |
 | Diagnostics | `Shift+F8` | Previous Diagnostic |
 | Diagnostics | `Ctrl+Shift+M` | Show Diagnostics |
@@ -780,6 +873,7 @@ Kemori reports what happened rather than deleting anything.
 | View | `Ctrl+B` | File Panel: Focus / Hide |
 | View | `Ctrl+E` | Focus File Tree / Editor |
 | View | `Ctrl+J` | Bottom Panel: Focus / Hide |
+| View | `Ctrl+Shift+T` | Panel: Terminal |
 | View | `Alt+I` | Toggle Inline Diagnostics |
 | View | `Alt+Z` | Toggle Soft Wrap |
 | View | `Ctrl+K z` | Toggle Fold |
@@ -798,6 +892,7 @@ Kemori reports what happened rather than deleting anything.
 | Editor | `Arrows` | move the cursor |
 | Editor | `Ctrl+←/→` | move by word |
 | Editor | `Shift+Arrows` | select |
+| Editor | `Ctrl+Alt+Shift+←/→/↑/↓` | extend a rectangular selection |
 | Editor | `Home / End` | line start / end |
 | Editor | `Ctrl+Home / End` | document start / end |
 | Editor | `PageUp / PageDown` | scroll a page |
@@ -805,6 +900,8 @@ Kemori reports what happened rather than deleting anything.
 | Editor | `Ctrl+PageUp/Down` | previous / next tab |
 | Context | `Alt+C / Alt+W / Alt+R` | find / project search: toggle case / whole word / regex |
 | Context | `Alt+Enter` | find / project search: replace every match |
+| Context | `Alt+P` | find/replace: preview replacements |
+| Context | `Alt+S` | find/replace: search the whole file again |
 | Context | `Space` | changed files: stage or unstage |
 | Context | `d` | changed files: show the diff |
 | Context | `/` | file tree: filter project files |
@@ -820,6 +917,21 @@ Kemori reports what happened rather than deleting anything.
 | Context | `↑ / ↓` | welcome: choose an action |
 | Context | `v` | welcome: cycle the animated scene |
 <!-- keymap:end -->
+
+### Terminal keys
+
+While the **Terminal** tab owns the keyboard, ordinary keys go to the shell.
+These chords stay with Kemori:
+
+| Keys | Action |
+| --- | --- |
+| `Ctrl+Shift+T` | Open the terminal, or start another session |
+| `Ctrl+Shift+W` | Close the active session and its process group |
+| `Alt+1…9` | Switch to a session |
+| `Ctrl+Shift+C` / `Ctrl+Shift+V` | Copy the screen and scrollback / paste |
+| `Shift+PageUp` / `Shift+PageDown` | Scroll through the scrollback |
+| `Ctrl+Shift+PageUp` / `Ctrl+Shift+PageDown` | Previous / next panel tab |
+| `Ctrl+J` | Return to the editor |
 
 Editor keys behave as you would expect: arrows, `Home`/`End`, `PageUp`/`PageDown`,
 `Shift`+arrows to select, `Ctrl`+arrows for word movement. Typing with a

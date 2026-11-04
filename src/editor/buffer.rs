@@ -46,6 +46,8 @@ pub struct Buffer {
     pub version: u64,
     /// Whether the buffer is read-only (e.g. a non-UTF-8 file opened lossily).
     pub read_only: bool,
+    /// Whether the user explicitly enabled read-only mode for this document.
+    pub user_read_only: bool,
 }
 
 impl Default for Buffer {
@@ -102,6 +104,7 @@ impl Buffer {
             line_ending,
             version: 0,
             read_only: false,
+            user_read_only: false,
         }
     }
 
@@ -140,9 +143,25 @@ impl Buffer {
         Ok(buffer)
     }
 
-    /// Whether this buffer is read-only.
+    /// Whether this buffer is read-only, either inherently or by user choice.
     pub fn is_read_only(&self) -> bool {
+        self.read_only || self.user_read_only
+    }
+
+    /// Whether the file itself must be converted before it can be written.
+    pub fn is_lossy_read_only(&self) -> bool {
         self.read_only
+    }
+
+    /// Whether the user enabled read-only mode for this document.
+    pub fn is_user_read_only(&self) -> bool {
+        self.user_read_only
+    }
+
+    /// Flip user read-only mode, returning the new state.
+    pub fn toggle_user_read_only(&mut self) -> bool {
+        self.user_read_only = !self.user_read_only;
+        self.user_read_only
     }
 
     /// Drop the read-only flag so a (lossily opened) non-UTF-8 file can be
@@ -158,6 +177,20 @@ impl Buffer {
     /// The full text, ready to be written to disk.
     pub fn text(&self) -> String {
         self.text.to_string()
+    }
+
+    /// The text with the document's line ending applied.
+    ///
+    /// The rope stores whatever was read, but the user can change the line
+    /// ending without rewriting every character (which would invalidate undo
+    /// offsets). Conversion therefore happens on the way to disk.
+    pub fn text_with_line_ending(&self) -> String {
+        let text = self.text.to_string();
+        let lf = text.replace("\r\n", "\n");
+        match self.line_ending {
+            LineEnding::Lf => lf,
+            LineEnding::Crlf => lf.replace('\n', "\r\n"),
+        }
     }
 
     /// Replace the entire contents (used when reloading from disk).
@@ -283,10 +316,14 @@ impl Buffer {
 
     /// Write the buffer to its path. Does nothing if the buffer is untitled.
     pub fn save(&mut self) -> std::io::Result<bool> {
-        if self.read_only {
+        if self.is_read_only() {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::PermissionDenied,
-                "file is read-only (not valid UTF-8)",
+                if self.user_read_only {
+                    "read-only mode is on — disable it to save"
+                } else {
+                    "file is read-only (not valid UTF-8)"
+                },
             ));
         }
         match self.path.clone() {
@@ -296,13 +333,17 @@ impl Buffer {
     }
 
     pub fn save_as(&mut self, path: &Path) -> std::io::Result<bool> {
-        if self.read_only {
+        if self.is_read_only() {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::PermissionDenied,
-                "file is read-only (not valid UTF-8)",
+                if self.user_read_only {
+                    "read-only mode is on — disable it to save"
+                } else {
+                    "file is read-only (not valid UTF-8)"
+                },
             ));
         }
-        crate::filesystem::write_atomic(path, &self.text())?;
+        crate::filesystem::write_atomic(path, &self.text_with_line_ending())?;
         self.path = Some(path.to_path_buf());
         self.mark_clean();
         Ok(true)
@@ -378,6 +419,36 @@ mod tests {
         assert!(buffer.save().unwrap());
         assert_eq!(std::fs::read_to_string(&path).unwrap(), "caf\u{FFFD}\n");
 
+        let _ = std::fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn user_read_only_blocks_saving_until_toggled_off() {
+        let path = temp_path("user-read-only");
+        std::fs::write(&path, "hello\n").unwrap();
+        let mut buffer = Buffer::from_path(&path).expect("open");
+        assert!(!buffer.is_read_only());
+
+        assert!(buffer.toggle_user_read_only());
+        assert!(buffer.is_read_only());
+        assert!(buffer.is_user_read_only());
+        let err = buffer.save().expect_err("saving must be refused");
+        assert!(err.to_string().contains("read-only mode"), "{err}");
+
+        assert!(!buffer.toggle_user_read_only());
+        assert!(buffer.save().unwrap());
+        let _ = std::fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn utf8_conversion_does_not_clear_user_read_only() {
+        let path = temp_path("lossy-user-read-only");
+        std::fs::write(&path, b"caf\xe9\n").unwrap();
+        let mut buffer = Buffer::from_path_lossy(&path).expect("lossy open");
+        buffer.toggle_user_read_only();
+        buffer.convert_to_utf8();
+        assert!(buffer.is_read_only(), "user read-only mode must survive");
+        assert!(!buffer.is_lossy_read_only());
         let _ = std::fs::remove_dir_all(path.parent().unwrap());
     }
 

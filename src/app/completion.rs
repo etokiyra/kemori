@@ -39,6 +39,16 @@ impl App {
     /// is nothing to offer) from the automatic, typing-driven offer, which stays
     /// silent rather than interrupting with an empty popup.
     pub(super) fn open_completion_inner(&mut self, manual: bool) -> bool {
+        if self
+            .editor
+            .active_document()
+            .is_some_and(|doc| doc.is_large_file())
+        {
+            if manual {
+                self.set_status("Completion is limited in large-file mode");
+            }
+            return false;
+        }
         let (language, text, cursor) = match self.editor.active_document() {
             Some(doc) => (doc.buffer.language, doc.buffer.text(), doc.clamped_cursor()),
             None => return false,

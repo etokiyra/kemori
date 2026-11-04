@@ -205,6 +205,7 @@ impl LanguageProvider for CSharpProvider {
             Capability::GotoReference,
             Capability::Completion,
             Capability::Hover,
+            Capability::Formatting,
         ]
     }
 
@@ -263,8 +264,12 @@ impl LanguageProvider for CSharpProvider {
         completions
     }
 
-    fn format(&self, _path: &Path, _text: &str) -> FormatOutcome {
-        FormatOutcome::Unsupported
+    fn format(&self, path: &Path, text: &str) -> FormatOutcome {
+        crate::language::format::csharpier(path, text)
+    }
+
+    fn formatter(&self) -> Option<&'static str> {
+        Some("csharpier")
     }
 
     fn hover(&self, text: &str, line: usize, col: usize) -> Option<crate::language::hover::Hover> {
@@ -666,5 +671,21 @@ mod tests {
         assert!(names.contains(&("IThing".to_string(), SymbolKind::Interface)));
         assert!(names.contains(&("Point".to_string(), SymbolKind::Type)));
         assert!(names.contains(&("Color".to_string(), SymbolKind::Enum)));
+    }
+
+    #[test]
+    fn csharp_offers_csharpier_formatting() {
+        assert!(
+            CSharpProvider
+                .capabilities()
+                .contains(&Capability::Formatting)
+        );
+        assert_eq!(CSharpProvider.formatter(), Some("csharpier"));
+        match CSharpProvider.format(Path::new("/tmp/Program.cs"), "class C{}\n") {
+            FormatOutcome::Formatted(_)
+            | FormatOutcome::ToolMissing { .. }
+            | FormatOutcome::Failed(_) => {}
+            FormatOutcome::Unsupported => panic!("C# should advertise a formatter"),
+        }
     }
 }

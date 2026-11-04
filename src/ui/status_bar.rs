@@ -42,6 +42,24 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             ));
         }
 
+        if doc.is_large_file() {
+            spans.push(Span::styled(
+                "  large file",
+                Style::default()
+                    .fg(theme::warn_color())
+                    .bg(theme::panel_bg()),
+            ));
+        }
+
+        if doc.is_read_only() {
+            spans.push(Span::styled(
+                "  read-only",
+                Style::default()
+                    .fg(theme::warn_color())
+                    .bg(theme::panel_bg()),
+            ));
+        }
+
         if let Some(selected) = doc.selected_text() {
             let lines = selected.matches('\n').count() + 1;
             let label = if lines > 1 {

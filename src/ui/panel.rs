@@ -17,7 +17,7 @@ use crate::language::diagnostics::Severity;
 use crate::ui::theme;
 
 /// Draw the panel into `area`.
-pub fn render(frame: &mut Frame, area: Rect, app: &App) {
+pub fn render(frame: &mut Frame, area: Rect, app: &mut App) {
     if area.width == 0 || area.height == 0 {
         return;
     }
@@ -35,6 +35,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     match app.panel.tab {
         PanelTab::Problems => render_problems(frame, inner, app),
         PanelTab::Output => render_output(frame, inner, app),
+        PanelTab::Terminal => render_terminal(frame, inner, app),
         PanelTab::DebugConsole => render_debug_console(frame, inner, app),
     }
 }
@@ -49,6 +50,9 @@ fn tab_strip(app: &App) -> Line<'static> {
         }
         let label = match tab {
             PanelTab::Problems => format!("{} ({problem_count})", tab.label()),
+            PanelTab::Terminal if !app.terminals.is_empty() => {
+                format!("{} ({})", tab.label(), app.terminals.len())
+            }
             _ => tab.label().to_string(),
         };
         if *tab == app.panel.tab {
@@ -66,6 +70,19 @@ fn tab_strip(app: &App) -> Line<'static> {
 
 /// Contextual keys in the bottom border.
 fn keys_line(app: &App) -> Line<'static> {
+    if app.panel.tab == PanelTab::Terminal {
+        return Line::from(vec![
+            Span::styled(" Ctrl+J editor ", theme::muted()),
+            Span::styled("·", theme::dim()),
+            Span::styled(" Ctrl+Shift+T new ", theme::muted()),
+            Span::styled("·", theme::dim()),
+            Span::styled(" Alt+1-9 session ", theme::muted()),
+            Span::styled("·", theme::dim()),
+            Span::styled(" Ctrl+Shift+C/V copy/paste ", theme::muted()),
+            Span::styled("·", theme::dim()),
+            Span::styled(" Shift+PgUp scroll ", theme::muted()),
+        ]);
+    }
     let mut spans = vec![
         Span::styled(" Esc editor ", theme::muted()),
         Span::styled("·", theme::dim()),
@@ -218,17 +235,126 @@ fn render_output(frame: &mut Frame, area: Rect, app: &App) {
     frame.render_widget(Paragraph::new(Text::from(lines)), content_area);
 }
 
+fn render_terminal(frame: &mut Frame, area: Rect, app: &mut App) {
+    if app.terminals.is_empty() {
+        render_message(
+            frame,
+            area,
+            "No terminal is open.",
+            "Ctrl+Shift+T starts a shell in the project root; Ctrl+J returns to the editor.",
+        );
+        return;
+    }
+    let content_height = area.height.saturating_sub(1) as usize;
+    // Keep the PTY in step with the panel's current size before drawing.
+    app.terminals
+        .resize_active(area.width as usize, content_height.max(1));
+    let Some(session) = app.terminals.active() else {
+        return;
+    };
+    let scroll = session.scroll();
+    let title = session.title();
+    let state_style = if session.is_alive() {
+        theme::success()
+    } else {
+        theme::error()
+    };
+    let header = Line::from(vec![
+        Span::styled(
+            format!(
+                " {}/{} ",
+                app.terminals.active_index() + 1,
+                app.terminals.len()
+            ),
+            theme::muted(),
+        ),
+        Span::styled(title, theme::accent_bold()),
+        Span::styled(" · ", theme::dim()),
+        Span::styled(session.cwd().display().to_string(), theme::muted()),
+        Span::styled(" · ", theme::dim()),
+        Span::styled(
+            if session.is_alive() {
+                "running"
+            } else {
+                "exited"
+            },
+            state_style,
+        ),
+    ]);
+    let header_area = Rect { height: 1, ..area };
+    frame.render_widget(Paragraph::new(header), header_area);
+
+    let lines: Vec<Line> = session
+        .screen()
+        .view(scroll, content_height.max(1))
+        .into_iter()
+        .map(|line| Line::from(Span::styled(format!(" {line}"), theme::text())))
+        .collect();
+    let content_area = Rect {
+        y: area.y.saturating_add(1),
+        height: area.height.saturating_sub(1),
+        ..area
+    };
+    frame.render_widget(Paragraph::new(Text::from(lines)), content_area);
+
+    if app.focus == Focus::Panel
+        && scroll == 0
+        && let Some((row, col)) = session
+            .screen()
+            .cursor_in_view(scroll, content_height.max(1))
+    {
+        frame.set_cursor_position((
+            content_area
+                .x
+                .saturating_add(1)
+                .saturating_add(col.min(u16::MAX as usize) as u16),
+            content_area
+                .y
+                .saturating_add(row.min(u16::MAX as usize) as u16),
+        ));
+    }
+}
+
 fn render_debug_console(frame: &mut Frame, area: Rect, app: &App) {
-    if app.panel.debug.is_empty() {
+    let active = app.debug.status != crate::app::debug::DebugStatus::Inactive;
+    let header_height = u16::from(active && area.height > 1);
+    if app.panel.debug.is_empty() && !active {
         render_message(
             frame,
             area,
             "The debug console is empty.",
-            "Debug Adapter Handshake (Preview) writes its messages here; it is not a debugger yet.",
+            "Start debugging from the palette; adapter output, stack frames and variables appear here.",
         );
         return;
     }
-    let visible = area.height as usize;
+    let content_area = Rect {
+        y: area.y.saturating_add(header_height),
+        height: area.height.saturating_sub(header_height),
+        ..area
+    };
+    if active {
+        let header = Line::from(vec![
+            Span::styled(
+                format!(" Debug: {} ", app.debug.status.label()),
+                theme::accent_bold(),
+            ),
+            Span::styled("·", theme::dim()),
+            Span::styled(" F5 continue ", theme::muted()),
+            Span::styled("·", theme::dim()),
+            Span::styled(" F10 over ", theme::muted()),
+            Span::styled("·", theme::dim()),
+            Span::styled(" F11 into ", theme::muted()),
+            Span::styled("·", theme::dim()),
+            Span::styled(" Shift+F11 out ", theme::muted()),
+            Span::styled("·", theme::dim()),
+            Span::styled(" Shift+F5 stop ", theme::muted()),
+        ]);
+        frame.render_widget(Paragraph::new(header), Rect { height: 1, ..area });
+    }
+    if content_area.height == 0 || app.panel.debug.is_empty() {
+        return;
+    }
+    let visible = content_area.height as usize;
     let selected = app.panel.debug_selected.min(app.panel.debug.len() - 1);
     let scroll = scroll_for(selected, app.panel.debug.len(), visible);
     let lines: Vec<Line> = app
@@ -247,7 +373,7 @@ fn render_debug_console(frame: &mut Frame, area: Rect, app: &App) {
             Line::from(Span::styled(format!(" {message}"), style))
         })
         .collect();
-    frame.render_widget(Paragraph::new(Text::from(lines)), area);
+    frame.render_widget(Paragraph::new(Text::from(lines)), content_area);
 }
 
 /// A two-line empty state: what is missing, then how to fill it.

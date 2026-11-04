@@ -77,6 +77,8 @@ pub struct Settings {
     pub indent_width: Option<u8>,
     pub use_spaces: bool,
     pub auto_completion: bool,
+    /// Format the active file on save (save, format, save again).
+    pub format_on_save: bool,
     /// Welcome and busy animations.
     pub motion: bool,
     /// Diagnostic messages shown at the end of their line.
@@ -92,6 +94,7 @@ impl Default for Settings {
             indent_width: None,
             use_spaces: true,
             auto_completion: true,
+            format_on_save: false,
             motion: true,
             inline_diagnostics: true,
         }
@@ -169,6 +172,9 @@ impl Settings {
         if let Some(enabled) = value.get("auto_completion").and_then(Value::as_bool) {
             settings.auto_completion = enabled;
         }
+        if let Some(enabled) = value.get("format_on_save").and_then(Value::as_bool) {
+            settings.format_on_save = enabled;
+        }
         if let Some(enabled) = value.get("motion").and_then(Value::as_bool) {
             settings.motion = enabled;
         }
@@ -187,6 +193,7 @@ impl Settings {
             "indent_width": self.indent_width,
             "use_spaces": self.use_spaces,
             "auto_completion": self.auto_completion,
+            "format_on_save": self.format_on_save,
             "motion": self.motion,
             "inline_diagnostics": self.inline_diagnostics,
         })
@@ -270,6 +277,7 @@ mod tests {
             indent_width: Some(2),
             use_spaces: false,
             auto_completion: false,
+            format_on_save: true,
             motion: false,
             inline_diagnostics: false,
         };

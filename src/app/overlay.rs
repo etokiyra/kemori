@@ -8,6 +8,8 @@ use crate::editor::Position;
 use crate::filesystem;
 use crate::language::completion::Completion;
 
+include!("overlay_states.rs");
+
 /// What happens when a picker item is chosen.
 #[derive(Clone, Debug)]
 pub enum PickerAction {
@@ -38,6 +40,12 @@ pub enum PickerAction {
     RemoveTool(crate::language::tools::Tool),
     /// Apply the code action at an index in the last response.
     ApplyCodeAction(usize),
+    /// Run a code lens in the active document.
+    RunCodeLens(usize),
+    /// Continue a prepared hierarchy using the node at this index.
+    HierarchyItem(usize),
+    /// Open a link that is not a file path (copy it for the user).
+    OpenLink(String),
     /// Delete a file or directory after confirmation.
     DeletePath(PathBuf),
     /// Show the unified diff for a path (staged or working tree).
@@ -53,6 +61,10 @@ pub enum PickerAction {
     SetLanguage(crate::language::id::LanguageId),
     /// Switch to an already-open workspace by index.
     SwitchWorkspace(usize),
+    /// Answer the workspace-trust prompt.
+    ResolveTrust(crate::app::trust::TrustDecision),
+    /// Insert a built-in snippet at the cursor.
+    InsertSnippet(crate::editor::snippet::Snippet),
 }
 
 /// A single row in a picker.
@@ -210,6 +222,10 @@ pub enum PromptKind {
     RenameFile,
     CommitMessage,
     CopyFile,
+    DebugWatch,
+    DebugAttach,
+    BreakpointCondition,
+    BreakpointLog,
 }
 
 /// A single-line text prompt.
@@ -256,6 +272,8 @@ pub enum Overlay {
     Diff(DiffState),
     /// Project-wide search and replace.
     ProjectSearch(ProjectSearchState),
+    /// A read-only preview of the in-file replacements before applying them.
+    ReplacePreview(ReplacePreview),
 }
 
 impl Overlay {
@@ -566,181 +584,6 @@ pub struct Help {
     pub scroll: usize,
 }
 
-/// Which search field has focus.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum SearchField {
-    Query,
-    Replacement,
-}
-
-/// State for the find/replace bar.
-pub struct Search {
-    pub open: bool,
-    pub replace_mode: bool,
-    pub field: SearchField,
-    pub query: String,
-    pub replacement: String,
-    /// Match case exactly rather than case-insensitively.
-    pub case_sensitive: bool,
-    /// Match whole words only.
-    pub whole_word: bool,
-    /// Interpret the query as a regular expression.
-    pub regex: bool,
-    /// The last regex compilation error, shown in the bar.
-    pub regex_error: Option<String>,
-    pub matches: Vec<(Position, Position)>,
-    pub current: Option<usize>,
-}
-
-impl Default for Search {
-    fn default() -> Self {
-        Search {
-            open: false,
-            replace_mode: false,
-            field: SearchField::Query,
-            query: String::new(),
-            replacement: String::new(),
-            case_sensitive: false,
-            whole_word: false,
-            regex: false,
-            regex_error: None,
-            matches: Vec::new(),
-            current: None,
-        }
-    }
-}
-
-impl Search {
-    pub fn close(&mut self) {
-        self.open = false;
-        self.replace_mode = false;
-        self.field = SearchField::Query;
-        self.matches.clear();
-        self.current = None;
-        self.regex_error = None;
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Completion
-// ---------------------------------------------------------------------------
-
-/// The hover popup's state.
-pub struct HoverState {
-    pub title: String,
-    pub kind: Option<crate::language::symbols::SymbolKind>,
-    pub body: Vec<String>,
-}
-
-/// The signature-help popup's state.
-pub struct SignatureState {
-    pub help: crate::language::lsp::convert::SignatureHelp,
-    /// The screen anchor captured when the response arrived.
-    pub anchor: Option<(u16, u16)>,
-}
-
-/// The completion popup's state: a candidate pool filtered by the typed prefix.
-pub struct CompletionState {
-    pool: Vec<Completion>,
-    pub prefix: String,
-    pub items: Vec<Completion>,
-    pub selected: usize,
-}
-
-impl CompletionState {
-    pub fn new(pool: Vec<Completion>, prefix: String) -> Self {
-        let mut state = CompletionState {
-            pool,
-            prefix,
-            items: Vec::new(),
-            selected: 0,
-        };
-        state.refilter();
-        state
-    }
-
-    /// Recompute `items` from the pool for the current prefix.
-    ///
-    /// Matching is a fuzzy subsequence so `mrs` still finds `main_result`, but
-    /// the ordering keeps prefix and short matches first: `if` ranks above
-    /// `impl`, and an exact prefix beats a scattered match.
-    pub fn refilter(&mut self) {
-        let lower = self.prefix.to_lowercase();
-        if lower.is_empty() {
-            self.items = self.pool.clone();
-        } else {
-            let mut scored: Vec<(i32, &Completion)> = self
-                .pool
-                .iter()
-                .filter_map(|item| {
-                    fuzzy_score(&lower, &item.label).map(|score| {
-                        // A prefix match is a strong signal; bias it upward.
-                        let bias = if item.label.to_lowercase().starts_with(&lower) {
-                            -100
-                        } else {
-                            0
-                        };
-                        (score + bias, item)
-                    })
-                })
-                .collect();
-            scored.sort_by(|a, b| {
-                a.0.cmp(&b.0)
-                    .then_with(|| a.1.label.len().cmp(&b.1.label.len()))
-                    .then_with(|| a.1.label.cmp(&b.1.label))
-            });
-            self.items = scored.into_iter().map(|(_, item)| item.clone()).collect();
-        }
-        if self.selected >= self.items.len() {
-            self.selected = self.items.len().saturating_sub(1);
-        }
-    }
-
-    /// Merge additional candidates (e.g. from a language server) and re-filter.
-    pub fn extend(&mut self, items: Vec<Completion>) {
-        for item in items {
-            if !self
-                .pool
-                .iter()
-                .any(|existing| existing.label == item.label)
-            {
-                self.pool.push(item);
-            }
-        }
-        self.refilter();
-    }
-
-    pub fn set_prefix(&mut self, prefix: String) {
-        self.prefix = prefix;
-        self.selected = 0;
-        self.refilter();
-    }
-
-    pub fn move_up(&mut self) {
-        if self.selected > 0 {
-            self.selected -= 1;
-        }
-    }
-
-    pub fn move_down(&mut self) {
-        if self.selected + 1 < self.items.len() {
-            self.selected += 1;
-        }
-    }
-
-    pub fn move_by(&mut self, delta: i32) {
-        if self.items.is_empty() {
-            return;
-        }
-        let last = self.items.len() as i32 - 1;
-        self.selected = (self.selected as i32 + delta).clamp(0, last) as usize;
-    }
-
-    pub fn selected_item(&self) -> Option<&Completion> {
-        self.items.get(self.selected)
-    }
-}
-
 /// A simple subsequence fuzzy matcher. Lower scores are better.
 pub fn fuzzy_score(query: &str, text: &str) -> Option<i32> {
     if query.is_empty() {
@@ -860,57 +703,5 @@ impl TreeFilter {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::language::completion::CompletionKind;
-
-    #[test]
-    fn classifies_unified_diff_lines() {
-        let diff = DiffState::from_unified(
-            "working tree · a.rs",
-            "diff --git a/a.rs b/a.rs\n\
-             index 111..222 100644\n\
-             --- a/a.rs\n\
-             +++ b/a.rs\n\
-             @@ -1,2 +1,2 @@\n\
-             - old\n\
-             + new\n\
-             \u{20}unchanged\n",
-        );
-        assert_eq!(diff.title, "working tree · a.rs");
-        let kinds: Vec<_> = diff.lines.iter().map(|line| line.kind).collect();
-        assert_eq!(kinds[0], DiffLineKind::Header);
-        assert_eq!(kinds[4], DiffLineKind::Hunk);
-        assert_eq!(kinds[5], DiffLineKind::Remove);
-        assert_eq!(kinds[6], DiffLineKind::Add);
-        assert_eq!(kinds[7], DiffLineKind::Context);
-        assert!(diff.lines[6].text.starts_with("+ new"));
-    }
-
-    #[test]
-    fn completion_matches_fuzzy_subsequences() {
-        let pool = vec![
-            Completion::new("main_result", CompletionKind::Variable),
-            Completion::new("map", CompletionKind::Variable),
-            Completion::new("maximum", CompletionKind::Variable),
-        ];
-        let state = CompletionState::new(pool, "mrs".to_string());
-        let labels: Vec<&str> = state.items.iter().map(|item| item.label.as_str()).collect();
-        assert!(labels.contains(&"main_result"), "labels: {labels:?}");
-        assert!(!labels.contains(&"map"), "labels: {labels:?}");
-    }
-
-    #[test]
-    fn completion_ranks_prefix_matches_first() {
-        let pool = vec![
-            Completion::new("account", CompletionKind::Variable),
-            Completion::new("counter", CompletionKind::Variable),
-            Completion::new("count", CompletionKind::Variable),
-        ];
-        let state = CompletionState::new(pool, "count".to_string());
-        let labels: Vec<&str> = state.items.iter().map(|item| item.label.as_str()).collect();
-        assert_eq!(labels.first(), Some(&"count"), "labels: {labels:?}");
-        assert!(labels.contains(&"counter"));
-        assert!(labels.contains(&"account"));
-    }
-}
+#[path = "overlay_tests.rs"]
+mod tests;

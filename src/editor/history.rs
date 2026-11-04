@@ -8,6 +8,8 @@
 
 use crate::editor::position::Position;
 
+use serde_json::{Value, json};
+
 /// How an edit may be merged with the previous one.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Coalesce {
@@ -178,6 +180,113 @@ impl History {
         self.undo.clear();
         self.redo.clear();
     }
+
+    /// Serialize the last `max_edits` undo steps and `saved_id` for a session.
+    ///
+    /// Persistent undo is bounded: a session file must not grow with a huge
+    /// editing history, and edits older than the window are discarded.
+    pub fn to_value(&self, saved_id: Option<u64>, max_edits: usize) -> Value {
+        let start = self.undo.len().saturating_sub(max_edits.max(1));
+        json!({
+            "undo": self.undo[start..].iter().map(edit_to_value).collect::<Vec<_>>(),
+            "redo": self.redo.iter().map(edit_to_value).collect::<Vec<_>>(),
+            "next_id": self.next_id,
+            "saved_id": saved_id,
+        })
+    }
+
+    /// Restore a history snapshot from [`History::to_value`].
+    pub fn from_value(value: &Value) -> Option<(History, Option<u64>)> {
+        let undo = value
+            .get("undo")?
+            .as_array()?
+            .iter()
+            .filter_map(edit_from_value)
+            .collect::<Vec<_>>();
+        let redo: Vec<Edit> = value
+            .get("redo")
+            .and_then(Value::as_array)
+            .map(|items| items.iter().filter_map(edit_from_value).collect())
+            .unwrap_or_default();
+        let max_id = undo
+            .iter()
+            .chain(redo.iter())
+            .map(|edit| edit.id)
+            .max()
+            .unwrap_or(0);
+        let next_id = value
+            .get("next_id")
+            .and_then(Value::as_u64)
+            .unwrap_or(max_id + 1)
+            .max(max_id + 1);
+        let saved_id = value.get("saved_id").and_then(Value::as_u64);
+        Some((
+            History {
+                undo,
+                redo,
+                limit: 1000,
+                next_id,
+            },
+            saved_id,
+        ))
+    }
+}
+
+fn edit_to_value(edit: &Edit) -> Value {
+    json!({
+        "id": edit.id,
+        "ops": edit.ops.iter().map(|op| json!({
+            "start": op.start,
+            "removed": op.removed,
+            "inserted": op.inserted,
+        })).collect::<Vec<_>>(),
+        "cursor_before": [edit.cursor_before.row, edit.cursor_before.col],
+        "cursor_after": [edit.cursor_after.row, edit.cursor_after.col],
+        "coalesce": match edit.coalesce {
+            Some(Coalesce::Insert) => Some("insert"),
+            Some(Coalesce::DeleteBackward) => Some("delete_backward"),
+            Some(Coalesce::DeleteForward) => Some("delete_forward"),
+            None => None,
+        },
+    })
+}
+
+fn edit_from_value(value: &Value) -> Option<Edit> {
+    let ops = value
+        .get("ops")?
+        .as_array()?
+        .iter()
+        .filter_map(|op| {
+            Some(EditOp {
+                start: op.get("start")?.as_u64()? as usize,
+                removed: op.get("removed")?.as_str()?.to_string(),
+                inserted: op.get("inserted")?.as_str()?.to_string(),
+            })
+        })
+        .collect::<Vec<_>>();
+    if ops.is_empty() {
+        return None;
+    }
+    let position = |key: &str| -> Option<Position> {
+        let pair = value.get(key)?.as_array()?;
+        Some(Position::new(
+            pair.first()?.as_u64()? as usize,
+            pair.get(1)?.as_u64()? as usize,
+        ))
+    };
+    let coalesce = match value.get("coalesce").and_then(Value::as_str) {
+        Some("insert") => Some(Coalesce::Insert),
+        Some("delete_backward") => Some(Coalesce::DeleteBackward),
+        Some("delete_forward") => Some(Coalesce::DeleteForward),
+        _ => None,
+    };
+    Some(Edit {
+        id: value.get("id")?.as_u64()?,
+        ops,
+        cursor_before: position("cursor_before")?,
+        cursor_after: position("cursor_after")?,
+        coalesce,
+    })
 }
 
 fn merge(last: &mut Edit, edit: &Edit, kind: Coalesce) -> bool {
@@ -225,5 +334,49 @@ fn merge(last: &mut Edit, edit: &Edit, kind: Coalesce) -> bool {
             last.cursor_after = edit.cursor_after;
             true
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn edit(start: usize, removed: &str, inserted: &str, id: u64) -> Edit {
+        let mut edit = Edit::single(
+            start,
+            removed.to_string(),
+            inserted.to_string(),
+            Position::new(0, start),
+            Position::new(0, start + inserted.chars().count()),
+            None,
+        );
+        edit.id = id;
+        edit
+    }
+
+    #[test]
+    fn history_round_trips_through_json() {
+        let mut history = History::new(1000);
+        history.push(edit(0, "", "hello", 0));
+        history.push(edit(5, "", " world", 0));
+        let value = history.to_value(Some(2), 100);
+        let (mut restored, saved) = History::from_value(&value).expect("history");
+        assert_eq!(saved, Some(2));
+        assert_eq!(restored.undo_len(), 2);
+        let undone = restored.undo().expect("undo");
+        assert_eq!(undone.ops[0].inserted, " world");
+    }
+
+    #[test]
+    fn history_snapshot_is_bounded() {
+        let mut history = History::new(1000);
+        for index in 0..20 {
+            history.push(edit(index, "", "x", 0));
+        }
+        let value = history.to_value(None, 5);
+        assert_eq!(
+            value.get("undo").and_then(Value::as_array).unwrap().len(),
+            5
+        );
     }
 }

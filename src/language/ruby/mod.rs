@@ -9,11 +9,14 @@
 use crate::language::completion::{Completion, CompletionKind};
 use crate::language::data::{push_merged, scan_quoted, scan_single_quoted};
 use crate::language::detection::LanguageDescriptor;
+use crate::language::format::FormatOutcome;
 use crate::language::id::LanguageId;
 use crate::language::provider::{
     Capability, HighlightSpan, HighlightState, LanguageProvider, TokenKind,
 };
 use crate::language::symbols::{Location, Symbol, SymbolKind, word_at};
+
+use std::path::Path;
 
 const KEYWORDS: &[&str] = &[
     "alias", "and", "begin", "break", "case", "class", "def", "defined?", "do", "else", "elsif",
@@ -84,6 +87,7 @@ impl LanguageProvider for RubyProvider {
             Capability::GotoReference,
             Capability::Completion,
             Capability::Hover,
+            Capability::Formatting,
         ]
     }
 
@@ -120,6 +124,14 @@ impl LanguageProvider for RubyProvider {
                 .map(|word| Completion::new(*word, CompletionKind::Function)),
         );
         completions
+    }
+
+    fn format(&self, path: &Path, text: &str) -> FormatOutcome {
+        crate::language::format::rubocop(path, text)
+    }
+
+    fn formatter(&self) -> Option<&'static str> {
+        Some("rubocop")
     }
 
     fn hover(&self, text: &str, line: usize, col: usize) -> Option<crate::language::hover::Hover> {
@@ -391,5 +403,21 @@ end
     fn diagnostics_report_unbalanced_parens() {
         let diagnostics = RubyProvider.diagnostics("def f(a\n");
         assert!(diagnostics.iter().any(|d| d.message.contains("unclosed")));
+    }
+
+    #[test]
+    fn ruby_offers_rubocop_formatting() {
+        assert!(
+            RubyProvider
+                .capabilities()
+                .contains(&Capability::Formatting)
+        );
+        assert_eq!(RubyProvider.formatter(), Some("rubocop"));
+        match RubyProvider.format(Path::new("/tmp/app.rb"), "def f; end\n") {
+            FormatOutcome::Formatted(_)
+            | FormatOutcome::ToolMissing { .. }
+            | FormatOutcome::Failed(_) => {}
+            FormatOutcome::Unsupported => panic!("Ruby should advertise a formatter"),
+        }
     }
 }

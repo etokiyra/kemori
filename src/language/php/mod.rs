@@ -10,11 +10,14 @@
 use crate::language::completion::{Completion, CompletionKind};
 use crate::language::data::{push_merged, scan_quoted, scan_single_quoted};
 use crate::language::detection::LanguageDescriptor;
+use crate::language::format::FormatOutcome;
 use crate::language::id::LanguageId;
 use crate::language::provider::{
     Capability, HighlightSpan, HighlightState, LanguageProvider, TokenKind,
 };
 use crate::language::symbols::{Location, Symbol, SymbolKind, word_at};
+
+use std::path::Path;
 
 const KEYWORDS: &[&str] = &[
     "abstract",
@@ -163,6 +166,7 @@ impl LanguageProvider for PhpProvider {
             Capability::GotoReference,
             Capability::Completion,
             Capability::Hover,
+            Capability::Formatting,
         ]
     }
 
@@ -204,6 +208,14 @@ impl LanguageProvider for PhpProvider {
                 .map(|word| Completion::new(*word, CompletionKind::Constant)),
         );
         completions
+    }
+
+    fn format(&self, path: &Path, text: &str) -> FormatOutcome {
+        crate::language::format::php_cs_fixer(path, text)
+    }
+
+    fn formatter(&self) -> Option<&'static str> {
+        Some("php-cs-fixer")
     }
 
     fn hover(&self, text: &str, line: usize, col: usize) -> Option<crate::language::hover::Hover> {
@@ -575,5 +587,17 @@ const VERSION = '1';
         let definition = PhpProvider.definition(text, 2, 1).expect("definition");
         assert_eq!(definition.name, "greet");
         assert_eq!(definition.line, 1);
+    }
+
+    #[test]
+    fn php_offers_php_cs_fixer_formatting() {
+        assert!(PhpProvider.capabilities().contains(&Capability::Formatting));
+        assert_eq!(PhpProvider.formatter(), Some("php-cs-fixer"));
+        match PhpProvider.format(Path::new("/tmp/index.php"), "<?php echo 1;\n") {
+            FormatOutcome::Formatted(_)
+            | FormatOutcome::ToolMissing { .. }
+            | FormatOutcome::Failed(_) => {}
+            FormatOutcome::Unsupported => panic!("PHP should advertise a formatter"),
+        }
     }
 }

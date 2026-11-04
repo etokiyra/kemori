@@ -940,6 +940,43 @@ fn renders_the_bottom_panel_with_problems() {
 }
 
 #[test]
+fn renders_the_terminal_tab_and_its_empty_state() {
+    use kemori::app::panel::PanelTab;
+
+    let dir = temp_project("panel-terminal-ui");
+    let file = dir.join("src/main.rs");
+    let mut app = app_with_file(&file);
+
+    app.panel.open = true;
+    app.panel.tab = PanelTab::Terminal;
+    let empty = draw(&mut app);
+    assert!(
+        empty.contains("No terminal is open"),
+        "empty terminal state missing:\n{empty}"
+    );
+    assert!(
+        empty.contains("Ctrl+Shift+T"),
+        "the terminal hint should name the shortcut:\n{empty}"
+    );
+
+    #[cfg(unix)]
+    {
+        app.terminals
+            .spawn_command(&dir, "/bin/sh", &[], "test shell", 80, 6)
+            .unwrap();
+        let screen = draw(&mut app);
+        assert!(screen.contains("Terminal"), "tab missing:\n{screen}");
+        assert!(
+            screen.contains("running"),
+            "session state missing:\n{screen}"
+        );
+        app.terminals.kill_all();
+    }
+
+    cleanup(&dir);
+}
+
+#[test]
 fn renders_task_output_in_the_bottom_panel() {
     use kemori::app::panel::{PanelTab, TaskRunState};
 

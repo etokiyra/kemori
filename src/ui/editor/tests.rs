@@ -11,6 +11,84 @@ fn doc(text: &str) -> Document {
 }
 
 #[test]
+fn code_lenses_are_collected_for_their_row() {
+    let mut d = doc("fn main() {}\n");
+    d.set_code_lenses(
+        1,
+        vec![crate::editor::CodeLens {
+            position: Position::new(0, 0),
+            end: Position::new(0, 3),
+            title: "1 reference".to_string(),
+            command: Some("test".to_string()),
+            arguments: None,
+        }],
+    );
+    let row = build_row(
+        &mut d,
+        &crate::language::rust::RustProvider,
+        &Search::default(),
+        0,
+        &[],
+        &std::collections::HashSet::new(),
+    );
+    assert_eq!(row.code_lenses, vec!["1 reference".to_string()]);
+}
+
+#[test]
+fn inlay_hints_are_keyed_by_row_and_column() {
+    let mut d = doc("let value = 1;");
+    d.set_inlay_hints(
+        1,
+        vec![
+            crate::editor::InlayHint {
+                position: Position::new(0, 3),
+                label: " : i32".to_string(),
+                kind: crate::editor::InlayHintKind::Type,
+                padding_left: true,
+                padding_right: false,
+            },
+            crate::editor::InlayHint {
+                position: Position::new(1, 0),
+                label: "other".to_string(),
+                kind: crate::editor::InlayHintKind::Other,
+                padding_left: false,
+                padding_right: false,
+            },
+        ],
+    );
+    let row = build_row(
+        &mut d,
+        &crate::language::rust::RustProvider,
+        &Search::default(),
+        0,
+        &[],
+        &std::collections::HashSet::new(),
+    );
+    assert_eq!(row.inlay_hints, vec![(3, " : i32".to_string())]);
+}
+
+#[test]
+fn document_highlights_mark_the_expected_characters() {
+    let mut d = doc("let value = value;");
+    d.set_document_highlights(vec![
+        (Position::new(0, 4), Position::new(0, 9)),
+        (Position::new(0, 12), Position::new(0, 17)),
+    ]);
+    let row = build_row(
+        &mut d,
+        &crate::language::rust::RustProvider,
+        &Search::default(),
+        0,
+        &[],
+        &std::collections::HashSet::new(),
+    );
+    assert!(row.highlighted[4..9].iter().all(|flag| *flag));
+    assert!(row.highlighted[12..17].iter().all(|flag| *flag));
+    assert!(!row.highlighted[0]);
+    assert!(!row.highlighted[9]);
+}
+
+#[test]
 fn inline_note_fits_or_declines() {
     let diagnostic = diagnostic("unused variable `x`", Severity::Warning);
     let (note, severity) = inline_note(&diagnostic, 1, 40).expect("note");

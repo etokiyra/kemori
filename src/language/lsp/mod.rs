@@ -11,9 +11,14 @@
 //! has syntax highlighting, structural diagnostics, symbols and formatting.
 
 pub mod change;
+pub mod code_lens;
 pub mod convert;
 pub mod folding;
+pub mod hierarchy;
+pub mod inlay;
 pub mod jsonrpc;
+pub mod links;
+pub mod selection;
 
 use std::collections::HashMap;
 use std::io::{self, BufRead, BufReader};
@@ -76,43 +81,29 @@ struct ServerCapabilities {
     signature_help: bool,
     document_formatting: bool,
     folding_range: bool,
+    /// `textDocument/documentHighlight`.
+    document_highlight: bool,
+    /// `textDocument/inlayHint`.
+    inlay_hint: bool,
+    /// `textDocument/codeLens`.
+    code_lens: bool,
+    /// `textDocument/selectionRange`.
+    selection_range: bool,
+    /// `callHierarchy/*`.
+    call_hierarchy: bool,
+    /// `typeHierarchy/*`.
+    type_hierarchy: bool,
+    /// `textDocument/implementation`.
+    implementation: bool,
+    /// `textDocument/typeDefinition`.
+    type_definition: bool,
+    /// `textDocument/documentLink`.
+    document_link: bool,
+    /// `textDocument/diagnostic` (pull diagnostics).
+    document_diagnostics: bool,
+    /// `workspace/diagnostic` (workspace-wide pull diagnostics).
+    workspace_diagnostics: bool,
     sync: TextDocumentSyncKind,
-}
-
-/// The LSP `languageId` string for a language.
-pub fn lsp_language_id(language: LanguageId) -> &'static str {
-    match language {
-        LanguageId::Rust => "rust",
-        LanguageId::Go => "go",
-        LanguageId::Python => "python",
-        LanguageId::Shell => "shellscript",
-        LanguageId::Markdown => "markdown",
-        LanguageId::Nix => "nix",
-        LanguageId::Json => "json",
-        LanguageId::Toml => "toml",
-        LanguageId::Yaml => "yaml",
-        LanguageId::TypeScript => "typescript",
-        LanguageId::JavaScript => "javascript",
-        LanguageId::C => "c",
-        LanguageId::Cpp => "cpp",
-        LanguageId::Java => "java",
-        LanguageId::CSharp => "csharp",
-        LanguageId::Html => "html",
-        LanguageId::Css => "css",
-        _ => "plaintext",
-    }
-}
-
-/// The `languageId` for a specific file, refining TSX/JSX to their React ids.
-fn language_id_for(language: LanguageId, path: &Path) -> &'static str {
-    match (
-        language,
-        path.extension().and_then(|extension| extension.to_str()),
-    ) {
-        (LanguageId::TypeScript, Some("tsx")) => "typescriptreact",
-        (LanguageId::JavaScript, Some("jsx")) => "javascriptreact",
-        _ => lsp_language_id(language),
-    }
 }
 
 /// The Kemori feature a server request belongs to.
@@ -128,6 +119,25 @@ pub enum RequestKind {
     SignatureHelp,
     Formatting,
     FoldingRange,
+    DocumentHighlight,
+    InlayHint,
+    CodeLens,
+    SelectionRange,
+    PrepareCallHierarchy,
+    CallHierarchyIncoming,
+    CallHierarchyOutgoing,
+    PrepareTypeHierarchy,
+    TypeHierarchySuper,
+    TypeHierarchySub,
+    Implementation,
+    TypeDefinition,
+    DocumentLink,
+    /// Pull diagnostics for one document (`textDocument/diagnostic`).
+    DocumentDiagnostics,
+    /// Pull diagnostics for the whole workspace (`workspace/diagnostic`).
+    WorkspaceDiagnostics,
+    /// `workspace/executeCommand`, used for JDT LS debug commands.
+    ExecuteCommand,
 }
 
 /// Something the app consumes from a running server.
@@ -297,6 +307,18 @@ impl Server {
             stderr,
         };
 
+        let initialization_options = if language == LanguageId::Java {
+            crate::language::tools::java_debug_jar()
+                .filter(|path| path.is_file())
+                .map(|path| {
+                    json!({
+                        "bundles": [path.to_string_lossy()],
+                    })
+                })
+                .unwrap_or(Value::Null)
+        } else {
+            Value::Null
+        };
         let id = server.request(
             "initialize",
             json!({
@@ -304,6 +326,7 @@ impl Server {
                 "clientInfo": { "name": "kemori" },
                 "rootUri": path_to_uri(root),
                 "rootPath": root.to_string_lossy(),
+                "initializationOptions": initialization_options,
                 "capabilities": {
                     "general": { "positionEncodings": ["utf-8", "utf-16"] },
                     "textDocument": {
@@ -323,9 +346,17 @@ impl Server {
                             "contextSupport": true
                         },
                         "formatting": { "dynamicRegistration": false },
-                        "foldingRange": { "dynamicRegistration": false }
+                        "foldingRange": { "dynamicRegistration": false },
+                        "diagnostic": {
+                            "dynamicRegistration": false,
+                            "relatedDocumentSupport": false
+                        }
                     },
-                    "workspace": { "configuration": true, "symbol": {} }
+                    "workspace": {
+                        "configuration": true,
+                        "symbol": {},
+                        "diagnostics": { "refreshSupport": false }
+                    }
                 },
                 "workspaceFolders": null
             }),
@@ -341,22 +372,6 @@ impl Server {
     /// The encoding the server uses for character offsets.
     pub fn position_encoding(&self) -> PositionEncoding {
         self.encoding
-    }
-
-    /// Whether the server advertised support for `kind`.
-    pub fn supports(&self, kind: RequestKind) -> bool {
-        match kind {
-            RequestKind::Completion => self.capabilities.completion,
-            RequestKind::Hover => self.capabilities.hover,
-            RequestKind::Definition => self.capabilities.definition,
-            RequestKind::References => self.capabilities.references,
-            RequestKind::Rename => self.capabilities.rename,
-            RequestKind::CodeActions => self.capabilities.code_action,
-            RequestKind::WorkspaceSymbols => self.capabilities.workspace_symbol,
-            RequestKind::SignatureHelp => self.capabilities.signature_help,
-            RequestKind::Formatting => self.capabilities.document_formatting,
-            RequestKind::FoldingRange => self.capabilities.folding_range,
-        }
     }
 
     /// Read the negotiated position encoding and the advertised capabilities.
@@ -454,6 +469,17 @@ impl Server {
         });
         self.send_request(RequestKind::Formatting, "textDocument/formatting", params)
             .ok()
+    }
+
+    /// Ask JDT LS to run a debug-related command (`vscode.java.*`), returning
+    /// the request id so the app can consume the response.
+    pub fn execute_command_request(&mut self, command: &str, arguments: Value) -> Option<i64> {
+        self.send_request(
+            RequestKind::ExecuteCommand,
+            "workspace/executeCommand",
+            json!({ "command": command, "arguments": arguments }),
+        )
+        .ok()
     }
 
     /// Ask the server for a document's folding ranges, returning the request id
@@ -744,400 +770,14 @@ impl Drop for Server {
 }
 
 /// Parse the `initialize` result into the encoding and capabilities Kemori uses.
-fn parse_initialize(result: &Value) -> (PositionEncoding, ServerCapabilities) {
-    let encoding = match result
-        .pointer("/capabilities/positionEncoding")
-        .and_then(Value::as_str)
-    {
-        Some("utf-8") => PositionEncoding::Utf8,
-        Some("utf-32") => PositionEncoding::Utf32,
-        _ => PositionEncoding::Utf16,
-    };
-    let capabilities = result.get("capabilities").unwrap_or(&Value::Null);
-    let advertised = |name: &str| {
-        capabilities
-            .get(name)
-            .is_some_and(|value| !value.is_null() && value != &Value::Bool(false))
-    };
-    let sync = parse_sync(capabilities.get("textDocumentSync"));
-    (
-        encoding,
-        ServerCapabilities {
-            completion: advertised("completionProvider"),
-            hover: advertised("hoverProvider"),
-            definition: advertised("definitionProvider"),
-            references: advertised("referencesProvider"),
-            rename: advertised("renameProvider"),
-            code_action: advertised("codeActionProvider"),
-            workspace_symbol: advertised("workspaceSymbolProvider"),
-            signature_help: advertised("signatureHelpProvider"),
-            document_formatting: advertised("documentFormattingProvider"),
-            folding_range: advertised("foldingRangeProvider"),
-            sync,
-        },
-    )
-}
-
-/// Parse `textDocumentSync`, which the protocol defines as either a numeric
-/// `TextDocumentSyncKind` or an object carrying a `change` kind.
-///
-/// Kemori has always sent whole-document changes; an omitted field keeps that
-/// behaviour (some servers rely on it), while an explicit `None` is honoured so
-/// such a server is not spammed with changes it does not want.
-fn parse_sync(value: Option<&Value>) -> TextDocumentSyncKind {
-    let kind = match value {
-        Some(Value::Number(number)) => number.as_u64(),
-        Some(object) => object.get("change").and_then(Value::as_u64),
-        None => return TextDocumentSyncKind::Full,
-    };
-    match kind {
-        Some(0) => TextDocumentSyncKind::None,
-        Some(2) => TextDocumentSyncKind::Incremental,
-        _ => TextDocumentSyncKind::Full,
-    }
-}
-
-fn parse_publish_diagnostics(params: &Value) -> Option<ServerEvent> {
-    let path = uri_to_path(params.get("uri")?.as_str()?)?;
-    let version = params.get("version").and_then(Value::as_i64);
-    let diagnostics = params
-        .get("diagnostics")?
-        .as_array()?
-        .iter()
-        .filter_map(parse_diagnostic)
-        .collect();
-    Some(ServerEvent::Diagnostics {
-        path,
-        version,
-        diagnostics,
-    })
-}
-
-/// Whether diagnostics stamped with `version` are behind the version the server
-/// has since received.
-///
-/// A missing version on either side is treated as current, matching the
-/// protocol's optional field and servers that do not version diagnostics.
-fn diagnostics_are_stale(version: Option<i64>, current: Option<i64>) -> bool {
-    matches!((version, current), (Some(version), Some(current)) if version < current)
-}
-
-/// The deadline for a request of `kind`.
-fn request_timeout(kind: RequestKind) -> Duration {
-    if kind == RequestKind::Formatting {
-        FORMAT_REQUEST_TIMEOUT
-    } else {
-        REQUEST_TIMEOUT
-    }
-}
-
-/// Remove and return every request whose deadline has passed.
-fn expire_requests(
-    pending: &mut HashMap<i64, PendingRequest>,
-    now: Instant,
-) -> Vec<(i64, RequestKind)> {
-    let expired: Vec<i64> = pending
-        .iter()
-        .filter(|(_, request)| request.deadline <= now)
-        .map(|(id, _)| *id)
-        .collect();
-    expired
-        .into_iter()
-        .filter_map(|id| pending.remove(&id).map(|request| (id, request.kind)))
-        .collect()
-}
-
-fn parse_diagnostic(item: &Value) -> Option<Diagnostic> {
-    let range = item.get("range")?;
-    let start = text_pos(range.get("start")?)?;
-    let end = text_pos(range.get("end")?)?;
-    let severity = match item.get("severity").and_then(Value::as_u64) {
-        Some(1) => Severity::Error,
-        Some(2) => Severity::Warning,
-        Some(3) => Severity::Info,
-        _ => Severity::Hint,
-    };
-    let message = item.get("message").and_then(Value::as_str).unwrap_or("");
-    Some(Diagnostic::new(start, end, severity, message))
-}
-
-fn text_pos(value: &Value) -> Option<TextPos> {
-    Some(TextPos::new(
-        value.get("line")?.as_u64()? as usize,
-        value.get("character")?.as_u64()? as usize,
-    ))
-}
-
-/// The `textDocument` + `position` parameters shared by most requests.
-fn position_params(path: &Path, line: usize, col: usize) -> Value {
-    json!({
-        "textDocument": { "uri": path_to_uri(path) },
-        "position": { "line": line, "character": col }
-    })
-}
-
-/// Encode a filesystem path as a `file://` URI, percent-encoding the bytes LSP
-/// cares about.
-pub fn path_to_uri(path: &Path) -> String {
-    let mut uri = String::from("file://");
-    for byte in path.to_string_lossy().bytes() {
-        match byte {
-            b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'/' | b'-' | b'_' | b'.' | b'~' => {
-                uri.push(byte as char)
-            }
-            other => uri.push_str(&format!("%{other:02X}")),
-        }
-    }
-    uri
-}
-
-/// Decode a `file://` URI back into a path.
-pub fn uri_to_path(uri: &str) -> Option<PathBuf> {
-    let rest = uri.strip_prefix("file://")?;
-    // Drop an optional authority component (`file://localhost/...`).
-    let rest = match rest.find('/') {
-        Some(slash) => &rest[slash..],
-        None => rest,
-    };
-    let bytes = rest.as_bytes();
-    let mut decoded = Vec::with_capacity(bytes.len());
-    let mut index = 0;
-    while index < bytes.len() {
-        if bytes[index] == b'%'
-            && let Some(hex) = bytes.get(index + 1..index + 3)
-            && let Ok(hex) = std::str::from_utf8(hex)
-            && let Ok(byte) = u8::from_str_radix(hex, 16)
-        {
-            decoded.push(byte);
-            index += 3;
-            continue;
-        }
-        decoded.push(bytes[index]);
-        index += 1;
-    }
-    let mut decoded = String::from_utf8_lossy(&decoded).into_owned();
-    // `file:///C:/x` decodes to `/C:/x`; drop the leading slash so the path is
-    // usable on Windows. Harmless on other platforms, where no drive letter
-    // follows.
-    let bytes = decoded.as_bytes();
-    if bytes.len() >= 3 && bytes[0] == b'/' && bytes[1].is_ascii_alphabetic() && bytes[2] == b':' {
-        decoded.remove(0);
-    }
-    if decoded.is_empty() {
-        return None;
-    }
-    Some(PathBuf::from(decoded))
-}
+mod requests_extra;
+mod wire;
+pub use wire::lsp_language_id;
+use wire::{
+    diagnostics_are_stale, expire_requests, language_id_for, parse_initialize,
+    parse_publish_diagnostics, position_params, request_timeout,
+};
+pub use wire::{parse_document_diagnostics, parse_workspace_diagnostics, path_to_uri, uri_to_path};
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn uri_round_trips_paths_with_spaces() {
-        let path = PathBuf::from("/tmp/kemori lsp/main.rs");
-        let uri = path_to_uri(&path);
-        assert_eq!(uri, "file:///tmp/kemori%20lsp/main.rs");
-        assert_eq!(uri_to_path(&uri).as_deref(), Some(path.as_path()));
-    }
-
-    #[test]
-    fn decodes_windows_drive_uris() {
-        assert_eq!(
-            uri_to_path("file:///C:/tmp/a.rs"),
-            Some(PathBuf::from("C:/tmp/a.rs"))
-        );
-    }
-
-    #[test]
-    fn reads_capabilities_and_position_encoding() {
-        let (encoding, caps) = parse_initialize(&json!({
-            "capabilities": {
-                "positionEncoding": "utf-8",
-                "completionProvider": {},
-                "hoverProvider": true,
-                "renameProvider": { "prepareProvider": false }
-            }
-        }));
-        assert_eq!(encoding, PositionEncoding::Utf8);
-        assert!(caps.completion);
-        assert!(caps.hover);
-        assert!(caps.rename);
-        assert!(!caps.definition);
-        assert!(!caps.workspace_symbol);
-
-        // No declaration means the protocol default, UTF-16.
-        let (encoding, caps) = parse_initialize(&json!({ "capabilities": {} }));
-        assert_eq!(encoding, PositionEncoding::Utf16);
-        assert!(!caps.completion);
-    }
-
-    #[test]
-    fn parses_published_diagnostics() {
-        let params = json!({
-            "uri": "file:///tmp/main.rs",
-            "diagnostics": [
-                {
-                    "range": { "start": { "line": 1, "character": 2 }, "end": { "line": 1, "character": 5 } },
-                    "severity": 1,
-                    "message": "unused variable"
-                },
-                {
-                    "range": { "start": { "line": 3, "character": 0 }, "end": { "line": 3, "character": 1 } },
-                    "severity": 2,
-                    "message": "try using `mut`"
-                }
-            ]
-        });
-        let ServerEvent::Diagnostics {
-            path,
-            version,
-            diagnostics,
-        } = parse_publish_diagnostics(&params).expect("event")
-        else {
-            panic!("expected diagnostics");
-        };
-        assert_eq!(path, PathBuf::from("/tmp/main.rs"));
-        assert_eq!(version, None);
-        assert_eq!(diagnostics.len(), 2);
-        assert_eq!(diagnostics[0].severity, Severity::Error);
-        assert_eq!(diagnostics[0].start, TextPos::new(1, 2));
-        assert_eq!(diagnostics[1].severity, Severity::Warning);
-        assert_eq!(diagnostics[1].message, "try using `mut`");
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn initializes_and_receives_diagnostics_from_a_mock_server() {
-        use std::io::Write;
-        use std::os::unix::fs::PermissionsExt;
-        use std::time::{Duration, Instant};
-
-        // A tiny shell server: answer `initialize` (id 1), publish one
-        // diagnostic, then wait for the client to close our stdin.
-        const MOCK: &str = r#"#!/bin/sh
-read -r header
-len=$(printf '%s' "$header" | tr -dc '0-9')
-read -r blank
-dd bs=1 count="$len" of=/dev/null 2>/dev/null
-resp='{"jsonrpc":"2.0","id":1,"result":{"capabilities":{}}}'
-printf 'Content-Length: %s\r\n\r\n%s' "${#resp}" "$resp"
-note='{"jsonrpc":"2.0","method":"textDocument/publishDiagnostics","params":{"uri":"file:///tmp/main.rs","diagnostics":[{"range":{"start":{"line":1,"character":0},"end":{"line":1,"character":3}},"severity":1,"message":"boom"}]}}'
-printf 'Content-Length: %s\r\n\r\n%s' "${#note}" "$note"
-cat >/dev/null
-"#;
-
-        let dir = std::env::temp_dir().join(format!("kemori-lsp-mock-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).unwrap();
-        let script = dir.join("mock-lsp.sh");
-        {
-            let mut file = std::fs::File::create(&script).unwrap();
-            file.write_all(MOCK.as_bytes()).unwrap();
-        }
-        let mut perms = std::fs::metadata(&script).unwrap().permissions();
-        perms.set_mode(0o755);
-        std::fs::set_permissions(&script, perms).unwrap();
-
-        let mut server =
-            Server::start(LanguageId::Rust, script.to_str().unwrap(), &[], &dir).unwrap();
-
-        let deadline = Instant::now() + Duration::from_secs(5);
-        let mut ready = false;
-        let mut diagnostics = None;
-        while Instant::now() < deadline && !(ready && diagnostics.is_some()) {
-            for event in server.poll() {
-                match event {
-                    ServerEvent::Ready => ready = true,
-                    ServerEvent::Diagnostics { diagnostics: d, .. } => diagnostics = Some(d),
-                    ServerEvent::Response { .. } => {}
-                    ServerEvent::ApplyEdit { .. } => {}
-                    ServerEvent::Failed(_) => {}
-                }
-            }
-            std::thread::sleep(Duration::from_millis(5));
-        }
-
-        assert!(ready, "the server should complete initialize");
-        let diagnostics = diagnostics.expect("diagnostics");
-        assert_eq!(diagnostics.len(), 1);
-        assert_eq!(diagnostics[0].message, "boom");
-
-        let _ = std::fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn parses_a_published_diagnostic_version() {
-        let params = json!({
-            "uri": "file:///tmp/a.rs",
-            "version": 7,
-            "diagnostics": []
-        });
-        match parse_publish_diagnostics(&params).expect("event") {
-            ServerEvent::Diagnostics { version, .. } => assert_eq!(version, Some(7)),
-            other => panic!("expected diagnostics, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn diagnostics_staleness_rules() {
-        assert!(diagnostics_are_stale(Some(1), Some(2)), "older is stale");
-        assert!(!diagnostics_are_stale(Some(2), Some(2)));
-        assert!(!diagnostics_are_stale(Some(3), Some(2)), "newer is kept");
-        assert!(!diagnostics_are_stale(None, Some(2)), "missing is kept");
-        assert!(!diagnostics_are_stale(Some(1), None));
-    }
-
-    #[test]
-    fn parses_text_document_sync_forms() {
-        assert_eq!(parse_sync(Some(&json!(0))), TextDocumentSyncKind::None);
-        assert_eq!(parse_sync(Some(&json!(1))), TextDocumentSyncKind::Full);
-        assert_eq!(
-            parse_sync(Some(&json!(2))),
-            TextDocumentSyncKind::Incremental
-        );
-        assert_eq!(
-            parse_sync(Some(&json!({ "change": 0 }))),
-            TextDocumentSyncKind::None
-        );
-        assert_eq!(
-            parse_sync(Some(&json!({ "change": 2 }))),
-            TextDocumentSyncKind::Incremental
-        );
-        // An omitted field keeps Kemori's long-standing full-text sync.
-        assert_eq!(parse_sync(None), TextDocumentSyncKind::Full);
-
-        let (_, caps) = parse_initialize(&json!({ "capabilities": { "textDocumentSync": 0 } }));
-        assert_eq!(caps.sync, TextDocumentSyncKind::None);
-    }
-
-    #[test]
-    fn requests_expire_and_bounded() {
-        // Formatting is allowed longer than the other requests.
-        assert!(
-            request_timeout(RequestKind::Formatting) > request_timeout(RequestKind::Completion)
-        );
-
-        let now = Instant::now();
-        let mut pending = HashMap::new();
-        pending.insert(
-            1,
-            PendingRequest {
-                kind: RequestKind::Hover,
-                deadline: now - Duration::from_secs(1),
-            },
-        );
-        pending.insert(
-            2,
-            PendingRequest {
-                kind: RequestKind::Definition,
-                deadline: now + Duration::from_secs(60),
-            },
-        );
-
-        let expired = expire_requests(&mut pending, now);
-        assert_eq!(expired, vec![(1, RequestKind::Hover)]);
-        assert!(!pending.contains_key(&1), "expired entries are removed");
-        assert!(pending.contains_key(&2), "live entries are kept");
-    }
-}
+mod tests;

@@ -20,6 +20,11 @@ pub mod ids {
     pub const CLOSE_ALL: &str = "file.closeAll";
     pub const REVERT: &str = "file.revert";
     pub const CONVERT_TO_UTF8: &str = "file.convertToUtf8";
+    pub const CONVERT_LF: &str = "file.lineEndingLf";
+    pub const CONVERT_CRLF: &str = "file.lineEndingCrlf";
+    pub const TRIM_TRAILING_WHITESPACE: &str = "edit.trimTrailingWhitespace";
+    pub const TOGGLE_READ_ONLY: &str = "edit.toggleReadOnly";
+    pub const ENSURE_FINAL_NEWLINE: &str = "edit.ensureFinalNewline";
     pub const NEW_FILE: &str = "file.new";
     pub const RENAME_FILE: &str = "file.rename";
     pub const DELETE_FILE: &str = "file.delete";
@@ -40,8 +45,11 @@ pub mod ids {
     pub const PASTE: &str = "edit.paste";
     pub const YANK_POP: &str = "edit.yankPop";
     pub const COMPLETE: &str = "edit.complete";
+    pub const SNIPPET: &str = "edit.snippet";
     pub const FIND: &str = "edit.find";
+    pub const FIND_IN_SELECTION: &str = "edit.findInSelection";
     pub const REPLACE: &str = "edit.replace";
+    pub const REPLACE_IN_SELECTION: &str = "edit.replaceInSelection";
     pub const REPLACE_ALL: &str = "edit.replaceAll";
     pub const GOTO_LINE: &str = "edit.gotoLine";
     pub const TOGGLE_COMMENT: &str = "edit.toggleComment";
@@ -54,6 +62,19 @@ pub mod ids {
     pub const MATCHING_BRACKET: &str = "edit.matchingBracket";
     pub const TOGGLE_BREAKPOINT: &str = "debug.toggleBreakpoint";
     pub const DEBUG_START: &str = "debug.start";
+    pub const DEBUG_ATTACH: &str = "debug.attach";
+    pub const DEBUG_CONTINUE: &str = "debug.continue";
+    pub const DEBUG_STEP_OVER: &str = "debug.stepOver";
+    pub const DEBUG_STEP_INTO: &str = "debug.stepInto";
+    pub const DEBUG_STEP_OUT: &str = "debug.stepOut";
+    pub const DEBUG_PAUSE: &str = "debug.pause";
+    pub const DEBUG_STOP: &str = "debug.stop";
+    pub const DEBUG_STACK: &str = "debug.stack";
+    pub const DEBUG_VARIABLES: &str = "debug.variables";
+    pub const DEBUG_ADD_WATCH: &str = "debug.addWatch";
+    pub const DEBUG_WATCHES: &str = "debug.watches";
+    pub const DEBUG_SET_CONDITION: &str = "debug.setCondition";
+    pub const DEBUG_SET_LOGPOINT: &str = "debug.setLogpoint";
     pub const FOLD_TOGGLE: &str = "view.foldToggle";
     pub const FOLD_CLOSE: &str = "view.foldClose";
     pub const FOLD_OPEN: &str = "view.foldOpen";
@@ -71,6 +92,16 @@ pub mod ids {
     pub const SHOW_SYMBOLS: &str = "language.symbols";
     pub const RENAME: &str = "language.rename";
     pub const CODE_ACTIONS: &str = "language.codeActions";
+    pub const CODE_LENS: &str = "language.codeLens";
+    pub const INCOMING_CALLS: &str = "language.incomingCalls";
+    pub const OUTGOING_CALLS: &str = "language.outgoingCalls";
+    pub const SUPERTYPES: &str = "language.supertypes";
+    pub const SUBTYPES: &str = "language.subtypes";
+    pub const IMPLEMENTATION: &str = "language.implementation";
+    pub const TYPE_DEFINITION: &str = "language.typeDefinition";
+    pub const DOCUMENT_LINKS: &str = "language.documentLinks";
+    pub const EXPAND_SELECTION: &str = "edit.expandSelection";
+    pub const SHRINK_SELECTION: &str = "edit.shrinkSelection";
 
     pub const DIAGNOSTICS_NEXT: &str = "diagnostics.next";
     pub const DIAGNOSTICS_PREV: &str = "diagnostics.previous";
@@ -104,10 +135,16 @@ pub mod ids {
     pub const TOGGLE_PANEL: &str = "view.togglePanel";
     pub const PANEL_PROBLEMS: &str = "view.panelProblems";
     pub const PANEL_OUTPUT: &str = "view.panelOutput";
+    pub const PANEL_TERMINAL: &str = "view.panelTerminal";
     pub const PANEL_DEBUG_CONSOLE: &str = "view.panelDebugConsole";
     pub const PANEL_CLEAR: &str = "view.panelClear";
     pub const PANEL_GROW: &str = "view.panelGrow";
     pub const PANEL_SHRINK: &str = "view.panelShrink";
+    pub const TERMINAL_NEW: &str = "view.terminalNew";
+    pub const TERMINAL_CLOSE: &str = "view.terminalClose";
+    pub const TERMINAL_NEXT: &str = "view.terminalNext";
+    pub const TRUST_WORKSPACE: &str = "workspace.trust";
+    pub const REVOKE_TRUST: &str = "workspace.revokeTrust";
     pub const TOGGLE_HIDDEN: &str = "view.toggleHidden";
     pub const TOGGLE_INLINE_DIAGNOSTICS: &str = "view.toggleInlineDiagnostics";
     pub const TOGGLE_WRAP: &str = "view.toggleWrap";
@@ -122,6 +159,14 @@ pub mod ids {
     pub const SETTINGS: &str = "app.settings";
     pub const TOGGLE_MOTION: &str = "app.toggleMotion";
     pub const WELCOME_SCENE: &str = "app.welcomeScene";
+}
+
+/// Which stepping command to send to the debugger.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DebugStep {
+    Over,
+    Into,
+    Out,
 }
 
 /// A single command definition.
@@ -227,6 +272,12 @@ impl CommandRegistry {
             Command::new(CONVERT_TO_UTF8, "Convert to UTF-8", "File", None)
                 .describes("Convert a read-only non-UTF-8 file to UTF-8 so it can be saved")
                 .needs_doc(),
+            Command::new(CONVERT_LF, "Line Endings: LF", "File", None)
+                .describes("Save this file with Unix line endings")
+                .needs_doc(),
+            Command::new(CONVERT_CRLF, "Line Endings: CRLF", "File", None)
+                .describes("Save this file with Windows line endings")
+                .needs_doc(),
             Command::new(NEW_FILE, "New File…", "File", Some("Ctrl+N"))
                 .describes("Create a file in the selected folder"),
             Command::new(RENAME_FILE, "Rename…", "File", None)
@@ -270,6 +321,22 @@ impl CommandRegistry {
             .describes("Put a cursor on every occurrence of the selection")
             .needs_doc(),
             Command::new(
+                EXPAND_SELECTION,
+                "Expand Selection",
+                "Edit",
+                Some("Shift+Alt+→"),
+            )
+            .describes("Grow the selection to the next language-server range")
+            .needs_doc(),
+            Command::new(
+                SHRINK_SELECTION,
+                "Shrink Selection",
+                "Edit",
+                Some("Shift+Alt+←"),
+            )
+            .describes("Shrink the selection to the previous language-server range")
+            .needs_doc(),
+            Command::new(
                 ADD_CURSOR_BELOW,
                 "Add Cursor Below",
                 "Edit",
@@ -300,11 +367,20 @@ impl CommandRegistry {
             Command::new(COMPLETE, "Complete", "Edit", Some("Ctrl+Space"))
                 .describes("Suggest completions for the word being typed")
                 .needs_doc(),
+            Command::new(SNIPPET, "Insert Snippet…", "Edit", None)
+                .describes("Insert a built-in snippet and step through its tab stops")
+                .needs_doc(),
             Command::new(FIND, "Find", "Edit", Some("Ctrl+F"))
                 .describes("Search the active file")
                 .needs_doc(),
+            Command::new(FIND_IN_SELECTION, "Find in Selection", "Edit", None)
+                .describes("Search only inside the current selection")
+                .needs_doc(),
             Command::new(REPLACE, "Replace", "Edit", Some("Ctrl+H"))
                 .describes("Search and replace in the active file")
+                .needs_doc(),
+            Command::new(REPLACE_IN_SELECTION, "Replace in Selection", "Edit", None)
+                .describes("Search and replace only inside the current selection")
                 .needs_doc(),
             Command::new(REPLACE_ALL, "Replace All", "Edit", Some("Alt+Enter"))
                 .describes("Replace every match in the active file")
@@ -314,6 +390,25 @@ impl CommandRegistry {
                 .needs_doc(),
             Command::new(TOGGLE_COMMENT, "Toggle Comment", "Edit", Some("Ctrl+/"))
                 .describes("Comment or uncomment the selected lines")
+                .needs_doc(),
+            Command::new(
+                TRIM_TRAILING_WHITESPACE,
+                "Trim Trailing Whitespace",
+                "Edit",
+                None,
+            )
+            .describes("Remove trailing spaces and tabs from every line")
+            .needs_doc(),
+            Command::new(
+                TOGGLE_READ_ONLY,
+                "Toggle Read-Only Mode",
+                "Edit",
+                Some("Ctrl+Alt+R"),
+            )
+            .describes("Block edits and saves for the active document")
+            .needs_doc(),
+            Command::new(ENSURE_FINAL_NEWLINE, "Ensure Final Newline", "Edit", None)
+                .describes("Add a newline at the end of the file when it is missing")
                 .needs_doc(),
             Command::new(INDENT, "Indent", "Edit", Some("Tab"))
                 .describes("Indent the selection or current line")
@@ -347,16 +442,50 @@ impl CommandRegistry {
             .describes("Jump to the bracket matching the one under the cursor")
             .needs_doc(),
             Command::new(TOGGLE_BREAKPOINT, "Toggle Breakpoint", "Debug", Some("F9"))
-                .describes("Toggle a visual breakpoint marker on the current line")
+                .describes("Toggle a breakpoint on the current line")
                 .needs_doc(),
+            Command::new(DEBUG_START, "Start Debugging", "Debug", None)
+                .describes("Start the debugger for the active file")
+                .needs_doc(),
+            Command::new(DEBUG_ATTACH, "Attach to Debugger…", "Debug", None)
+                .describes("Attach to a process id or host:port with the active language's adapter")
+                .needs_doc(),
+            Command::new(DEBUG_CONTINUE, "Debug: Continue", "Debug", None)
+                .describes("Continue from the current breakpoint (F5 while debugging)"),
+            Command::new(DEBUG_STEP_OVER, "Debug: Step Over", "Debug", Some("F10"))
+                .describes("Run the current statement and stop at the next one"),
+            Command::new(DEBUG_STEP_INTO, "Debug: Step Into", "Debug", Some("F11"))
+                .describes("Step into the function on the current line"),
             Command::new(
-                DEBUG_START,
-                "Debug Adapter Handshake (Preview)",
+                DEBUG_STEP_OUT,
+                "Debug: Step Out",
+                "Debug",
+                Some("Shift+F11"),
+            )
+            .describes("Run until the current function returns"),
+            Command::new(DEBUG_PAUSE, "Debug: Pause", "Debug", None)
+                .describes("Pause a running debuggee"),
+            Command::new(DEBUG_STOP, "Debug: Stop", "Debug", Some("Shift+F5"))
+                .describes("End the debug session and terminate the debuggee"),
+            Command::new(DEBUG_STACK, "Debug: Stack Frames…", "Debug", None)
+                .describes("Inspect the stack of the stopped debuggee"),
+            Command::new(DEBUG_VARIABLES, "Debug: Variables…", "Debug", None)
+                .describes("Inspect the variables captured at the last stop"),
+            Command::new(DEBUG_ADD_WATCH, "Debug: Add Watch…", "Debug", None)
+                .describes("Evaluate an expression at every stop"),
+            Command::new(DEBUG_WATCHES, "Debug: Watch Expressions…", "Debug", None)
+                .describes("Inspect watch expressions and their last values"),
+            Command::new(
+                DEBUG_SET_CONDITION,
+                "Debug: Set Breakpoint Condition…",
                 "Debug",
                 None,
             )
-            .describes("Spawn an adapter and perform the DAP handshake (does not debug yet)")
+            .describes("Run a breakpoint only when an expression is true")
             .needs_doc(),
+            Command::new(DEBUG_SET_LOGPOINT, "Debug: Set Logpoint…", "Debug", None)
+                .describes("Log a message at the current line without stopping")
+                .needs_doc(),
             Command::new(FORMAT, "Format Document", "Language", Some("Ctrl+Shift+I"))
                 .describes("Format the active file with its language formatter")
                 .needs_doc()
@@ -379,6 +508,15 @@ impl CommandRegistry {
                 .describes("Jump to where the symbol is defined")
                 .needs_doc()
                 .capability(Capability::GotoDefinition),
+            Command::new(IMPLEMENTATION, "Go to Implementation", "Language", None)
+                .describes("Jump to an implementation of the symbol")
+                .needs_doc(),
+            Command::new(TYPE_DEFINITION, "Go to Type Definition", "Language", None)
+                .describes("Jump to the declared type of the expression")
+                .needs_doc(),
+            Command::new(DOCUMENT_LINKS, "Document Links…", "Language", None)
+                .describes("List links the language server extracts from the file")
+                .needs_doc(),
             Command::new(
                 FIND_REFERENCES,
                 "Find References",
@@ -405,6 +543,21 @@ impl CommandRegistry {
                 .describes("Show quick fixes and refactors for the cursor")
                 .needs_doc()
                 .capability(Capability::CodeActions),
+            Command::new(CODE_LENS, "Code Lens…", "Language", Some("Ctrl+Shift+."))
+                .describes("Run a code lens reported by the language server")
+                .needs_doc(),
+            Command::new(INCOMING_CALLS, "Incoming Calls…", "Language", None)
+                .describes("Show the language server's call hierarchy for the symbol")
+                .needs_doc(),
+            Command::new(OUTGOING_CALLS, "Outgoing Calls…", "Language", None)
+                .describes("Show what the symbol under the cursor calls")
+                .needs_doc(),
+            Command::new(SUPERTYPES, "Supertypes…", "Language", None)
+                .describes("Show the supertypes of the type under the cursor")
+                .needs_doc(),
+            Command::new(SUBTYPES, "Subtypes…", "Language", None)
+                .describes("Show the subtypes of the type under the cursor")
+                .needs_doc(),
             Command::new(
                 DIAGNOSTICS_NEXT,
                 "Next Diagnostic",
@@ -523,8 +676,21 @@ impl CommandRegistry {
                 .describes("Show diagnostics across the open files"),
             Command::new(PANEL_OUTPUT, "Panel: Output", "View", None)
                 .describes("Show the output of the last task"),
+            Command::new(
+                PANEL_TERMINAL,
+                "Panel: Terminal",
+                "View",
+                Some("Ctrl+Shift+T"),
+            )
+            .describes("Show the integrated terminal, rooted at the project"),
             Command::new(PANEL_DEBUG_CONSOLE, "Panel: Debug Console", "View", None)
                 .describes("Show messages from the debug-adapter preview"),
+            Command::new(TERMINAL_NEW, "Terminal: New Session", "Terminal", None)
+                .describes("Start another shell in the project root"),
+            Command::new(TERMINAL_CLOSE, "Terminal: Close Session", "Terminal", None)
+                .describes("Close the active shell and its processes"),
+            Command::new(TERMINAL_NEXT, "Terminal: Next Session", "Terminal", None)
+                .describes("Switch to the next terminal session"),
             Command::new(PANEL_CLEAR, "Panel: Clear", "View", None)
                 .describes("Clear the output or the debug console"),
             Command::new(PANEL_GROW, "Panel: Grow", "View", None)
@@ -576,6 +742,10 @@ impl CommandRegistry {
                 .describes("Show every shortcut at a glance"),
             Command::new(SETTINGS, "Settings", "General", None)
                 .describes("Adjust Kemori's appearance, editor and completion preferences"),
+            Command::new(TRUST_WORKSPACE, "Trust This Project", "Workspace", None)
+                .describes("Allow this project's tasks, terminal and debugger to run"),
+            Command::new(REVOKE_TRUST, "Revoke Workspace Trust", "Workspace", None)
+                .describes("Ask again before running this project's code"),
         ];
         CommandRegistry { commands }
     }
@@ -589,139 +759,7 @@ impl CommandRegistry {
     }
 }
 
-/// Editor movement keys that are not commands.
-///
-/// Shared by the F1 cheatsheet and the README keymap so the two cannot drift.
-pub const EDITOR_KEYS: &[(&str, &str)] = &[
-    ("Arrows", "move the cursor"),
-    ("Ctrl+←/→", "move by word"),
-    ("Shift+Arrows", "select"),
-    ("Home / End", "line start / end"),
-    ("Ctrl+Home / End", "document start / end"),
-    ("PageUp / PageDown", "scroll a page"),
-    ("F3 / Shift+F3", "find next / previous"),
-    ("Ctrl+PageUp/Down", "previous / next tab"),
-];
-
-/// Context-local keys that are not registry commands (the find bar, the file
-/// tree and the welcome screen).
-pub const CONTEXT_KEYS: &[(&str, &str)] = &[
-    (
-        "Alt+C / Alt+W / Alt+R",
-        "find / project search: toggle case / whole word / regex",
-    ),
-    ("Alt+Enter", "find / project search: replace every match"),
-    ("Space", "changed files: stage or unstage"),
-    ("d", "changed files: show the diff"),
-    ("/", "file tree: filter project files"),
-    (".", "file tree: toggle hidden files"),
-    (
-        "Tab / Shift+Tab",
-        "panel: cycle tabs; project search: next / previous field",
-    ),
-    (
-        "↑ / ↓, PageUp / PageDown",
-        "panel / project search: move through results",
-    ),
-    (
-        "Enter",
-        "panel / project search: open or search; welcome: open",
-    ),
-    (
-        "c",
-        "panel: clear task and project problems, or the current output",
-    ),
-    (
-        "r",
-        "panel: refresh project problems (Problems) / rerun the last task (Output)",
-    ),
-    (
-        "x / h",
-        "panel Output: cancel the running task / task history",
-    ),
-    ("Alt+↑↓", "panel: grow or shrink"),
-    ("Esc", "panel / project search: close"),
-    ("↑ / ↓", "welcome: choose an action"),
-    ("v", "welcome: cycle the animated scene"),
-];
-
-/// Render the keymap as a Markdown table from the command registry plus the
-/// editor and context keys.
-///
-/// `examples/keymap.rs` prints this to regenerate the README block, and
-/// `tests/keymap.rs` fails when `README.md` drifts from it.
-pub fn keymap_markdown() -> String {
-    let registry = CommandRegistry::builtin();
-    let mut out = String::from("| Category | Shortcut | Action |\n| --- | --- | --- |\n");
-
-    let mut order: Vec<&'static str> = Vec::new();
-    let mut groups: HashMap<&'static str, Vec<(&'static str, &'static str)>> = HashMap::new();
-    for command in registry.all() {
-        let Some(shortcut) = command.shortcut else {
-            continue;
-        };
-        if !groups.contains_key(command.category) {
-            order.push(command.category);
-        }
-        groups
-            .entry(command.category)
-            .or_default()
-            .push((shortcut, command.title));
-    }
-    for category in order {
-        for (shortcut, title) in &groups[category] {
-            out.push_str(&format!("| {category} | `{shortcut}` | {title} |\n"));
-        }
-    }
-    for (shortcut, title) in EDITOR_KEYS {
-        out.push_str(&format!("| Editor | `{shortcut}` | {title} |\n"));
-    }
-    for (shortcut, title) in CONTEXT_KEYS {
-        out.push_str(&format!("| Context | `{shortcut}` | {title} |\n"));
-    }
-    out
-}
+include!("keys.rs");
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use std::collections::HashSet;
-
-    #[test]
-    fn command_ids_and_shortcuts_are_unique() {
-        let registry = CommandRegistry::builtin();
-        let mut ids = HashSet::new();
-        let mut shortcuts = HashSet::new();
-        for command in registry.all() {
-            assert!(
-                ids.insert(command.id),
-                "duplicate command id {}",
-                command.id
-            );
-            if let Some(shortcut) = command.shortcut {
-                assert!(
-                    shortcuts.insert(shortcut),
-                    "duplicate shortcut {shortcut} on {}",
-                    command.id
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn core_commands_are_registered() {
-        let registry = CommandRegistry::builtin();
-        for id in [
-            ids::SAVE,
-            ids::SAVE_ALL,
-            ids::PALETTE,
-            ids::COMPLETE,
-            ids::GOTO_DEFINITION,
-            ids::FORMAT,
-            ids::DIFF,
-            ids::SETUP,
-        ] {
-            assert!(registry.get(id).is_some(), "missing command {id}");
-        }
-    }
-}
+mod tests;

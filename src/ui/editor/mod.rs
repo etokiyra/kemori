@@ -18,6 +18,10 @@ use ratatui::widgets::Paragraph;
 use crate::app::overlay::Search;
 use crate::editor::layout::{LineLayout, segment_index, wrap_segments};
 use crate::editor::{Document, Position};
+
+mod empty;
+mod inlay;
+mod selection;
 use crate::git::GitLineChange;
 use crate::language::diagnostics::{Diagnostic, Severity};
 use crate::language::provider::{LanguageProvider, TokenKind};
@@ -46,7 +50,7 @@ pub fn render(
     }
 
     if doc.buffer.len_chars() == 0 {
-        render_empty(frame, area, focused);
+        empty::render_empty(frame, area, focused);
         return if focused {
             Some((area.x, area.y))
         } else {
@@ -331,6 +335,11 @@ struct RowContext {
     layout: LineLayout,
     kinds: Vec<TokenKind>,
     diagnostic_severity: Vec<Option<Severity>>,
+    highlighted: Vec<bool>,
+    /// Inlay hints keyed by the character column where they are inserted.
+    inlay_hints: Vec<(usize, String)>,
+    /// Code-lens titles shown on this logical row.
+    code_lenses: Vec<String>,
     selected: Vec<bool>,
     matched: Vec<bool>,
     current_match: Vec<bool>,
@@ -343,6 +352,8 @@ struct RowContext {
     git_change: Option<GitLineChange>,
     folded: bool,
     breakpoint: bool,
+    /// Whether the breakpoint has a condition or log message.
+    breakpoint_conditional: bool,
     /// The most severe diagnostic touching this line, with how many touch it,
     /// for the inline note.
     note: Option<(Diagnostic, usize)>,
@@ -395,9 +406,25 @@ fn build_row(
         }
     }
 
+    // Language-server document highlights for the symbol under the cursor.
+    let mut highlighted = vec![false; char_count];
+    for (start, end) in doc.document_highlights() {
+        if row < start.row || row > end.row {
+            continue;
+        }
+        let from = if row == start.row { start.col } else { 0 };
+        let to = if row == end.row { end.col } else { char_count };
+        for flag in highlighted.iter_mut().take(to.min(char_count)).skip(from) {
+            *flag = true;
+        }
+    }
+
+    let inlay_hints = inlay::hints_for_row(doc, row, char_count);
+    let code_lenses = inlay::code_lenses_for_row(doc, row);
+
     // Selection and search overlays per original character.
     let mut selected = vec![false; char_count];
-    if let Some((from, to)) = selection_columns(doc, row) {
+    if let Some((from, to)) = selection::selection_columns(doc, row) {
         for flag in selected.iter_mut().take(to.min(char_count)).skip(from) {
             *flag = true;
         }
@@ -458,6 +485,9 @@ fn build_row(
         layout,
         kinds,
         diagnostic_severity,
+        highlighted,
+        inlay_hints,
+        code_lenses,
         selected,
         matched,
         current_match,
@@ -470,6 +500,7 @@ fn build_row(
         git_change: doc.git_change_on_line(row),
         folded: doc.folded.contains(&row),
         breakpoint: doc.has_breakpoint(row),
+        breakpoint_conditional: doc.breakpoint_is_conditional(row),
         note,
     }
 }
@@ -509,7 +540,12 @@ fn render_segment(
             ),
             None => {
                 if context.breakpoint {
-                    ('●', with_bg(theme::error(), base_bg))
+                    let glyph = if context.breakpoint_conditional {
+                        '◆'
+                    } else {
+                        '●'
+                    };
+                    (glyph, with_bg(theme::error(), base_bg))
                 } else {
                     match context.git_change {
                         Some(GitLineChange::Added) => ('+', with_bg(theme::success(), base_bg)),
@@ -555,6 +591,15 @@ fn render_segment(
         let Some((mut ch, original)) = context.layout.cell(cell) else {
             break;
         };
+        // Inlay hints sit before the character at their position.
+        inlay::push_hints(
+            context,
+            &mut spans,
+            &mut run,
+            &mut run_style,
+            original,
+            base_bg,
+        );
         let mut style = theme::token_style(
             context
                 .kinds
@@ -582,6 +627,9 @@ fn render_segment(
         {
             // Mellow `ui.cursor.match`: yellow, bold and underlined.
             style = with_bg(theme::bracket_match(), base_bg);
+        }
+        if context.highlighted.get(original).copied().unwrap_or(false) {
+            style = style.patch(Style::default().bg(theme::document_highlight_bg()));
         }
         if context.selected.get(original).copied().unwrap_or(false) {
             style = style.patch(theme::selectable(theme::selection_bg()));
@@ -622,9 +670,21 @@ fn render_segment(
             run_style = Some(style);
         }
     }
+    if last {
+        inlay::push_hints(
+            context,
+            &mut spans,
+            &mut run,
+            &mut run_style,
+            context.kinds.len(),
+            base_bg,
+        );
+    }
     if let Some(style) = run_style {
         spans.push(Span::styled(run, style));
     }
+
+    let lens_width = inlay::push_code_lenses(context, &mut spans, base_bg, last);
 
     // A secondary caret sitting past the last character is drawn as a block on
     // the final visual row.
@@ -640,7 +700,7 @@ fn render_segment(
     let mut note_width = 0usize;
     let note_allowed = inline_diagnostics && last && (wrapped || display_start == 0);
     if note_allowed && let Some((diagnostic, count)) = &context.note {
-        let used = gutter as usize + (display_end - display_start);
+        let used = gutter as usize + (display_end - display_start) + lens_width;
         let available = (line_width as usize).saturating_sub(used);
         if let Some((note, severity)) = inline_note(diagnostic, *count, available) {
             note_width = note.chars().count();
@@ -656,7 +716,7 @@ fn render_segment(
 
     // Paint the cursorline band across the full width.
     if let Some(bg) = base_bg {
-        let used = gutter as usize + (display_end - display_start) + note_width;
+        let used = gutter as usize + (display_end - display_start) + note_width + lens_width;
         let pad = (line_width as usize).saturating_sub(used);
         if pad > 0 {
             spans.push(Span::styled(" ".repeat(pad), Style::default().bg(bg)));
@@ -664,26 +724,6 @@ fn render_segment(
     }
 
     Line::from(spans)
-}
-
-fn render_empty(frame: &mut Frame, area: Rect, focused: bool) {
-    let mut lines: Vec<Line> = vec![Line::from("")];
-    lines.extend(art::art_lines(art::CAT, theme::dim()));
-    lines.push(Line::from(""));
-    lines.push(Line::from(Span::styled("an empty file · start typing", theme::muted())).centered());
-
-    let block_height = lines.len() as u16;
-    if area.height > block_height {
-        let top = (area.height - block_height) / 2;
-        let mut padded: Vec<Line> = (0..top).map(|_| Line::from("")).collect();
-        padded.extend(lines);
-        lines = padded;
-    }
-    frame.render_widget(Paragraph::new(Text::from(lines)), area);
-
-    if focused {
-        frame.set_cursor_position((area.x, area.y));
-    }
 }
 
 /// Format an inline diagnostic note that fits within `available` columns.
@@ -735,21 +775,6 @@ fn severity_style(severity: Severity) -> Style {
         Severity::Info => theme::info(),
         Severity::Hint => theme::hint(),
     }
-}
-
-/// The selected column range on a row, if the selection covers it.
-fn selection_columns(doc: &Document, row: usize) -> Option<(usize, usize)> {
-    let (start, end) = doc.selection_range()?;
-    if row < start.row || row > end.row {
-        return None;
-    }
-    let from = if row == start.row { start.col } else { 0 };
-    let to = if row == end.row {
-        end.col
-    } else {
-        doc.buffer.line_char_len(row)
-    };
-    Some((from, to))
 }
 
 #[cfg(test)]

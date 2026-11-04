@@ -16,12 +16,19 @@ impl App {
             PickerAction::UpdateTool(tool) => self.install_tool(tool),
             PickerAction::RemoveTool(tool) => self.remove_tool(tool),
             PickerAction::ApplyCodeAction(index) => self.apply_code_action(index),
+            PickerAction::RunCodeLens(index) => self.run_code_lens(index),
+            PickerAction::HierarchyItem(index) => self.resolve_hierarchy_item(index),
+            PickerAction::OpenLink(target) => self.open_link(target),
             PickerAction::DeletePath(path) => self.delete_path(&path),
             PickerAction::ShowDiff { path, staged } => self.show_diff(path, Some(staged)),
-            PickerAction::RunTask(task) => self.run_task(task),
+            PickerAction::RunTask(task) => {
+                self.ensure_trust(super::trust::TrustIntent::RunTask(task))
+            }
             PickerAction::ShowTaskOutput(index) => self.show_task_history(index),
             PickerAction::SetLanguage(language) => self.set_language(language),
             PickerAction::SwitchWorkspace(index) => self.switch_workspace(index),
+            PickerAction::ResolveTrust(decision) => self.resolve_trust(decision),
+            PickerAction::InsertSnippet(snippet) => self.insert_snippet(&snippet),
         }
     }
 
@@ -155,6 +162,10 @@ impl App {
                     Err(err) => self.set_error(format!("Copy failed: {err}")),
                 }
             }
+            PromptKind::DebugWatch => self.add_debug_watch(input),
+            PromptKind::DebugAttach => self.start_attach(&input),
+            PromptKind::BreakpointCondition => self.set_breakpoint_condition(input),
+            PromptKind::BreakpointLog => self.set_breakpoint_log(input),
             PromptKind::CommitMessage => {
                 if input.is_empty() {
                     self.set_error("No commit message provided");
@@ -184,6 +195,11 @@ impl App {
             ids::CLOSE_ALL => self.close_all(),
             ids::REVERT => self.revert_file(),
             ids::CONVERT_TO_UTF8 => self.convert_to_utf8(),
+            ids::CONVERT_LF => self.convert_line_endings(crate::editor::buffer::LineEnding::Lf),
+            ids::CONVERT_CRLF => self.convert_line_endings(crate::editor::buffer::LineEnding::Crlf),
+            ids::TRIM_TRAILING_WHITESPACE => self.trim_trailing_whitespace(),
+            ids::TOGGLE_READ_ONLY => self.toggle_read_only(),
+            ids::ENSURE_FINAL_NEWLINE => self.ensure_final_newline(),
             ids::NEW_FILE => self.new_file(),
             ids::RENAME_FILE => self.rename_selected(),
             ids::DELETE_FILE => self.delete_selected(),
@@ -215,6 +231,8 @@ impl App {
             ids::SELECT_ALL => self.with_doc(|d| d.select_all()),
             ids::SELECT_NEXT => self.with_doc(|d| d.select_next_occurrence()),
             ids::SELECT_ALL_OCCURRENCES => self.with_doc(|d| d.select_all_occurrences()),
+            ids::EXPAND_SELECTION => self.expand_selection(),
+            ids::SHRINK_SELECTION => self.shrink_selection(),
             ids::ADD_CURSOR_BELOW => self.with_doc(|d| d.add_cursor_below()),
             ids::ADD_CURSOR_ABOVE => self.with_doc(|d| d.add_cursor_above()),
             ids::COPY => self.copy(),
@@ -222,6 +240,7 @@ impl App {
             ids::PASTE => self.paste(),
             ids::YANK_POP => self.yank_pop(),
             ids::COMPLETE => self.open_completion(),
+            ids::SNIPPET => self.open_snippet_picker(),
             ids::HOVER => self.open_hover(),
             ids::SETUP => self.language_setup(),
             ids::SET_LANGUAGE => self.set_language_picker(),
@@ -234,6 +253,12 @@ impl App {
             ids::CANCEL_TASK => self.cancel_task(),
             ids::RERUN_TASK => self.rerun_task(),
             ids::TASK_HISTORY => self.open_task_history(),
+            ids::PANEL_TERMINAL => self.open_terminal(),
+            ids::TERMINAL_NEW => self.start_terminal_session(),
+            ids::TERMINAL_CLOSE => self.close_terminal_session(),
+            ids::TERMINAL_NEXT => self.next_terminal_session(),
+            ids::TRUST_WORKSPACE => self.trust_workspace(),
+            ids::REVOKE_TRUST => self.revoke_workspace_trust(),
             ids::REFRESH_PROBLEMS => self.refresh_project_problems(),
             ids::CHANGED_FILES => self.open_changed_files(),
             ids::GIT_COMMIT => self.commit_changes(),
@@ -244,7 +269,9 @@ impl App {
             ids::GIT_FETCH => self.git_fetch(),
             ids::GITHUB_CREATE_REPO => self.github_create_repo(),
             ids::FIND => self.open_search(false),
+            ids::FIND_IN_SELECTION => self.open_search_in_selection(false),
             ids::REPLACE => self.open_search(true),
+            ids::REPLACE_IN_SELECTION => self.open_search_in_selection(true),
             ids::REPLACE_ALL => self.replace_all(),
             ids::GOTO_LINE => self.open_prompt(PromptKind::GotoLine, "Go to line", "42"),
             ids::TOGGLE_COMMENT => self.toggle_comment(),
@@ -256,7 +283,36 @@ impl App {
             ids::DELETE_LINE => self.with_doc(|d| d.delete_line()),
             ids::MATCHING_BRACKET => self.goto_matching_bracket(),
             ids::TOGGLE_BREAKPOINT => self.toggle_breakpoint(),
-            ids::DEBUG_START => self.debug_start(),
+            ids::DEBUG_START => self.ensure_trust(super::trust::TrustIntent::DebugPreview),
+            ids::DEBUG_ATTACH => self.open_prompt(
+                PromptKind::DebugAttach,
+                "Attach to process id or host:port",
+                "e.g. 1234 or 127.0.0.1:5678",
+            ),
+            ids::DEBUG_CONTINUE => self.debug_continue(),
+            ids::DEBUG_STEP_OVER => self.debug_step(crate::commands::DebugStep::Over),
+            ids::DEBUG_STEP_INTO => self.debug_step(crate::commands::DebugStep::Into),
+            ids::DEBUG_STEP_OUT => self.debug_step(crate::commands::DebugStep::Out),
+            ids::DEBUG_PAUSE => self.debug_pause(),
+            ids::DEBUG_STOP => self.debug_stop(),
+            ids::DEBUG_STACK => self.debug_stack_picker(),
+            ids::DEBUG_VARIABLES => self.debug_variables_picker(),
+            ids::DEBUG_ADD_WATCH => self.open_prompt(
+                PromptKind::DebugWatch,
+                "Watch expression",
+                "e.g. user.name or items.len()",
+            ),
+            ids::DEBUG_WATCHES => self.debug_watches_picker(),
+            ids::DEBUG_SET_CONDITION => self.open_prompt(
+                PromptKind::BreakpointCondition,
+                "Breakpoint condition (empty clears)",
+                "e.g. i > 10",
+            ),
+            ids::DEBUG_SET_LOGPOINT => self.open_prompt(
+                PromptKind::BreakpointLog,
+                "Logpoint message (empty clears)",
+                "e.g. value is {value}",
+            ),
             ids::TOGGLE_TREE => self.toggle_tree(),
             ids::FOCUS_TREE => self.focus_tree(),
             ids::TOGGLE_HIDDEN => self.toggle_hidden(),
@@ -278,8 +334,16 @@ impl App {
             ids::SETTINGS => self.open_settings(),
             ids::RENAME => self.rename_symbol(),
             ids::CODE_ACTIONS => self.code_actions(),
+            ids::CODE_LENS => self.open_code_lens_picker(),
+            ids::INCOMING_CALLS => self.incoming_calls(),
+            ids::OUTGOING_CALLS => self.outgoing_calls(),
+            ids::SUPERTYPES => self.supertypes(),
+            ids::SUBTYPES => self.subtypes(),
             ids::FORMAT => self.format_document(),
             ids::GOTO_DEFINITION => self.goto_definition(),
+            ids::IMPLEMENTATION => self.goto_implementation(),
+            ids::TYPE_DEFINITION => self.goto_type_definition(),
+            ids::DOCUMENT_LINKS => self.open_document_links(),
             ids::FIND_REFERENCES => self.find_references(),
             ids::SHOW_SYMBOLS => self.open_symbols(),
             ids::DIAGNOSTICS_NEXT => self.goto_diagnostic(1),
@@ -329,6 +393,7 @@ impl App {
             let purpose = match tool.purpose() {
                 crate::language::tools::ToolPurpose::LanguageServer => "language server",
                 crate::language::tools::ToolPurpose::Formatter => "formatter",
+                crate::language::tools::ToolPurpose::DebugAdapter => "debug adapter",
             };
             let label = format!("{}  ·  {} {purpose}", tool.label(), tool.language().name());
             let item = if status.available {

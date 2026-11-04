@@ -1,10 +1,16 @@
 # AUR packaging for Kemori
 
+> **Publication is currently blocked.** AUR account registration has been
+> disabled since the AUR incident a few months ago, so these packages cannot be
+> pushed yet. They remain ready for the maintainer to refresh and publish when
+> registration reopens. Until then, install Kemori from crates.io, the
+> `.deb`/`.rpm` release assets, or `make install`.
+
 This directory contains two ready-to-push AUR packages:
 
 | Directory | AUR package | Source |
 | --- | --- | --- |
-| `kemori/` | stable release | GitHub tag `v3.0.0` |
+| `kemori/` | stable release | GitHub tag `v3.0.0` (refresh pending publication) |
 | `kemori-git/` | VCS package | `master` from GitHub |
 
 Both install `/usr/bin/kemori`, so a normal Arch/Artix `sudo kemori` resolves the

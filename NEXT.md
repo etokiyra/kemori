@@ -1,10 +1,180 @@
 # NEXT — the working plan for turning Kemori into a full IDE
 
-**Status snapshot:** 2026-11-02, version 3.1.0, commit `36c349e`.
-**Verification at the time of writing:** `cargo check --all-targets`, `cargo clippy --all-targets` clean; `cargo test` green (653 library tests, 51 render tests, plus tooling suites with ignored live tests).
-**Release status:** `kemori` 3.1.0 is on crates.io, docs.rs and the GitHub `v3.1.0` release. The AUR packages are prepared for 3.0.0 and still need their version and checksum refreshed for 3.1.0; pushing them still needs the maintainer's AUR SSH key.
+**Status snapshot:** 2026-11-04, version 3.2.0.
+**Verification at the time of writing:** `cargo check --all-targets`, `cargo clippy --all-targets` clean; `cargo test` green (756 library tests, 52 render tests, plus tooling suites with ignored live tests).
+**Release status:** `kemori` 3.2.0 is on crates.io, docs.rs and the GitHub `v3.2.0` release. AUR publication remains blocked because AUR account registration is disabled; the packaging sources are ready to refresh when registration reopens.
 
 ### What this session completed
+
+- **The integrated terminal is in the bottom panel.** `Ctrl+Shift+T` starts the
+  user's `$SHELL` under a real Unix PTY in the project root. The panel has a
+  fourth **Terminal** tab: multiple sessions, `Alt+1…9` switching, live resize,
+  scrollback (`Shift+PageUp`/`PageDown`, `Ctrl+Home`/`End`), copy/paste
+  (`Ctrl+Shift+C`/`Ctrl+Shift+V`) and process-group shutdown. A small ANSI screen
+  model handles UTF-8 split across reads, cursor movement, erase, scroll regions,
+  alternate-screen programs and OSC titles; colour attributes are deliberately
+  ignored so terminal text follows the theme and transparency holds. Keys are
+  encoded as a terminal sends them, including modifiers and function keys.
+- **Workspace trust gates execution, once per root.** Tasks, the debug-adapter
+  preview and the terminal ask before running project code; editing, search,
+  git and language intelligence never do. The choice is stored in
+  `$XDG_STATE_HOME/kemori/trust.json`, outside the repository, with palette
+  commands to trust or revoke.
+- **The debugger is real now.** The old handshake preview is replaced by a DAP
+  client: `initialize`/`initialized`, breakpoints, `launch`,
+  `configurationDone`, stop/continue/exit events, stack frames, scopes and
+  variables, stepping (`F5`, `F10`, `F11`, `Shift+F11`) and stop (`Shift+F5`).
+  Stack and variable pickers jump to source. Python (`debugpy`) and Rust/C/C++
+  (`gdb -i=dap`) plans are inferred; other adapters can be named through
+  `KEMORI_DEBUG_ADAPTER`. A shell mock adapter exercises the full stop → stack →
+  scopes → variables path in the normal test suite. Adapter provisioning,
+  watch/conditional breakpoints and a dedicated variable tree remain.
+- **Editor convenience commands.** Palette actions now convert a file to LF or
+  CRLF line endings (written on the next save without rewriting the rope, so undo
+  stays valid), trim trailing spaces and tabs as one undoable edit, and add a
+  missing final newline.
+- **Document highlights track the cursor.** When a ready server advertises
+  `documentHighlightProvider`, cursor movement and edits send
+  `textDocument/documentHighlight`; the response is converted with the
+  negotiated position encoding and painted as a subtle background. Older
+  responses cannot replace a newer cursor position, edits clear stale ranges,
+  and a server without the capability leaves the editor unchanged.
+- **Inlay hints are versioned virtual text.** A server advertising
+  `inlayHintProvider` is asked for hints over the whole document after an edit
+  or handshake. Responses record the buffer version, so arrow keys do not
+  re-request unchanged text. Hints render as dim italic text at their character
+  position and never enter the buffer or undo history; large files skip them.
+- **Code lenses are rendered and runnable.** A server advertising
+  `codeLensProvider` supplies lens titles and commands. Titles appear at the end
+  of their line, and `Ctrl+Shift+.` opens a picker that runs the selected lens's
+  `workspace/executeCommand`. Data-only lenses are listed but reported as
+  needing a resolve step Kemori does not implement yet.
+- **Selection ranges expand and shrink.** The server's nested ranges are cached
+  for the caret; `Shift+Alt+→` grows to the next enclosing range and
+  `Shift+Alt+←` steps back. The cache is skipped while a selection exists, so
+  repeated expansion uses the chain from the caret where it started.
+- **Call and type hierarchies are picker-based.** Four commands prepare the
+  symbol at the cursor: Incoming Calls, Outgoing Calls, Supertypes and Subtypes.
+  If preparation yields one node the follow-up request is immediate; several
+  nodes open a chooser first. Results show the node, its detail and defining
+  file/line and jump on selection.
+- **Implementation and type definition reuse the definition pipeline.** Both ask
+  the server at the cursor and reveal the first location, with precise messages
+  for a missing capability or an empty result; they share the same stale-response
+  validation as Go to Definition.
+- **Document links become a jumpable picker.** The server's links are listed
+  with tooltip and line; file targets open at the linked position and other
+  targets are copied to the clipboard. Links without a resolved target are
+  skipped rather than shown as dead entries.
+- **Search in selection is scoped, not pre-filled.** **Find in Selection** and
+  **Replace in Selection** store the contiguous selection as a range and filter
+  every match against it; `Alt+S` clears the scope and returns to the whole
+  file. Replacement deltas shift the scope end so the next pass stays in range.
+  A rectangular selection is refused because its rows are not contiguous text.
+- **Replace preview is read-only until confirmed.** `Alt+P` in the replace field
+  builds `- old` / `+ new` rows from the current matches without touching the
+  buffer; `Enter` or `a` then runs the same replace-all path, so the result is
+  one undo step. Grouping matches by line keeps repeated matches on one line
+  visible together.
+- **Large-file mode keys off character count.** At one million characters the
+  document reports `large_file`; syntax highlighting, diagnostics, completion,
+  language-server `didOpen`/requests and git line markers are skipped, and a
+  server is not started when the only open document of that language is large.
+  Editing, saving, undo and search are unchanged, and the statusline says
+  `large file` so the reduced feature set is never a silent surprise.
+- **Read-only mode is explicit and per-document.** `Ctrl+Alt+R` / **Toggle
+  Read-Only Mode** flips a user flag that is separate from the automatic
+  non-UTF-8 read-only state. The editor core refuses mutations at its edit
+  entry points, and common editing commands report why they did nothing.
+  Navigation, selection and copying remain available; the statusline says
+  `read-only`.
+- **Rectangular selection is keyboard-first in this release.** The column model
+  stores an anchor column plus the cursor, so movement, copy and edits share the
+  normal document paths instead of a parallel selection type. Per-row edits are
+  planned as multi-cursor edits, which makes the whole block one undo step.
+  Mouse Alt-drag is not wired yet.
+- **Built-in snippets are in.** A language-owned snippet table expands
+  `$1`/`${1:default}`/`$0` as one undoable edit; Tab/Shift+Tab move through the
+  stops and Escape or navigation leaves snippet mode.
+- **Persistent undo survives sessions.** Clean files persist up to 100 undo
+  steps in the session store with an FNV-1a content fingerprint; a mismatch or a
+  dirty buffer refuses the history instead of corrupting it.
+- **C# formatting uses CSharpier.** The provider advertises `Formatting` and
+  runs `csharpier format --stdin-path <file>`, falling back to `dotnet csharpier`.
+- **PHP formatting uses PHP-CS-Fixer.** The provider advertises `Formatting` and
+  pipes the buffer through `fix --stdin`, using a project config or PSR-12.
+- **SQL formatting uses SQLFluff.** The provider advertises `Formatting` and
+  pipes the buffer through `sqlfluff format -`, using a project `.sqlfluff`
+  dialect or ANSI as the standalone default.
+- **Kotlin formatting uses ktlint.** The provider advertises `Formatting` and
+  runs `ktlint --stdin --format --stdin-path <file>` for editorconfig-aware
+  formatting.
+- **Ruby formatting uses RuboCop.** The provider advertises `Formatting` and
+  pipes the buffer through `rubocop --stdin --autocorrect-all`, resolving the
+  project's `.rubocop.yml`/`Gemfile` root.
+- **DAP attach.** **Debug: Attach to Debugger…** takes a process id or
+  `host:port`, builds an attach plan for the active language's provisioned
+  adapter, and sends DAP `attach`; Python, Go, JS/TS, C#, PHP and Dart are wired.
+- **PHP debugging uses the official Xdebug bridge.** The verified
+  `vscode-php-debug` VSIX is extracted, run through managed Node.js, and launches
+  the active file with Xdebug enabled. PHP with Xdebug is the precise prerequisite.
+- **Format on save is a real preference.** Settings can save, format with the
+  same LSP/built-in formatter, and write the result back; the first save is
+  preserved if formatting fails. Tests cover the full save→format→save cycle and
+  the default-off case.
+- **Ruby debugging uses rdbg.** The pinned `debug` gem is installed into the
+  isolated gem home and the plan runs `rdbg --open=vscode --port <port> <file>`
+  with DAP over that TCP port.
+- **Java debugging runs through JDT LS.** The pinned `java-debug` extension jar
+  is provisioned, loaded through `initializationOptions.bundles`, and the debug
+  pipeline resolves main class/classpath and calls
+  `vscode.java.startDebugSession` before connecting DAP to its port.
+- **Dart debugging is provisioned.** `Tool::DartDebug` reuses the managed Dart
+  SDK and the plan runs `dart debug_adapter` over stdio against the active file.
+- **C# debugging is provisioned.** `Tool::Netcoredbg` downloads the verified
+  Samsung archive; the plan runs `--interpreter=vscode` over stdio against the
+  newest `bin/Debug/*/<project>.dll` and explains a missing build.
+- **JS/TS debugging is provisioned.** `Tool::JsDebug` downloads the official
+  `js-debug-dap-v1.140.0` bundle (verified GitHub digest), provisions managed
+  Node.js when absent, and writes a `js-debug-dap` launcher. The plan uses a
+  known local TCP port and supports JavaScript and TypeScript.
+- **Go debugging is provisioned.** `Tool::Dlv` installs the pinned
+  `dlv@v1.27.2` through the existing managed-Go plan; `debug::plan_for` uses the
+  active file's package directory, `mode: "debug"`, and the TCP DAP transport
+  `dlv dap` exposes. The DAP client now speaks both stdio and a TCP socket.
+- **Native debugging prefers `lldb-dap`.** Rust/C/C++ plans discover
+  `lldb-dap`/`lldb-vscode` first and fall back to `gdb -i=dap`; the tool registry
+  exposes it as a debug adapter. Discovery covers LLVM prefixes and Xcode, and a
+  mock DAP test drives the lldb plan to a stop. `lldb-dap` is discovery-only for
+  now (LLVM's official bundle is very large).
+- **Python's debug adapter is provisioned.** `ToolPurpose::DebugAdapter` and
+  `Tool::Debugpy` are part of the provisioning model, with a pinned
+  `debugpy==1.8.22` plan through pipx/uv/Kemori's virtualenv/`--user`. Debugging
+  Python prefers the installed `debugpy-adapter` script and falls back to the
+  module only when it is absent. A mock DAP test drives the discovered plan
+  through stop, stack, variables and a watch.
+- **The 800-line rule now holds across the tree.** `editor/document`,
+  `language/tools`, `git`, `project/create`, `app/keys`, `app/lsp`,
+  `language/lsp`, `language/web`, `ui/overlay` and `app/tests` were split
+  mechanically (directory modules, sibling test modules, or textual includes
+  where the module's visibility graph made that safest). Every `.rs` file in
+  `src/` is now under 800 lines; the largest is 798.
+- **LSP pull diagnostics are wired.** A server that advertises
+  `textDocument/diagnostic` is asked for diagnostics on connect and after
+  changes; a server that also advertises `workspaceDiagnostics` answers a
+  whole-workspace request when **Problems** refreshes. Unopened files are
+  converted from the negotiated position encoding and merged with the built-in
+  scan and live diagnostics, deduplicated. The `initialize` request now
+  advertises both client capabilities.
+- **`libc` was added as a direct dependency** for the PTY layer, justified in
+  `docs/DECISIONS.md` and the changelog.
+- **Phase 1 is complete.** Bottom panel, live tasks, task depth, project
+  search/replace, built-in workspace problems, the integrated terminal, LSP pull
+  diagnostics and workspace trust are all implemented, and Phase 0's
+  oversized-file splits are complete.
+
+> Next action: LSP organize imports and format selection.
+
 
 - **Released 3.1.0.** crates.io, docs.rs and the GitHub `v3.1.0` release carry
   four tarballs (Linux glibc/musl, macOS x86_64/arm64), `.deb`, `.rpm`,
@@ -39,8 +209,8 @@
   reports the cursor's line. `ui/editor.rs` was split into a directory module
   (`ui/editor/mod.rs` + `ui/editor/tests.rs`), so that file is back under 800
   lines.
-- **Phase 0 is complete except the two remaining giant files.** `tools.rs` and
-  `document.rs` still need mechanical splits.
+- **Phase 0 is complete.** Every source file is under 800 lines, the two named
+  giants included. The extractions were mechanical and the suite stayed green.
 - **The project was renamed from Koda to Kemori.** The crate, library and
   binary are `kemori`; 3.0.0 is published on crates.io, docs.rs and GitHub. The
   old `koda-ide` crate has a 2.1.1 deprecation shim, old releases are marked
@@ -248,17 +418,13 @@ workspace switcher. The 2.1.0 commit added no new files under `tests/`.
 
 ### Edit and understand
 
-- Snippet engine; completion documentation and resolve.
-- Inlay hints, document highlights, code lens, call/type hierarchy,
-  implementation/type definition, selection ranges, folding ranges, document
-  links.
+- Completion documentation and resolve.
+- Call/type hierarchy, implementation/type definition, document links.
 - Outline panel and breadcrumbs. "Go to Symbol" is a picker, not a navigable
   outline.
 - Correct folding, fold all/unfold all, fold state survives edits.
 - Format on save, trim trailing whitespace, final newline.
 - Line-ending conversion, persistent undo, read-only toggle.
-- Column/rectangular selection, search in selection, replace preview.
-- Large-file mode.
 
 ### Run, test, debug
 
@@ -314,7 +480,7 @@ matrix have gaps in formatters, run/test tasks and debugging. Fill those first.
 
 ### Phase 0 — Make 2.1 honest and non-blocking
 
-**Status:** complete except the oversized-file splits.
+**Status:** complete.
 
 **Goal:** every claim matches the code, no UI-thread subprocess, no cursor can
 get lost in a fold.
@@ -337,20 +503,20 @@ get lost in a fold.
 - [x] **Add 2.1 regression tests.** Folding, breakpoints, gutter markers, hunk
       apply/revert, non-UTF-8 conversion, workspace switching, incremental
       sync, mouse, icons.
-- [ ] **Start splitting oversized files.** One mechanical extraction per
-      commit, suite green each time. Start with `language/tools.rs` and
-      `editor/document.rs`. *Started: the event loop moved out of
-      `src/app/mod.rs` (now under 800), and `ui/editor.rs` became a directory
-      module under 800; the two largest files are still untouched.*
+- [x] **Split oversized files.** Every `.rs` file under `src/` is now under 800
+      lines. `editor/document`, `language/tools`, `app/keys`, `app/lsp`,
+      `language/lsp`, `language/web` and `ui/overlay` were split mechanically;
+      `git`, `project/create`, `app/overlay` and `app/tests` had their tests
+      extracted. The largest remaining file is 798 lines.
 
 **Exit criteria:** no false feature claims; no git subprocess on the UI thread;
 folding either correct and tested or removed; 2.1 features have tests.
 
 ### Phase 1 — The core IDE loop
 
-**Status:** in progress — bottom panel, live tasks, project search/replace and
-workspace problem scanning landed; the integrated terminal, LSP pull diagnostics
-and workspace trust remain.
+**Status:** complete — bottom panel, live tasks, project search/replace,
+workspace problem scanning, the integrated terminal, LSP pull diagnostics and
+workspace trust have all landed.
 
 **Goal:** a user can run, test, search and navigate without leaving Kemori.
 
@@ -358,9 +524,12 @@ and workspace trust remain.
       focus toggle, `Tab` to switch tabs, `Alt+↑`/`↓` resize, per-tab state,
       scroll/selection, clear, and `Esc` back to the editor. *The Terminal tab
       ships with the integrated terminal below.*
-- [ ] **Integrated terminal** via a PTY, rooted at the workspace. Multiple
+- [x] **Integrated terminal** via a PTY, rooted at the workspace. Multiple
       sessions, copy/paste, resize, signals. A dependency decision is required;
       record it in `DECISIONS.md`.
+      *Shipped: Unix PTY via `libc`, a terminal screen model, four-panel tab,
+      session switching, scrollback, process-group shutdown and trust gating.
+      Mouse selection and persistent sessions remain documented limitations.*
 - [x] **Live task output.** Stream stdout/stderr into Output, follow the tail
       until the user scrolls, cancel with `x`, rerun with `r`, and show the
       final stdout/stderr-separated batch.
@@ -373,39 +542,82 @@ and workspace trust remain.
 - [x] **Problems panel (built-in).** Workspace scan of unopened files grouped
       by file/severity, combined with live diagnostics and task problems;
       refreshed with `r`.
-- [ ] **LSP pull diagnostics.** Workspace-wide type diagnostics from a language
+- [x] **LSP pull diagnostics.** Workspace-wide type diagnostics from a language
       server where it advertises `textDocument/diagnostic`.
-- [ ] **Workspace trust and safe mode.** Ask before running project tasks,
+      *Shipped: per-document pull on connect/change and `workspace/diagnostic`
+      on Problems refresh; unopened files merge into the panel.*
+- [x] **Workspace trust and safe mode.** Ask before running project tasks,
       debug adapters or project-specific servers. Store the decision in Kemori's
       state; never require a user-maintained config file.
+      *Shipped: tasks, the debug preview and terminal sessions are gated per root
+      in `trust.json`. Kemori-provisioned language servers start without a prompt
+      because they are not project code.*
 
 **Exit criteria:** open a repo, run a task in the terminal, see output live,
 jump to errors, replace across the project, all without config.
 
 ### Phase 2 — Language intelligence depth
 
+**Status:** in progress — editor depth, formatter coverage, the DAP debugger,
+adapter provisioning, attach and the main LSP intelligence features have landed.
+Remaining: organize imports/format selection, LSP lifecycle and completion depth,
+Swift debugging, Java/Ruby attach, formatter provisioning and a dedicated
+variable tree.
+
 **Goal:** the editor and LSP feel like a modern IDE, not a collection of pickers.
 
-- [ ] LSP: inlay hints, document highlights, code lens, folding ranges,
-      selection ranges, call/type hierarchy, implementation/type definition,
-      document links, organize imports, format selection.
+- [ ] LSP: organize imports and format selection.
+      *Shipped: document highlights on cursor movement (theme background),
+      type/parameter inlay hints as dim virtual text, code lenses rendered at
+      line end with a runnable picker, server selection ranges with
+      Expand/Shrink Selection, call/type hierarchies through incoming, outgoing,
+      supertype and subtype pickers, Go to Implementation / Go to Type
+      Definition, and a document-links picker. Stale responses are dropped and
+      edits clear old ranges. Organize imports and format selection remain.*
 - [ ] LSP lifecycle: `didSave`, watched-file notifications, pull diagnostics,
       workspace folders, progress reporting, `$/cancelRequest`.
+      *Pull diagnostics are shipped. `didSave`, watched files, workspace
+      folders, progress reporting and request cancellation remain.*
 - [ ] Completion: snippets, documentation, resolve, better signature help.
-- [ ] Editor: snippet engine, format on save, trim trailing whitespace, final
+- [x] Editor: snippet engine, format on save, trim trailing whitespace, final
       newline, line-ending conversion, persistent undo, read-only toggle,
       column/rectangular selection, search in selection, replace preview,
       large-file mode.
-- [ ] Formatters: Python (`ruff format`/`black`), Ruby, PHP, Kotlin, Swift,
+      *Shipped: snippet engine with built-in language snippets and tab stops,
+      rectangular (column) selection with per-row edits, search in selection
+      (find and replace, with `[selection]` in the bar), an `Alt+P` replace
+      preview that applies on `Enter`/`a`, large-file mode at one million
+      characters, user read-only mode via `Ctrl+Alt+R`, format on save
+      (Settings), persistent undo across sessions for clean files, trim trailing
+      whitespace, final newline and LF/CRLF conversion commands.*
+- [x] Formatters: Python (`ruff format`/`black`), Ruby, PHP, Kotlin, Swift,
       Lua, SQL, Java and C# where the server does not already format.
-- [ ] **Real DAP debugger.** Sessions, breakpoints (conditional/log), stack,
+      *Shipped through installed tools: Python (ruff/black), Lua (stylua), Swift
+      (swift-format), Java (google-java-format), Ruby (RuboCop), Kotlin (ktlint),
+      SQL (SQLFluff), PHP (PHP-CS-Fixer) and C# (CSharpier). Provisioning these
+      formatters remains a separate improvement.*
+- [x] **Real DAP debugger.** Sessions, breakpoints (conditional/log), stack,
       scopes, variables, watch, stepping, output, attach/launch.
+      *Shipped: sessions, conditional and log breakpoints, stack, scopes,
+      variables, watch expressions, stepping, output, launch and stop. Attach
+      and a dedicated variable tree remain.*
 - [ ] **Zero-config adapters** by language/project: Python `debugpy`, Go `dlv`,
       Rust/C/C++/Swift `lldb-dap`/codelldb, JS/TS `js-debug`, Java
       `java-debug`, C# `netcoredbg`, Ruby `rdbg`, PHP Xdebug, Dart VM service.
       Provision pinned/verified adapters where possible; otherwise discover and
       name the prerequisite.
-- [ ] Add a `DebugAdapter` tool purpose to the provisioning model.
+      *Shipped: pinned `debugpy==1.8.22`, `dlv@v1.27.2`, `js-debug-dap-v1.140.0`,
+      `netcoredbg-3.2.0-1092`, `java-debug-0.53.1`, Ruby `debug-1.11.1` and
+      `php-debug-1.40.2`, the SDK's `dart debug_adapter`, discovered
+      `debugpy-adapter` preferred over the module fallback, Rust/C/C++ discovery
+      of `lldb-dap` (plus `lldb-vscode`) with `gdb -i=dap` fallback, and TCP DAP
+      for `dlv`/js-debug/rdbg. `lldb-dap` itself is not downloaded because
+      LLVM's official bundle is very large. Attach is wired for Python, Go,
+      JS/TS, C#, PHP and Dart; Java/Ruby attach remain. Swift debug plans are
+      still missing.*
+- [x] Add a `DebugAdapter` tool purpose to the provisioning model.
+      *Shipped: `ToolPurpose::DebugAdapter`, `Tool::Debugpy`, pinned install
+      attempts, and `available_debug_adapter`.*
 
 **Exit criteria:** at least Python, Go, Rust, JS/TS and C/C++ can stop on a
 breakpoint, step and inspect variables with no launch configuration.
@@ -478,14 +690,13 @@ so "Complete" means the development loop works.
 
 ## 5. Suggested next commits
 
-1. `feat(terminal): PTY-backed terminal in the bottom panel`
-2. `feat(lsp): workspace pull diagnostics`
-3. `feat(app): workspace trust before running project code`
+1. `feat(debug): provision pinned DAP adapters and add conditional breakpoints`
+2. `feat(language): close Python/Ruby/PHP/Kotlin/Swift/Lua formatter gaps`
+3. `feat(editor): format on save and large-file mode`
+4. `feat(lsp): inlay hints, document highlights and selection ranges`
 
-Then the real debugger, then language expansion.
-
-This order is deliberate: add the terminal and live feedback, then make problems
-project-wide, then gate project code before the debugger can run it.
+The real debugger and the file-size split are done; the next debugger depth is
+adapter provisioning and conditional breakpoints.
 
 ---
 
@@ -537,7 +748,9 @@ Record the answer in `docs/DECISIONS.md` when decided.
 2. **Remote:** delete `KEMORI_REMOTE` until real remote development exists, or
    keep it as an internal experimental seam?
 3. **Terminal dependency:** `portable-pty` or Unix PTY via `nix`/`libc`?
-   Windows is out of scope, so a Unix-first choice is acceptable if documented.
+   **Decided:** Unix PTY via `libc` directly (`openpty`, `TIOCSCTTY`,
+   `TIOCSWINSZ`, process groups). Windows is out of scope, and the raw layer is
+   smaller than a process-management framework. Recorded in `DECISIONS.md`.
 4. **Multi-root:** complete the workspace model, or rename the feature to
    "recent projects / project switching" and defer multi-root?
 5. **Folding:** fix it fully now, or remove the command until it is correct?
@@ -577,22 +790,25 @@ Keep this table current so the next session knows where to resume.
 | 0. Git off the UI thread | done | e1e7eb5 | No cancellation yet; documented |
 | 0. Folding correctness | done | e1e7eb5 | Fold-aware movement, edit remapping, `Ctrl+K` chords, LSP ranges |
 | 0. 2.1 regression tests | done | 45d099f | Folding, breakpoints, gutter, hunk patch, non-UTF-8, workspace, incremental sync, mouse, icons |
-| 0. Oversized-file splits | in progress | a5bb9ea | `app/mod.rs` and `ui/editor` split; `tools.rs` and `document.rs` remain |
+| 0. Oversized-file splits | done | unreleased | Every file under `src/` is under 800 lines; largest is 798 |
 | Release / identity | done | dd64f6b | Renamed to Kemori; 3.0.0 on crates.io, docs.rs and GitHub; old `koda-ide` deprecated |
 | Release 3.1.0 | done | 36c349e | crates.io, docs.rs, GitHub release with four tarballs, deb/rpm and verified checksums |
-| AUR publication | prepared | dd64f6b | Packages built for 3.0.0; refresh the version/checksum for 3.1.0; waiting for the maintainer's AUR SSH key |
+| Release 3.2.0 | done | v3.2.0 | crates.io, docs.rs and GitHub release; 756 library and 52 render tests before tagging |
+| AUR publication | blocked | dd64f6b | AUR account registration is disabled; packages remain at 3.0.0 and cannot be pushed until registration reopens |
 | 1. Bottom panel | done | 3f1083e | Problems, Output and Debug Console; `Ctrl+J`, tab switching, resize, per-tab state |
-| 1. Integrated terminal | not started | — | Needs the PTY dependency decision (open decision 3) |
+| 1. Integrated terminal | done | unreleased | PTY via `libc`, four-tab panel, sessions, scrollback, copy/paste, resize, process-group shutdown |
 | 1. Live tasks | done | 03d5362 | Streaming, follow-tail, cancel and rerun |
 | 1. Task depth | done | 04845d4 | Session history, references in Problems and Run Active File |
 | 1. Problems panel | done | 5b0cafd | Built-in scan of unopened files plus live and task problems |
-| 1. LSP pull diagnostics | not started | — | Workspace-wide type diagnostics from a server |
+| 1. LSP pull diagnostics | done | unreleased | Per-document pull plus `workspace/diagnostic` merged into Problems |
 | 1. Project search/replace | done | 9be6382 | Form overlay, literals/regex, globs, preview, atomic replace, unsaved-buffer safety |
-| 1. Workspace trust | not started | — | — |
-| 2. LSP depth | not started | — | — |
-| 2. Editor depth | not started | — | — |
-| 2. Formatter gaps | not started | — | — |
-| 2. Real DAP debugger | not started | — | — |
+| 1. Workspace trust | done | unreleased | Per-root `trust.json`; tasks, debug preview and terminal gated |
+| 2. LSP depth | partial | unreleased | Document highlights, inlay hints, code lens, selection ranges, call/type hierarchy, implementation/type definition and document links shipped; pull diagnostics shipped in Phase 1; organize imports and format selection remain |
+| 2. Editor depth | done | unreleased | Snippets with tab stops, persistent undo, format on save, column selection, search in selection, replace preview, large-file mode, read-only toggle, trim/newline/line-ending commands |
+| 2. Formatter gaps | partial | v3.2.0 | All listed languages wired through installed tools; Kemori does not provision the formatters yet |
+| 2. Real DAP debugger | partial | v3.2.0 | Sessions, conditional/log breakpoints, watch, stack/scopes/variables, stepping, launch/stop; a dedicated variable tree remains |
+| 2. Debug-adapter provisioning | partial | v3.2.0 | `DebugAdapter` purpose; pinned `debugpy`, `dlv`, `js-debug`, `netcoredbg`, `java-debug`, Ruby `debug`, `php-debug`; Dart SDK adapter; lldb-dap discovery; Swift adapter remains |
+| 2. DAP attach | partial | v3.2.0 | Prompt + attach plans for Python/Go/JS/TS/C#/PHP/Dart; Java/Ruby attach open |
 | 3. Language expansion | not started | — | — |
 | 4. Git/workspace depth | not started | — | — |
 | 5. Performance/quality | not started | — | — |

@@ -16,6 +16,49 @@ this file, and add or change a test.
 - **Rope-backed buffers** (`ropey`). Efficient edits and slicing on large files.
 - **Operation-based undo.** Each edit records `(start, removed, inserted,
   cursor_before, cursor_after)`. Cheap and exact.
+- **Read-only mode is a separate user flag.** `Buffer` keeps the existing
+  `read_only` flag for lossily opened non-UTF-8 files and adds
+  `user_read_only` toggled by the user. Saves check either flag, but
+  `Convert to UTF-8` only clears the lossy one, so conversion cannot silently
+  re-enable writing. Mutations are refused in the document edit entry points,
+  while the app guards command paths that would otherwise report false success.
+- **Large-file mode is a threshold, not a file type.** A document reports
+  `is_large_file()` when the rope reaches one million characters. The reduced
+  feature set lives at the call sites (highlight spans, diagnostics scheduling,
+  completion, LSP sync and git markers), so normal editing, undo and search keep
+  the same code paths and behaviour. This avoids a second editor mode and keeps
+  the switch automatic; there is no per-file setting.
+- **Replace preview is computed, not applied.** The preview state is a list of
+  affected rows plus the match count; it is built from the same match set the
+  replace-all path will use. Confirming calls replace-all, so there is no second
+  replacement implementation and the edit remains one undo step. Multi-line
+  regex matches are flattened onto their starting line for display only.
+- **Find/replace scoping reuses match filtering.** A scoped search stores the
+  original contiguous selection as a `(start, end)` pair in `Search`; the normal
+  matcher still scans the document, then non-overlapping matches outside the
+  pair are discarded. This keeps regex, case and whole-word behaviour identical
+  to whole-file search. Replace updates the stored end by the total length delta
+  of the replacements it made, so subsequent passes stay inside the region
+  instead of drifting past it.
+- **Rectangular selection is part of the ordinary selection model.** A
+  `Selection` carries a `column` flag with the same anchor as a linear
+  selection. Bounds are derived from the anchor and cursor columns, edits across
+  rows become one multi-cursor edit, and short rows clamp to their length.
+  Starting requires the explicit column chord; once active, plain Shift arrows
+  keep the rectangle, so there is no hidden mode to turn off.
+- **Snippets are data with lexical placeholders.** Each language owns a small
+  static snippet table; the editor expands `$1`/`${1:default}`/`$0` into text
+  plus character offsets. Insertion is one normal edit (so one undo step), Tab
+  and Shift+Tab walk the recorded offsets, and Escape or cursor navigation ends
+  snippet mode. No extension language, mirror variables or user snippet files
+  are introduced, which keeps snippets aligned with the zero-configuration rule.
+- **Undo history can outlive the process for clean files.** The operation-based
+  history is serialized into the existing per-project session (at most the last
+  100 steps), together with the save-point id and an FNV-1a fingerprint of the
+  buffer text. Restoring is refused when the file's bytes changed or the buffer
+  was dirty at capture time, because edit offsets would otherwise point into
+  different text. This keeps normal undo undoable without turning a session file
+  into an unbounded log.
 - **Editor history tracks a save point.** Each edit has a unique id and the
   document remembers the id at its save point, so undo/redo restore the clean
   state exactly; coalescing is broken when a document is saved.
@@ -91,13 +134,21 @@ this file, and add or change a test.
 - **Formatting reuses trusted tools through one pipeline.** A provider declares
   the `Formatting` capability and implements `format()` by calling a shared
   helper in `language/format.rs` (`rustfmt`, `gofmt`, `prettier`,
-  `clang-format`, `shfmt`, `perltidy`, plus the managed `dart format` and
+  `clang-format`, `shfmt`, `perltidy`, `rubocop`, `ktlint`, `sqlfluff`,
+  `php-cs-fixer`, `csharpier`, plus the managed `dart format` and
   `mix format`). Every helper feeds a buffer snapshot on stdin and takes stdout,
   so unsaved edits are formatted in place and the result applies as one
   undoable edit. The provider's `formatter()` names the executable, and
   `Tool::for_language(language, Formatter)` lets the palette explain a missing
   formatter before the user invokes it. Language-server formatting is preferred
   when the server advertises it.
+- **Format on save is save → format → save.** Enabling the preference in
+  Settings saves the active file immediately, starts the same formatter path as
+  `Format Document` (server first, built-in tool second), and writes the buffer
+  again when the result applies. The first write is deliberately not rolled
+  back: a missing or failed formatter leaves a saved file and a clear error,
+  never unsaved work. The second write is suppressed if the user closes the
+  document while formatting is in flight.
 - **A language may have more than one candidate server.** `Tool::ALL` order is
   the preference order and `Tool::available_server` / `Tool::installable_server`
   choose the first server that is actually available or installable. Perl is the
@@ -143,6 +194,55 @@ this file, and add or change a test.
   edits, formatting and locations convert back before use. Conversion always
   clamps to a character boundary and never splits a code point. Do not add
   ad-hoc character/byte arithmetic in the UI.
+- **Pull diagnostics are used when the server offers them.** A server that
+  advertises `diagnosticProvider` is asked `textDocument/diagnostic` when it
+  connects and after a document changes; a server that also advertises
+  `workspaceDiagnostics` answers `workspace/diagnostic` when the Problems panel
+  refreshes. Unopened files are read only to convert the negotiated position
+  encoding into character columns, and their diagnostics join the built-in scan
+  in the same panel with duplicate rows removed. Push diagnostics remain fully
+  supported for servers that do not implement pull.
+- **Document highlights are cursor-driven and superseding.** Cursor movement and
+  edits request `textDocument/documentHighlight` at the primary cursor. The
+  response is converted through the same encoding boundary as diagnostics and
+  painted as a background under token styles; edits clear the old ranges
+  immediately. Because requests can overlap, the handler checks the pending id
+  before taking it, so a stale response cannot discard the newer request.
+- **Inlay hints are decorations with a text version.** `InlayHint` is an editor
+  type independent of LSP; the app converts server positions and stores the
+  resulting hints with the buffer version that produced them. The renderer
+  inserts them before the character at their position as dim virtual text, so
+  they never affect widths, selection, undo or saving. Re-requesting is keyed to
+  the version, not cursor movement, and large files opt out.
+- **Document links are resolved into a picker, not rendered as underlines.**
+  The terminal has no reliable modifier for clickable spans, so the command
+  presents every target with its tooltip and line. `file:` targets use the
+  normal reveal path; other schemes are copied to the clipboard, which avoids
+  launching a browser from the editor. Data-only links are skipped until a
+  resolve step exists.
+- **Implementation and type definition share the definition request slot.**
+  All three requests resolve to locations, so they use the same pending
+  `PendingDocRequest` and reveal path; the response kind only changes the empty
+  and failure wording. This keeps one validated jump pipeline rather than three
+  nearly identical ones.
+- **Hierarchies are two-phase pickers.** Preparing a symbol and expanding one
+  direction are separate requests, matching the LSP protocol. The first response
+  either continues immediately for a single node or asks the user which node to
+  expand; the follow-up response is shown as a jumpable list rather than a
+  persistent tree, which fits the palette UI and avoids another navigation mode.
+  Call and type hierarchies share the same pending-request validation.
+- **Selection ranges are cached for the caret, not the selection.** The server
+  returns an innermost-to-outermost chain; the app stores it with the buffer
+  version and caret position and only replaces it while the document has no
+  selection. Expand picks the smallest cached range that strictly contains the
+  current selection, and shrink walks the chain backwards, so repeated key
+  presses behave predictably even after the caret moves to a range boundary.
+- **Code lenses are decorations with an opaque command.** The editor stores a
+  title plus serialized command/arguments strings; only the app parses the
+  payload and sends `workspace/executeCommand` to the active server. This keeps
+  JSON and LSP out of the editor while still making lenses runnable. Lens
+  responses are versioned like inlay hints, and a data-only lens is reported as
+  unresolved instead of silently doing nothing.
 - **Server responses are validated against the document they describe.** A
   document-sensitive request records `(language, id, path, buffer version)` at
   request time; a response is applied only if it is still the newest request and
@@ -164,6 +264,68 @@ this file, and add or change a test.
   so the regex engine carries a per-line step budget and the `.gitignore` glob
   matcher is polynomial; a crafted pattern degrades to "no match" instead of
   freezing the editor.
+
+---
+
+## Debugging
+
+- **A real DAP client, not a handshake.** `debug/session.rs` spawns an adapter
+  over stdio, frames JSON with `Content-Length`, tracks request ids and maps
+  responses back to their command. It sends `initialize`, waits for the
+  `initialized` event, sets breakpoints, launches and sends
+  `configurationDone`; `stopped`, `continued`, `exited` and `terminated` become
+  typed events. The client is adapter-agnostic and the same code serves every
+  language. Adapters that only offer TCP (`dlv dap`) announce a listen address
+  on stdout; Kemori waits for it, connects, and then uses the socket with the
+  same framing and request loop. Adapters that need a caller-supplied port
+  (js-debug's `dapDebugServer.js`) get a reserved local port in the launch plan.
+- **Stack, scopes, variables and watches are pulled on demand.** A stop requests
+  `stackTrace`; the top frame requests `scopes`; each scope requests
+  `variables`; every watch expression is evaluated in the top frame. Results are
+  appended to the Debug Console and kept in app state so **Stack Frames…** can
+  jump to a source line, **Variables…** can list values and **Watch
+  Expressions…** can show the last result. Reverse adapter requests (for example
+  `runInTerminal`) are answered with an explicit failure rather than left
+  hanging.
+- **Breakpoints are data, not just markers.** A breakpoint can carry a condition
+  or a log message; both are sent in `setBreakpoints` as `condition` and
+  `logMessage`, and the gutter draws a diamond for either. Toggling the
+  breakpoint off clears its extras, and changing breakpoints while a session is
+  live resends them.
+- **Attaching reuses the launch adapter but sends `attach`.** The prompt accepts
+  a process id or `host:port`; a per-adapter argument builder maps it to
+  `processId`, `connect`, `address`/`port`, `vmServiceUri` or the Go remote mode.
+  Java's JDT-hosted attach and Ruby's rdbg attach are refused with a precise
+  message instead of a broken session.
+- **Java debugging is hosted by JDT LS.** `java-debug` is not a standalone DAP
+  binary: it is an Eclipse extension jar. Kemori therefore pins and installs
+  `com.microsoft.java.debug.plugin-0.53.1.jar`, passes it to the Java language
+  server as `initializationOptions.bundles`, and drives the Java debug commands
+  (`vscode.java.resolveMainClass`, `resolveClasspath`, `startDebugSession`) over
+  the existing LSP connection. The resulting DAP session connects to the
+  returned port and owns no child process, so stopping the debugger never kills
+  the language server. If the server was already running without the jar, it
+  must be restarted to load it.
+- **Launch plans are explicit and honest.** `KEMORI_DEBUG_ADAPTER` (with
+  optional whitespace-separated `KEMORI_DEBUG_ADAPTER_ARGS`) always wins.
+  Python prefers the `debugpy-adapter` console script and falls back to
+  `python3 -m debugpy.adapter`; `debugpy` is a pinned Kemori-managed tool
+  (`debugpy==1.8.22`) with the same isolated Python install strategies as the
+  language server. Rust/C/C++ prefer a discovered `lldb-dap` (or legacy
+  `lldb-vscode`), falling back to `gdb -i=dap`; the program is
+  `target/debug/<package>` or `a.out` when it exists. Go uses a pinned
+  `dlv@v1.27.2` and the active file's package directory with `mode: "debug"`.
+  JS/TS use a pinned `js-debug-dap-v1.140.0`, managed Node.js, and a reserved
+  local TCP port. C# uses a pinned `netcoredbg` and the newest built
+  `bin/Debug/*/<project>.dll`, reporting a missing build. Dart uses the managed
+  SDK's `dart debug_adapter` over stdio. Ruby installs the pinned `debug` gem and
+  runs `rdbg --open=vscode` over TCP. PHP installs the verified
+  `vscode-php-debug` bridge and launches the file with Xdebug enabled; the PHP
+  runtime and Xdebug remain prerequisites. Other languages report the missing
+  prerequisite instead of inventing a launch configuration. A plan that starts
+  but whose adapter fails names the adapter's stderr.
+- **A debug session is another kind of project execution.** Starting it passes
+  through the workspace-trust gate, like tasks and the terminal.
 
 ---
 
@@ -375,6 +537,38 @@ this file, and add or change a test.
 
 ---
 
+## Terminal
+
+- **The integrated terminal is a Unix PTY built on `libc`.** `openpty` allocates
+  the pair, the shell is started in a new session with the PTY as its
+  controlling terminal, and `TIOCSWINSZ` keeps it in step with the panel.
+  Windows is out of scope, so a raw Unix layer is smaller and more direct than a
+  process-management framework; `libc` was already a transitive dependency.
+  Sessions run in the project root, are owned by Kemori, and are closed by
+  signalling the whole process group (SIGHUP, SIGTERM, SIGKILL) so a foreground
+  job cannot leak.
+- **The screen is a small ANSI interpreter, not a full VT emulator.** It handles
+  cursor movement, erase, scroll regions, tab stops, alternate-screen programs,
+  OSC titles and UTF-8 split across PTY reads, with a bounded scrollback.
+  Colour attributes are deliberately ignored: terminal text uses the theme's
+  text role, which keeps the transparent terminal-native surface intact. This is
+  an honest subset; full 24-bit SGR and mouse reporting are not emulated.
+- **Keys are encoded, not re-dispatched.** While the terminal owns the keyboard
+  Kemori turns key events into the byte sequences a terminal sends (including
+  modifiers and function keys), so line editors and full-screen programs work.
+  A small allow-list keeps application chords available: `Ctrl+J` leaves the
+  panel, `Ctrl+Shift+PageUp`/`PageDown` switch panel tabs, `Ctrl+Shift+T`/
+  `Ctrl+Shift+W` manage sessions, and the palette, save, search and diagnostics
+  function keys pass through. `Ctrl+C` belongs to the shell, not to Kemori.
+- **Execution needs workspace trust.** Tasks, the terminal and the debug-adapter
+  preview run project code, so they pass through one gate; the decision is per
+  root, stored under Kemori's state directory, and never inside the project.
+  Editing, git, search and the language servers Kemori provisions itself do not
+  require it. This keeps "open a cloned repository" safe while still allowing
+  the user to trust it explicitly, or run one action once.
+
+---
+
 ## UI
 
 - **Centralised, data-driven themes + art.** All colour flows through
@@ -533,7 +727,19 @@ distributed a little further so every production file is under 800 lines:
 | `view.rs` | tree/diagnostic/wrap/fold toggles and reveal | 108 |
 
 `app/tests.rs` is the deliberately single test module moved whole from `mod.rs`.
-`app/keys.rs`, `app/lsp.rs` and `app/overlay.rs` are still over 800 and are
-candidates for the next mechanical extractions; new work should not make them
-longer. `commands.rs` was brought back under 800 by moving availability into
-`availability.rs` and tool/project setup into `setup.rs`.
+`app/keys.rs`, `app/lsp.rs`, `app/overlay.rs`, `language/web/mod.rs`,
+`language/lsp/mod.rs` and `ui/overlay.rs` have since been split or reduced as
+well; every `.rs` file under `src/` is now under 800 lines. `commands.rs` was
+brought back under 800 by moving availability into `availability.rs` and
+tool/project setup into `setup.rs`. `git`, `project/create`, `app/overlay` and
+`app/tests` had their test modules moved beside them.
+
+The same mechanical rule was later applied to `editor/document.rs` (a directory
+of `mod`/`cursors`/`typing`/`movement`/`highlight`/`helpers`/`tests`, with
+cross-module inherent methods promoted to `pub(super)`) and to
+`language/tools.rs`. Because `tools` is one module of free functions whose
+visibility crosses almost every item, its parts are `include!`d in
+`tools/mod.rs` rather than declared as separate modules: the extraction is
+purely textual, so no visibility annotation or call site changes and the
+compiler still type-checks the whole module as one unit. Each included file is
+under 800 lines, and the test module is split into three included parts.

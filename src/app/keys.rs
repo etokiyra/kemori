@@ -2,6 +2,11 @@
 
 use super::*;
 
+#[path = "keys_find.rs"]
+mod find_keys;
+#[path = "keys_overlay.rs"]
+mod overlay_keys;
+
 impl App {
     pub(super) fn handle_paste(&mut self, text: &str) {
         match &mut self.overlay {
@@ -18,6 +23,7 @@ impl App {
             Overlay::Settings(_) => return,
             Overlay::DirPicker(_) => return,
             Overlay::Diff(_) => return,
+            Overlay::ReplacePreview(_) => return,
             Overlay::ProjectSearch(state) => {
                 for ch in text.chars().filter(|ch| *ch != '\n' && *ch != '\r') {
                     state.push_char(ch);
@@ -33,6 +39,10 @@ impl App {
             }
             Overlay::None => {}
         }
+        if self.terminal_focused() {
+            self.terminals.write_active(text.as_bytes());
+            return;
+        }
         self.completion = None;
         self.signature = None;
         if self.search.open {
@@ -45,6 +55,9 @@ impl App {
             return;
         }
         if self.focus == Focus::Editor {
+            if self.read_only_block() {
+                return;
+            }
             let text = text.to_string();
             self.with_doc(|doc| doc.insert_text(&text));
         }
@@ -61,7 +74,29 @@ impl App {
         }
         if key.code == KeyCode::F(5) {
             self.completion = None;
-            self.refresh_workspace();
+            if self.debug.session.is_some() {
+                if shift {
+                    self.execute_command(ids::DEBUG_STOP);
+                } else {
+                    self.execute_command(ids::DEBUG_CONTINUE);
+                }
+            } else {
+                self.refresh_workspace();
+            }
+            return true;
+        }
+        if key.code == KeyCode::F(10) {
+            self.completion = None;
+            self.execute_command(ids::DEBUG_STEP_OVER);
+            return true;
+        }
+        if key.code == KeyCode::F(11) {
+            self.completion = None;
+            if shift {
+                self.execute_command(ids::DEBUG_STEP_OUT);
+            } else {
+                self.execute_command(ids::DEBUG_STEP_INTO);
+            }
             return true;
         }
         if key.code == KeyCode::F(8) {
@@ -171,7 +206,8 @@ impl App {
                     ('b', _) => self.toggle_tree(),
                     ('e', _) => self.focus_tree(),
                     ('w', _) => self.execute_command(ids::CLOSE_TAB),
-                    ('t', _) => self.open_workspace_symbols(),
+                    ('t', true) => self.open_terminal(),
+                    ('t', false) => self.open_workspace_symbols(),
                     ('m', true) => self.execute_command(ids::DIAGNOSTICS_LIST),
                     ('i', true) => self.execute_command(ids::FORMAT),
                     _ => return false,
@@ -227,6 +263,11 @@ impl App {
                 return;
             }
         }
+        // The terminal consumes keys before the application keymap, because
+        // `Ctrl+C`, arrows and `Esc` belong to the shell while it has focus.
+        if self.terminal_focused() && self.handle_terminal_key(key) {
+            return;
+        }
         // A hover popup is informational; the next key dismisses it.
         if self.hover.is_some() {
             self.hover = None;
@@ -267,9 +308,44 @@ impl App {
         }
     }
     pub(super) fn handle_editor_key(&mut self, key: KeyEvent) {
+        if self.handle_snippet_key(key) {
+            return;
+        }
         let shift = key_shift(&key);
         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
         let alt = key.modifiers.contains(KeyModifiers::ALT);
+
+        if self
+            .editor
+            .active_document()
+            .is_some_and(|doc| doc.is_user_read_only())
+        {
+            let edits = match key.code {
+                KeyCode::Enter
+                | KeyCode::Tab
+                | KeyCode::BackTab
+                | KeyCode::Backspace
+                | KeyCode::Delete => true,
+                KeyCode::Char(c) => {
+                    if !ctrl && !alt {
+                        true
+                    } else if ctrl {
+                        matches!(
+                            c.to_ascii_lowercase(),
+                            'z' | 'y' | 'x' | 'v' | 'd' | 'k' | '/'
+                        )
+                    } else {
+                        matches!(c.to_ascii_lowercase(), 'y')
+                    }
+                }
+                KeyCode::Up | KeyCode::Down => alt && !ctrl,
+                _ => false,
+            };
+            if edits {
+                self.set_error("Read-only mode is on — toggle it off to edit");
+                return;
+            }
+        }
 
         // Signature help is transient: any key that is not a literal character
         // dismisses it.
@@ -292,6 +368,7 @@ impl App {
                         }
                         'y' => self.with_doc(|d| d.redo()),
                         'a' => self.with_doc(|d| d.select_all()),
+                        'r' if alt => self.toggle_read_only(),
                         'c' => self.copy(),
                         'x' => self.cut(),
                         'v' => self.paste(),
@@ -302,6 +379,7 @@ impl App {
                         'k' => self.fold_prefix = true,
                         'm' => self.goto_matching_bracket(),
                         '/' => self.toggle_comment(),
+                        '.' if shift => self.open_code_lens_picker(),
                         '.' => self.code_actions(),
                         _ => {}
                     }
@@ -321,31 +399,65 @@ impl App {
             KeyCode::BackTab => self.with_doc(|d| d.outdent()),
             KeyCode::Backspace => self.with_doc(|d| d.backspace()),
             KeyCode::Delete => self.with_doc(|d| d.delete_forward()),
-            KeyCode::Left => self.with_doc(|d| {
-                if ctrl {
-                    d.move_word_left(shift);
+            KeyCode::Left => {
+                if alt && shift && !ctrl {
+                    self.shrink_selection();
                 } else {
-                    d.move_left(shift);
+                    self.with_doc(|d| {
+                        if ctrl && alt && shift {
+                            d.extend_column_left();
+                        } else if ctrl {
+                            d.move_word_left(shift);
+                        } else if shift && d.has_column_selection() {
+                            d.extend_column_left();
+                        } else {
+                            d.move_left(shift);
+                        }
+                    });
                 }
-            }),
-            KeyCode::Right => self.with_doc(|d| {
-                if ctrl {
-                    d.move_word_right(shift);
+            }
+            KeyCode::Right => {
+                if alt && shift && !ctrl {
+                    self.expand_selection();
                 } else {
-                    d.move_right(shift);
+                    self.with_doc(|d| {
+                        if ctrl && alt && shift {
+                            d.extend_column_right();
+                        } else if ctrl {
+                            d.move_word_right(shift);
+                        } else if shift && d.has_column_selection() {
+                            d.extend_column_right();
+                        } else {
+                            d.move_right(shift);
+                        }
+                    });
                 }
-            }),
+            }
             KeyCode::Up => {
-                if ctrl && alt {
+                let column = self
+                    .editor
+                    .active_document()
+                    .is_some_and(|doc| doc.has_column_selection());
+                if ctrl && alt && shift {
+                    self.with_doc(|d| d.extend_column_up());
+                } else if ctrl && alt {
                     self.with_doc(|d| d.add_cursor_above());
                 } else if alt {
                     self.with_doc(|d| d.move_line_up());
+                } else if shift && column {
+                    self.with_doc(|d| d.extend_column_up());
                 } else {
                     self.with_doc(|d| d.move_up(shift));
                 }
             }
             KeyCode::Down => {
-                if ctrl && alt {
+                let column = self
+                    .editor
+                    .active_document()
+                    .is_some_and(|doc| doc.has_column_selection());
+                if ctrl && alt && shift {
+                    self.with_doc(|d| d.extend_column_down());
+                } else if ctrl && alt {
                     self.with_doc(|d| d.add_cursor_below());
                 } else if alt {
                     if shift {
@@ -353,6 +465,8 @@ impl App {
                     } else {
                         self.with_doc(|d| d.move_line_down());
                     }
+                } else if shift && column {
+                    self.with_doc(|d| d.extend_column_down());
                 } else {
                     self.with_doc(|d| d.move_down(shift));
                 }
@@ -434,431 +548,6 @@ impl App {
                 }
             }
             _ => {}
-        }
-    }
-    pub(super) fn handle_overlay_key(&mut self, key: KeyEvent) {
-        // Settings edits application state, so it is handled directly rather
-        // than through the picker `Outcome` plumbing below.
-        if matches!(self.overlay, Overlay::Settings(_)) {
-            self.handle_settings_key(key);
-            return;
-        }
-        if matches!(self.overlay, Overlay::ProjectSearch(_)) {
-            self.handle_project_search_key(key);
-            return;
-        }
-        let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
-
-        enum Outcome {
-            Nothing,
-            Close,
-            Run(PickerAction, Option<String>),
-            Submit(PromptKind, String),
-            Stage(PathBuf, bool),
-            OpenDir(PathBuf),
-            CreateProject {
-                parent: PathBuf,
-                name: String,
-                language: LanguageId,
-            },
-        }
-
-        let outcome = match &mut self.overlay {
-            Overlay::None => Outcome::Nothing,
-            Overlay::Picker(picker) => match key.code {
-                KeyCode::Esc => Outcome::Close,
-                KeyCode::Up => {
-                    picker.move_up();
-                    Outcome::Nothing
-                }
-                KeyCode::Down => {
-                    picker.move_down();
-                    Outcome::Nothing
-                }
-                KeyCode::Enter => match picker.selected_item() {
-                    Some(item) => Outcome::Run(
-                        item.action.clone(),
-                        item.hint.clone().filter(|_| !item.enabled),
-                    ),
-                    None => Outcome::Close,
-                },
-                KeyCode::Backspace => {
-                    picker.backspace();
-                    Outcome::Nothing
-                }
-                KeyCode::Char(' ') if picker.title == "Changed Files" => {
-                    match picker.selected_item().map(|item| item.action.clone()) {
-                        Some(PickerAction::OpenPath(path)) => {
-                            let staged = !self.workspace.git.is_staged(&path);
-                            Outcome::Stage(path, staged)
-                        }
-                        _ => Outcome::Nothing,
-                    }
-                }
-                KeyCode::Char('d') if picker.title == "Changed Files" => {
-                    match picker.selected_item().map(|item| item.action.clone()) {
-                        Some(PickerAction::OpenPath(path)) => {
-                            let staged = self.workspace.git.is_staged(&path);
-                            Outcome::Run(PickerAction::ShowDiff { path, staged }, None)
-                        }
-                        _ => Outcome::Nothing,
-                    }
-                }
-                KeyCode::Char(c) if !ctrl => {
-                    picker.push_char(c);
-                    Outcome::Nothing
-                }
-                _ => Outcome::Nothing,
-            },
-            Overlay::Prompt(prompt) => match key.code {
-                KeyCode::Esc => Outcome::Close,
-                KeyCode::Enter => Outcome::Submit(prompt.kind, prompt.input.clone()),
-                KeyCode::Backspace => {
-                    prompt.backspace();
-                    Outcome::Nothing
-                }
-                KeyCode::Char(c) if !ctrl => {
-                    prompt.push_char(c);
-                    Outcome::Nothing
-                }
-                _ => Outcome::Nothing,
-            },
-            Overlay::DirPicker(picker) => match key.code {
-                KeyCode::Esc => Outcome::Close,
-                KeyCode::Up => {
-                    picker.browser.move_up();
-                    Outcome::Nothing
-                }
-                KeyCode::Down => {
-                    picker.browser.move_down();
-                    Outcome::Nothing
-                }
-                KeyCode::Backspace | KeyCode::Left => {
-                    if let Some(parent) = picker.browser.current.parent() {
-                        picker.browser.current = parent.to_path_buf();
-                        picker.browser.selected = 0;
-                        picker.browser.refresh();
-                    }
-                    Outcome::Nothing
-                }
-                KeyCode::Enter => match picker.browser.activate() {
-                    Some(directory) => Outcome::OpenDir(directory),
-                    None => Outcome::Nothing,
-                },
-                _ => Outcome::Nothing,
-            },
-            Overlay::NewProject(flow) => match flow.step {
-                NewProjectStep::Parent => match key.code {
-                    KeyCode::Esc => Outcome::Close,
-                    KeyCode::Up => {
-                        flow.browser.move_up();
-                        Outcome::Nothing
-                    }
-                    KeyCode::Down => {
-                        flow.browser.move_down();
-                        Outcome::Nothing
-                    }
-                    KeyCode::Backspace | KeyCode::Left => {
-                        if let Some(parent) = flow.browser.current.parent() {
-                            flow.browser.current = parent.to_path_buf();
-                            flow.browser.selected = 0;
-                            flow.browser.refresh();
-                        }
-                        Outcome::Nothing
-                    }
-                    KeyCode::Enter => {
-                        if let Some(directory) = flow.browser.activate() {
-                            flow.parent = directory;
-                            flow.step = NewProjectStep::Name;
-                            flow.error = None;
-                        }
-                        Outcome::Nothing
-                    }
-                    _ => Outcome::Nothing,
-                },
-                NewProjectStep::Name => match key.code {
-                    KeyCode::Esc => {
-                        flow.step = NewProjectStep::Parent;
-                        flow.error = None;
-                        Outcome::Nothing
-                    }
-                    KeyCode::Enter => {
-                        match validate_project_name(&flow.parent, &flow.name) {
-                            Ok(()) => {
-                                flow.name = flow.name.trim().to_string();
-                                flow.step = NewProjectStep::Language;
-                                flow.error = None;
-                            }
-                            Err(message) => flow.error = Some(message),
-                        }
-                        Outcome::Nothing
-                    }
-                    KeyCode::Backspace => {
-                        flow.name.pop();
-                        flow.error = None;
-                        Outcome::Nothing
-                    }
-                    KeyCode::Char(c) if !ctrl => {
-                        flow.name.push(c);
-                        flow.error = None;
-                        Outcome::Nothing
-                    }
-                    _ => Outcome::Nothing,
-                },
-                NewProjectStep::Language => match key.code {
-                    KeyCode::Esc => {
-                        flow.step = NewProjectStep::Name;
-                        flow.error = None;
-                        Outcome::Nothing
-                    }
-                    KeyCode::Up => {
-                        flow.language = flow.language.saturating_sub(1);
-                        flow.error = None;
-                        Outcome::Nothing
-                    }
-                    KeyCode::Down => {
-                        if flow.language + 1 < create::CREATABLE.len() {
-                            flow.language += 1;
-                        }
-                        flow.error = None;
-                        Outcome::Nothing
-                    }
-                    KeyCode::Enter => {
-                        let index = flow.language.min(create::CREATABLE.len().saturating_sub(1));
-                        let language = create::CREATABLE[index];
-                        match validate_project_name(&flow.parent, &flow.name) {
-                            Ok(()) => Outcome::CreateProject {
-                                parent: flow.parent.clone(),
-                                name: flow.name.trim().to_string(),
-                                language,
-                            },
-                            Err(message) => {
-                                flow.error = Some(message);
-                                Outcome::Nothing
-                            }
-                        }
-                    }
-                    _ => Outcome::Nothing,
-                },
-            },
-            Overlay::Help(help) => match key.code {
-                KeyCode::Esc => Outcome::Close,
-                KeyCode::Up => {
-                    help.scroll = help.scroll.saturating_sub(1);
-                    Outcome::Nothing
-                }
-                KeyCode::Down => {
-                    help.scroll = help.scroll.saturating_add(1);
-                    Outcome::Nothing
-                }
-                KeyCode::PageUp => {
-                    help.scroll = help.scroll.saturating_sub(8);
-                    Outcome::Nothing
-                }
-                KeyCode::PageDown => {
-                    help.scroll = help.scroll.saturating_add(8);
-                    Outcome::Nothing
-                }
-                _ => Outcome::Nothing,
-            },
-            // Handled before this match; the arm keeps the match exhaustive.
-            Overlay::Settings(_) => Outcome::Nothing,
-            Overlay::ProjectSearch(_) => Outcome::Nothing,
-            Overlay::Diff(diff) => match key.code {
-                KeyCode::Esc | KeyCode::Char('q') => Outcome::Close,
-                KeyCode::Up => {
-                    diff.scroll_by(-1);
-                    Outcome::Nothing
-                }
-                KeyCode::Down => {
-                    diff.scroll_by(1);
-                    Outcome::Nothing
-                }
-                KeyCode::PageUp => {
-                    diff.scroll_by(-16);
-                    Outcome::Nothing
-                }
-                KeyCode::PageDown => {
-                    diff.scroll_by(16);
-                    Outcome::Nothing
-                }
-                KeyCode::Home => {
-                    diff.scroll = 0;
-                    Outcome::Nothing
-                }
-                KeyCode::End => {
-                    diff.scroll = diff.lines.len();
-                    Outcome::Nothing
-                }
-                KeyCode::Char('a') => {
-                    self.apply_diff_hunk(false);
-                    Outcome::Nothing
-                }
-                KeyCode::Char('r') => {
-                    self.apply_diff_hunk(true);
-                    Outcome::Nothing
-                }
-                KeyCode::Char('n') => {
-                    diff.next_hunk();
-                    Outcome::Nothing
-                }
-                KeyCode::Char('p') => {
-                    diff.prev_hunk();
-                    Outcome::Nothing
-                }
-                _ => Outcome::Nothing,
-            },
-        };
-
-        match outcome {
-            Outcome::Nothing => {}
-            Outcome::Close => self.overlay = Overlay::None,
-            Outcome::Run(action, hint) => {
-                self.overlay = Overlay::None;
-                match hint {
-                    Some(hint) => self.set_status(hint),
-                    None => self.run_picker_action(action),
-                }
-            }
-            Outcome::Submit(kind, input) => {
-                self.overlay = Overlay::None;
-                self.submit_prompt(kind, input);
-            }
-            Outcome::Stage(path, staged) => self.dispatch_stage(path, staged, true),
-            Outcome::OpenDir(directory) => {
-                self.overlay = Overlay::None;
-                self.open_project(directory);
-            }
-            Outcome::CreateProject {
-                parent,
-                name,
-                language,
-            } => {
-                self.overlay = Overlay::None;
-                self.start_project_creation(parent, name, language);
-            }
-        }
-    }
-    pub(super) fn handle_search_key(&mut self, key: KeyEvent) {
-        let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
-        let shift = key.modifiers.contains(KeyModifiers::SHIFT);
-        let alt = key.modifiers.contains(KeyModifiers::ALT);
-        if alt {
-            match key.code {
-                KeyCode::Char(c) => match c.to_ascii_lowercase() {
-                    'c' => self.search.case_sensitive = !self.search.case_sensitive,
-                    'w' => self.search.whole_word = !self.search.whole_word,
-                    'r' => self.search.regex = !self.search.regex,
-                    _ => return,
-                },
-                KeyCode::Enter => {
-                    self.replace_all();
-                    return;
-                }
-                _ => return,
-            }
-            self.refresh_search_matches();
-            self.jump_to_first_from_cursor();
-            return;
-        }
-        match key.code {
-            KeyCode::Esc => self.search.close(),
-            KeyCode::Enter => {
-                if self.search.replace_mode && self.search.field == SearchField::Replacement {
-                    self.replace_current();
-                } else if shift {
-                    self.find_previous();
-                } else {
-                    self.find_next();
-                }
-            }
-            KeyCode::Tab => {
-                if self.search.replace_mode {
-                    self.search.field = match self.search.field {
-                        SearchField::Query => SearchField::Replacement,
-                        SearchField::Replacement => SearchField::Query,
-                    };
-                }
-            }
-            KeyCode::Up => self.find_previous(),
-            KeyCode::Down => self.find_next(),
-            KeyCode::Backspace => {
-                match self.search.field {
-                    SearchField::Query => {
-                        self.search.query.pop();
-                    }
-                    SearchField::Replacement => {
-                        self.search.replacement.pop();
-                    }
-                }
-                self.refresh_search_matches();
-                self.jump_to_first_from_cursor();
-            }
-            KeyCode::Char(c) if !ctrl => {
-                match self.search.field {
-                    SearchField::Query => self.search.query.push(c),
-                    SearchField::Replacement => self.search.replacement.push(c),
-                }
-                self.refresh_search_matches();
-                self.jump_to_first_from_cursor();
-            }
-            _ => {}
-        }
-    }
-
-    /// Handle a key while the completion popup is open. Returns `false` for keys
-    /// the popup does not claim, after dismissing it.
-    pub(super) fn handle_completion_key(&mut self, key: KeyEvent) -> bool {
-        let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
-        match key.code {
-            KeyCode::Esc => {
-                self.completion = None;
-                self.completion_due = None;
-                true
-            }
-            KeyCode::Up => {
-                if let Some(state) = self.completion.as_mut() {
-                    state.move_up();
-                }
-                true
-            }
-            KeyCode::Down => {
-                if let Some(state) = self.completion.as_mut() {
-                    state.move_down();
-                }
-                true
-            }
-            KeyCode::PageUp => {
-                if let Some(state) = self.completion.as_mut() {
-                    state.move_by(-8);
-                }
-                true
-            }
-            KeyCode::PageDown => {
-                if let Some(state) = self.completion.as_mut() {
-                    state.move_by(8);
-                }
-                true
-            }
-            KeyCode::Enter | KeyCode::Tab => {
-                self.accept_completion();
-                true
-            }
-            KeyCode::Backspace => {
-                self.with_doc(|doc| doc.backspace());
-                self.after_completion_edit();
-                true
-            }
-            KeyCode::Char(c) if !ctrl => {
-                self.with_doc(|doc| doc.type_char(c));
-                self.after_typed_char(c);
-                true
-            }
-            _ => {
-                self.completion = None;
-                self.completion_due = None;
-                false
-            }
         }
     }
 }

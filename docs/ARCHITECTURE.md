@@ -17,6 +17,7 @@ src/
 │   ├── availability.rs     # command availability and format checks
 │   ├── commands.rs         # command dispatch, palette, prompts, quick open
 │   ├── completion.rs       # completion popup + hover
+│   ├── debug.rs            # debugger session, stack/scopes/variables
 │   ├── diagnostics.rs      # diagnostics polling, navigation, list
 │   ├── editor.rs           # cursor moves, clipboard, comment, matching bracket
 │   ├── files.rs            # save/close/revert and file create/rename/copy/delete
@@ -36,15 +37,27 @@ src/
 │   ├── setup.rs            # tool installation, project setup, tool actions
 │   ├── status.rs           # statusline messages and toasts
 │   ├── tasks.rs            # task picker and bounded run output
+│   ├── terminal_panel.rs   # integrated terminal: keys, sessions, copy/paste
 │   ├── tests.rs            # the app-level integration tests
+│   ├── trust.rs            # workspace-trust prompt and gate
 │   └── view.rs             # tree/diagnostic/wrap/fold toggles and reveal
 ├── background.rs           # worker pool for detection, LSP, git, formatting, tasks
 ├── task_run.rs             # one project task: streaming, bounded, cancellable
 ├── commands/mod.rs         # command registry (ids, titles, shortcuts)
-├── debug.rs                # DAP handshake preview (not a debugger yet)
+├── debug/
+│   ├── mod.rs              # launch plans and DAP types
+│   ├── protocol.rs         # Content-Length framing
+│   └── session.rs          # adapter process: requests, events, stack/scopes/variables
 ├── editor/
 │   ├── buffer.rs           # rope-backed text buffer
-│   ├── document.rs         # buffer + cursor + selection + undo + highlight cache
+│   ├── document/           # buffer + cursor + selection + undo + highlight cache
+│   │   ├── mod.rs          # state, lifecycle, diagnostics and base edits
+│   │   ├── cursors.rs      # multiple cursors and edit planning
+│   │   ├── typing.rs       # typing, indentation and line operations
+│   │   ├── movement.rs     # history, selection and navigation
+│   │   ├── highlight.rs    # highlight cache and search helpers
+│   │   ├── helpers.rs      # bracket, indentation and word helpers
+│   │   └── tests.rs        # document unit tests
 │   ├── folding.rs          # visible-row folding, movement and edit remapping
 │   ├── history.rs          # undo/redo edits
 │   ├── layout.rs           # tab expansion + soft-wrap segments
@@ -60,7 +73,24 @@ src/
 │   ├── mod.rs              # LanguageService facade + Capability
 │   ├── symbols.rs          # workspace symbol scan
 │   ├── format.rs           # formatter pipeline (stdin/stdout tools)
-│   ├── tools.rs            # discovery + trusted provisioning
+│   ├── tools/              # discovery + trusted provisioning
+│   │   ├── mod.rs          # Tool enum, probes, registry facade
+│   │   ├── spec.rs         # pinned versions and limits
+│   │   ├── plan.rs         # attempt builders and install types
+│   │   ├── install.rs      # lock, preflight, step execution
+│   │   ├── download.rs     # verified downloads and the cache
+│   │   ├── runtimes.rs     # JDK, .NET, Node, Dart runtimes
+│   │   ├── remote.rs       # metadata, GPG and GitHub releases
+│   │   ├── toolchains.rs   # Go/Swift/Elixir platform toolchains
+│   │   ├── archive.rs      # safe extraction and promotion
+│   │   ├── hash.rs         # SHA-256/512 helpers
+│   │   ├── status.rs       # probe results and portable helpers
+│   │   ├── status_types.rs # ToolStatus
+│   │   ├── registry.rs     # ToolRegistry and server probing
+│   │   ├── discovery.rs    # locating executables
+│   │   ├── paths.rs        # managed directories
+│   │   ├── env.rs          # launch environments
+│   │   └── attempts_more.rs# per-language install attempts
 │   ├── setup.rs            # project setup plan (what is missing)
 │   ├── support.rs          # support class surfaced in-app
 │   ├── data.rs             # shared keyword/builtin data
@@ -87,7 +117,11 @@ src/
 ├── search.rs               # project-wide text search
 ├── session.rs              # per-project session persistence
 ├── settings.rs             # global user preferences + atomic JSON persistence
-├── terminal/mod.rs         # init/restore, OSC 52 clipboard
+├── terminal/
+│   ├── mod.rs              # init/restore, OSC 52 clipboard
+│   ├── screen.rs           # bounded ANSI screen model for the terminal
+│   └── session.rs          # PTY sessions, reader threads and resize
+├── trust.rs                # trusted project roots (state directory)
 └── ui/
     ├── theme.rs            # bundled themes + semantic roles (single source of truth)
     ├── art.rs              # original ASCII art: mascot, wordmark, frames

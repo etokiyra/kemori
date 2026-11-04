@@ -9,11 +9,14 @@
 use crate::language::completion::{Completion, CompletionKind};
 use crate::language::data::{push_merged, scan_number, scan_quoted};
 use crate::language::detection::LanguageDescriptor;
+use crate::language::format::FormatOutcome;
 use crate::language::id::LanguageId;
 use crate::language::provider::{
     Capability, HighlightSpan, HighlightState, LanguageProvider, TokenKind,
 };
 use crate::language::symbols::{Location, Symbol, SymbolKind, word_at};
+
+use std::path::Path;
 
 const KEYWORDS: &[&str] = &[
     "as",
@@ -155,6 +158,7 @@ impl LanguageProvider for KotlinProvider {
             Capability::GotoReference,
             Capability::Completion,
             Capability::Hover,
+            Capability::Formatting,
         ]
     }
 
@@ -197,6 +201,14 @@ impl LanguageProvider for KotlinProvider {
                 .map(|word| Completion::new(*word, CompletionKind::Constant)),
         );
         completions
+    }
+
+    fn format(&self, path: &Path, text: &str) -> FormatOutcome {
+        crate::language::format::ktlint(path, text)
+    }
+
+    fn formatter(&self) -> Option<&'static str> {
+        Some("ktlint")
     }
 
     fn hover(&self, text: &str, line: usize, col: usize) -> Option<crate::language::hover::Hover> {
@@ -533,5 +545,21 @@ typealias Handler = (Int) -> Unit
             "expected an unclosed brace: {diagnostics:?}"
         );
         assert!(KotlinProvider.diagnostics("fun main() {\n}\n").is_empty());
+    }
+
+    #[test]
+    fn kotlin_offers_ktlint_formatting() {
+        assert!(
+            KotlinProvider
+                .capabilities()
+                .contains(&Capability::Formatting)
+        );
+        assert_eq!(KotlinProvider.formatter(), Some("ktlint"));
+        match KotlinProvider.format(Path::new("/tmp/Main.kt"), "fun main(){}\n") {
+            FormatOutcome::Formatted(_)
+            | FormatOutcome::ToolMissing { .. }
+            | FormatOutcome::Failed(_) => {}
+            FormatOutcome::Unsupported => panic!("Kotlin should advertise a formatter"),
+        }
     }
 }

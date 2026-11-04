@@ -90,8 +90,9 @@ they open **Settings** from the command palette; there is no file to find or
 edit.
 
 - **Supported settings.** Theme, line numbers, animations, soft wrap, indent
-  width (Auto or a fixed width), spaces vs tabs, inline diagnostics, and
-  automatic completion. Each applies immediately and can be reset to its default.
+  width (Auto or a fixed width), spaces vs tabs, inline diagnostics, automatic
+  completion, and format on save. Each applies immediately and can be reset to
+  its default.
 - **Storage.** Choices are written on quit, and only once something changed, to
   `$XDG_STATE_HOME/kemori/settings.json` (or
   `~/.local/state/kemori/settings.json`). A missing file loads the defaults; a

@@ -87,6 +87,9 @@ impl App {
             SettingsRow::AutoCompletion => {
                 self.settings.auto_completion = !self.settings.auto_completion
             }
+            SettingsRow::FormatOnSave => {
+                self.settings.format_on_save = !self.settings.format_on_save
+            }
             SettingsRow::Reset => {
                 self.settings = Settings::default();
                 self.set_status("Settings reset to defaults");
@@ -113,12 +116,13 @@ pub enum SettingsRow {
     UseSpaces,
     InlineDiagnostics,
     AutoCompletion,
+    FormatOnSave,
     Reset,
     Back,
 }
 
 /// The rows of the Settings screen, in display order.
-pub const SETTINGS_ROWS: [SettingsRow; 14] = [
+pub const SETTINGS_ROWS: [SettingsRow; 15] = [
     SettingsRow::Header("Appearance"),
     SettingsRow::Theme,
     SettingsRow::LineNumbers,
@@ -128,6 +132,7 @@ pub const SETTINGS_ROWS: [SettingsRow; 14] = [
     SettingsRow::IndentWidth,
     SettingsRow::UseSpaces,
     SettingsRow::InlineDiagnostics,
+    SettingsRow::FormatOnSave,
     SettingsRow::Header("Completion"),
     SettingsRow::AutoCompletion,
     SettingsRow::Header("General"),
@@ -153,6 +158,7 @@ impl SettingsRow {
             SettingsRow::UseSpaces => "Use spaces",
             SettingsRow::InlineDiagnostics => "Inline diagnostics",
             SettingsRow::AutoCompletion => "Automatic completion",
+            SettingsRow::FormatOnSave => "Format on save",
             SettingsRow::Reset => "Reset to defaults",
             SettingsRow::Back => "Back",
         }

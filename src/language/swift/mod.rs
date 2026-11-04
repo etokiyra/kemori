@@ -9,11 +9,14 @@
 use crate::language::completion::{Completion, CompletionKind};
 use crate::language::data::{push_merged, scan_number, scan_quoted};
 use crate::language::detection::LanguageDescriptor;
+use crate::language::format::FormatOutcome;
 use crate::language::id::LanguageId;
 use crate::language::provider::{
     Capability, HighlightSpan, HighlightState, LanguageProvider, TokenKind,
 };
 use crate::language::symbols::{Location, Symbol, SymbolKind, word_at};
+
+use std::path::Path;
 
 const KEYWORDS: &[&str] = &[
     "associatedtype",
@@ -127,6 +130,7 @@ impl LanguageProvider for SwiftProvider {
             Capability::GotoReference,
             Capability::Completion,
             Capability::Hover,
+            Capability::Formatting,
         ]
     }
 
@@ -163,6 +167,10 @@ impl LanguageProvider for SwiftProvider {
                 .map(|word| Completion::new(*word, CompletionKind::Type)),
         );
         completions
+    }
+
+    fn format(&self, _path: &Path, text: &str) -> FormatOutcome {
+        crate::language::format::swift_format(text)
     }
 
     fn hover(&self, text: &str, line: usize, col: usize) -> Option<crate::language::hover::Hover> {

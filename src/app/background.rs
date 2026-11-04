@@ -157,6 +157,7 @@ impl App {
                             .editor
                             .documents
                             .iter()
+                            .filter(|doc| !doc.is_large_file())
                             .filter_map(|doc| doc.buffer.path.clone())
                             .collect();
                         if !paths.is_empty() {

@@ -185,6 +185,48 @@ impl App {
         ));
     }
 
+    /// Jump to the server's implementation of the symbol under the cursor.
+    pub(super) fn goto_implementation(&mut self) {
+        self.goto_extra_definition(RequestKind::Implementation);
+    }
+
+    /// Jump to the server's declared type of the expression under the cursor.
+    pub(super) fn goto_type_definition(&mut self) {
+        self.goto_extra_definition(RequestKind::TypeDefinition);
+    }
+
+    fn goto_extra_definition(&mut self, kind: RequestKind) {
+        let Some(language) = self.lsp_language() else {
+            self.set_status("Implementation and type definition need a language server");
+            return;
+        };
+        let Some((path, row, col)) = self.lsp_target_for(kind) else {
+            self.set_status("The language server does not provide that lookup");
+            return;
+        };
+        let col = self.lsp_col(language, &path, row, col);
+        let version = self.document_version(&path).unwrap_or(0);
+        let request = self.active_server_mut().and_then(|server| match kind {
+            RequestKind::Implementation => server.implementation(&path, row, col),
+            RequestKind::TypeDefinition => server.type_definition(&path, row, col),
+            _ => None,
+        });
+        self.pending_definition = request.map(|id| PendingDocRequest {
+            language,
+            id,
+            path,
+            version,
+        });
+        if self.pending_definition.is_some() {
+            self.set_status(match kind {
+                RequestKind::Implementation => "Resolving implementation…",
+                _ => "Resolving type definition…",
+            });
+        } else {
+            self.set_status("The language server did not accept the lookup");
+        }
+    }
+
     /// Ask the server for code actions over the cursor or selection.
     pub(super) fn code_actions(&mut self) {
         let Some(language) = self.lsp_language() else {
@@ -503,21 +545,30 @@ impl App {
         } else {
             self.set_status("File is no longer open");
         }
+        self.save_after_format(path);
     }
 
     /// Format the active document with the language's trusted formatter.
     pub(super) fn format_document(&mut self) {
+        let _ = self.format_document_request();
+    }
+
+    /// Start a format request, returning whether one was actually dispatched.
+    pub(super) fn format_document_request(&mut self) -> bool {
+        if self.read_only_block() {
+            return false;
+        }
         let (path, language, text) = match self.editor.active_document() {
             Some(doc) => (
                 doc.buffer.path.clone(),
                 doc.buffer.language,
                 doc.buffer.text(),
             ),
-            None => return,
+            None => return false,
         };
         let Some(path) = path else {
             self.set_error("Save the file before formatting");
-            return;
+            return false;
         };
 
         // Prefer the language server's formatter when it advertises one; the
@@ -541,7 +592,7 @@ impl App {
                     .map(|id| (path.clone(), language, id, version));
                 if self.pending_lsp_format.is_some() {
                     self.set_status("Formatting…");
-                    return;
+                    return true;
                 }
             }
         }
@@ -556,13 +607,14 @@ impl App {
                 "Formatting is not available for {}",
                 language.name()
             ));
-            return;
+            return false;
         }
 
         self.format_seq += 1;
         let revision = self.format_seq;
         self.pending_format = Some((path.clone(), revision));
         self.background.format(path, language, text, revision);
+        true
     }
 
     /// Apply a formatting result, or explain why it could not run.
@@ -570,14 +622,17 @@ impl App {
         match outcome {
             FormatOutcome::Formatted(text) => self.apply_formatted(path, &text),
             FormatOutcome::Unsupported => {
+                self.cancel_format_save(path);
                 self.set_status("Formatting is not available for this language")
             }
             FormatOutcome::ToolMissing { tool, hint } => {
+                self.cancel_format_save(path);
                 let message = format!("{tool} not found — {hint}");
                 self.set_error(message.clone());
                 self.push_toast(ToastKind::Error, message);
             }
             FormatOutcome::Failed(message) => {
+                self.cancel_format_save(path);
                 let text = format!("Format failed: {message}");
                 self.set_error(text.clone());
                 self.push_toast(ToastKind::Error, text);

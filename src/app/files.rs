@@ -43,6 +43,7 @@ impl App {
             .filter_map(|doc| doc.buffer.path.clone().map(|p| (p, doc.buffer.language)))
             .collect();
         self.editor.close_all();
+        self.snippet = None;
         for (path, language) in closed {
             self.notify_lsp_close(&path, language);
         }
@@ -79,7 +80,7 @@ impl App {
         let read_only = self
             .editor
             .active_document()
-            .map(|doc| doc.is_read_only())
+            .map(|doc| doc.is_lossy_read_only())
             .unwrap_or(false);
         if !read_only {
             self.set_status("File is already UTF-8");
@@ -104,9 +105,84 @@ impl App {
                 self.request_git_refresh();
                 self.quit_armed = false;
                 self.set_status("Saved");
+                let path = self
+                    .editor
+                    .active_document()
+                    .and_then(|doc| doc.buffer.path.clone());
+                if let Some(path) = path {
+                    self.maybe_format_after_save(&path);
+                }
             }
             Ok(false) => self.set_status("Nothing to save"),
             Err(err) => self.set_error(format!("Save failed: {err}")),
+        }
+    }
+
+    /// Start format-on-save after the first write, when the preference is on and
+    /// the language can format.
+    fn maybe_format_after_save(&mut self, path: &Path) {
+        if !self.settings.format_on_save {
+            return;
+        }
+        let language = self
+            .editor
+            .active_document()
+            .map(|doc| doc.buffer.language)
+            .unwrap_or(LanguageId::Unknown);
+        let can_format = self.lsp_supports(RequestKind::Formatting)
+            || self
+                .language
+                .provider(language)
+                .capabilities()
+                .contains(&Capability::Formatting);
+        if !can_format {
+            self.format_save_pending = None;
+            return;
+        }
+        self.format_save_pending = Some(path.to_path_buf());
+        if self.format_document_request() {
+            self.set_status("Saved; formatting…");
+        } else {
+            self.format_save_pending = None;
+        }
+    }
+
+    /// Write the formatted result and finish a format-on-save cycle.
+    pub(super) fn save_after_format(&mut self, path: &Path) {
+        let pending = self
+            .format_save_pending
+            .as_deref()
+            .is_some_and(|pending| same_file(Some(pending), path));
+        if !pending {
+            return;
+        }
+        self.format_save_pending = None;
+        let saved = self
+            .editor
+            .documents
+            .iter_mut()
+            .find(|doc| same_file(doc.buffer.path.as_deref(), path))
+            .map(|doc| doc.save());
+        match saved {
+            Some(Ok(true)) => {
+                self.request_git_refresh();
+                self.quit_armed = false;
+                self.set_status("Saved (formatted)");
+            }
+            Some(Ok(false)) => {}
+            Some(Err(err)) => self.set_error(format!("Save after formatting failed: {err}")),
+            None => {}
+        }
+    }
+
+    /// Drop a pending format-on-save cycle, e.g. when the formatter is missing.
+    pub(super) fn cancel_format_save(&mut self, path: &Path) {
+        if self
+            .format_save_pending
+            .as_deref()
+            .is_some_and(|pending| same_file(Some(pending), path))
+        {
+            self.format_save_pending = None;
         }
     }
 
@@ -130,6 +206,7 @@ impl App {
             .get(index)
             .and_then(|doc| doc.buffer.path.clone().map(|p| (p, doc.buffer.language)));
         self.editor.close(index);
+        self.snippet = None;
         if let Some((path, language)) = closed {
             self.notify_lsp_close(&path, language);
         }

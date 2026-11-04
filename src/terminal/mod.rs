@@ -5,6 +5,9 @@
 
 use std::io::{self, Write};
 
+pub mod screen;
+pub mod session;
+
 use crossterm::event::{
     DisableBracketedPaste, DisableFocusChange, DisableMouseCapture, EnableBracketedPaste,
     EnableFocusChange, EnableMouseCapture, KeyboardEnhancementFlags, PopKeyboardEnhancementFlags,

@@ -61,35 +61,118 @@ impl App {
 
     pub(super) fn toggle_breakpoint(&mut self) {
         self.with_doc(|doc| doc.toggle_breakpoint());
-        self.set_status("Breakpoint marker toggled (visual only — no debugger yet)");
-    }
-
-    pub(super) fn debug_start(&mut self) {
-        let breakpoints: Vec<usize> = self
+        if let Some(path) = self
             .editor
             .active_document()
-            .map(|doc| doc.breakpoints.iter().copied().collect())
-            .unwrap_or_default();
-        // The pre-rename KODA_DEBUG_ADAPTER spelling still works for one release.
-        let adapter = std::env::var("KEMORI_DEBUG_ADAPTER")
-            .or_else(|_| std::env::var("KODA_DEBUG_ADAPTER"))
-            .unwrap_or_else(|_| "gdb".to_string());
-        match crate::debug::launch(&adapter, &[], &breakpoints) {
-            Ok(message) => {
-                let text =
-                    format!("{message} — preview only; execution will not stop on breakpoints");
-                self.debug_console(text.clone());
-                self.set_status(text);
+            .and_then(|doc| doc.buffer.path.clone())
+        {
+            self.sync_debug_breakpoints(&path);
+        }
+        self.set_status("Breakpoint toggled");
+    }
+
+    /// Attach a condition to the breakpoint on the current line.
+    pub(super) fn set_breakpoint_condition(&mut self, condition: String) {
+        let condition = condition.trim().to_string();
+        let mut row = None;
+        self.with_doc(|doc| {
+            row = Some(doc.clamped_cursor().row);
+            doc.set_breakpoint_condition(
+                doc.clamped_cursor().row,
+                (!condition.is_empty()).then(|| condition.clone()),
+            );
+        });
+        if let Some(row) = row {
+            if let Some(path) = self
+                .editor
+                .active_document()
+                .and_then(|doc| doc.buffer.path.clone())
+            {
+                self.sync_debug_breakpoints(&path);
             }
-            Err(err) => {
-                let text = format!("Debug adapter preview: {err}");
-                self.debug_console(text.clone());
-                self.set_error(text);
+            if condition.is_empty() {
+                self.set_status(format!("Cleared condition on line {}", row + 1));
+            } else {
+                self.set_status(format!(
+                    "Breakpoint condition on line {}: {condition}",
+                    row + 1
+                ));
             }
         }
     }
 
+    /// Turn the breakpoint on the current line into a logpoint.
+    pub(super) fn set_breakpoint_log(&mut self, message: String) {
+        let message = message.trim().to_string();
+        let mut row = None;
+        self.with_doc(|doc| {
+            row = Some(doc.clamped_cursor().row);
+            doc.set_breakpoint_log(
+                doc.clamped_cursor().row,
+                (!message.is_empty()).then(|| message.clone()),
+            );
+        });
+        if let Some(row) = row {
+            if let Some(path) = self
+                .editor
+                .active_document()
+                .and_then(|doc| doc.buffer.path.clone())
+            {
+                self.sync_debug_breakpoints(&path);
+            }
+            if message.is_empty() {
+                self.set_status(format!("Cleared logpoint on line {}", row + 1));
+            } else {
+                self.set_status(format!("Logpoint on line {}: {message}", row + 1));
+            }
+        }
+    }
+
+    pub(super) fn convert_line_endings(&mut self, ending: crate::editor::buffer::LineEnding) {
+        let mut changed = false;
+        self.with_doc(|doc| changed = doc.set_line_ending(ending));
+        if changed {
+            self.set_status(format!(
+                "Line endings set to {} — save to write the file",
+                ending.label()
+            ));
+        } else {
+            self.set_status(format!("Already using {} line endings", ending.label()));
+        }
+    }
+
+    /// Remove trailing spaces and tabs from every line.
+    pub(super) fn trim_trailing_whitespace(&mut self) {
+        if self.read_only_block() {
+            return;
+        }
+        let mut changed = false;
+        self.with_doc(|doc| changed = doc.trim_trailing_whitespace());
+        if changed {
+            self.set_status("Trimmed trailing whitespace");
+        } else {
+            self.set_status("No trailing whitespace");
+        }
+    }
+
+    /// Ensure the file ends with a newline.
+    pub(super) fn ensure_final_newline(&mut self) {
+        if self.read_only_block() {
+            return;
+        }
+        let mut changed = false;
+        self.with_doc(|doc| changed = doc.ensure_final_newline());
+        if changed {
+            self.set_status("Added a final newline");
+        } else {
+            self.set_status("The file already ends with a newline");
+        }
+    }
+
     pub(super) fn toggle_comment(&mut self) {
+        if self.read_only_block() {
+            return;
+        }
         let Some(language) = self.editor.active_document().map(|d| d.buffer.language) else {
             return;
         };
@@ -150,6 +233,10 @@ impl App {
             self.refresh_search_matches();
         }
         self.schedule_diagnostics();
+        self.request_document_highlights();
+        self.request_inlay_hints();
+        self.request_code_lenses();
+        self.request_selection_ranges();
     }
 
     pub(super) fn paste(&mut self) {
@@ -179,6 +266,9 @@ impl App {
     }
 
     pub(super) fn cut(&mut self) {
+        if self.read_only_block() {
+            return;
+        }
         let text = self.editor.active_document_mut().and_then(|doc| {
             let text = doc.selected_text()?;
             doc.delete_selection();
@@ -282,5 +372,36 @@ impl App {
             action(doc);
         }
         self.after_edit();
+    }
+
+    /// Flip the user-facing read-only mode for the active document.
+    pub(super) fn toggle_read_only(&mut self) {
+        let Some(doc) = self.editor.active_document_mut() else {
+            self.set_status("No file open");
+            return;
+        };
+        let on = doc.toggle_user_read_only();
+        self.completion = None;
+        if on {
+            self.set_status("Read-only mode on — editing and saving are disabled");
+        } else {
+            self.set_status("Read-only mode off");
+        }
+    }
+
+    /// Refuse an editing action while the user enabled read-only mode.
+    ///
+    /// Navigation and copying stay available; only mutations call this.
+    pub(super) fn read_only_block(&mut self) -> bool {
+        if self
+            .editor
+            .active_document()
+            .is_some_and(|doc| doc.is_user_read_only())
+        {
+            self.set_error("Read-only mode is on — toggle it off to edit");
+            true
+        } else {
+            false
+        }
     }
 }

@@ -39,4 +39,5 @@ pub mod session;
 pub mod settings;
 mod task_run;
 pub mod terminal;
+pub mod trust;
 pub mod ui;

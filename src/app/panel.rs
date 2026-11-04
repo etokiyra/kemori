@@ -30,36 +30,46 @@ pub enum PanelTab {
     Problems,
     /// The captured output of the last run task.
     Output,
+    /// An interactive shell rooted at the workspace.
+    Terminal,
     /// Messages from the debug-adapter preview.
     DebugConsole,
 }
 
 impl PanelTab {
     /// Every tab, in display order.
-    pub const ALL: [PanelTab; 3] = [PanelTab::Problems, PanelTab::Output, PanelTab::DebugConsole];
+    pub const ALL: [PanelTab; 4] = [
+        PanelTab::Problems,
+        PanelTab::Output,
+        PanelTab::Terminal,
+        PanelTab::DebugConsole,
+    ];
 
     /// The label shown in the panel's tab strip.
     pub fn label(self) -> &'static str {
         match self {
             PanelTab::Problems => "Problems",
             PanelTab::Output => "Output",
+            PanelTab::Terminal => "Terminal",
             PanelTab::DebugConsole => "Debug Console",
         }
     }
 
-    fn next(self) -> Self {
+    pub(super) fn next(self) -> Self {
         match self {
             PanelTab::Problems => PanelTab::Output,
-            PanelTab::Output => PanelTab::DebugConsole,
+            PanelTab::Output => PanelTab::Terminal,
+            PanelTab::Terminal => PanelTab::DebugConsole,
             PanelTab::DebugConsole => PanelTab::Problems,
         }
     }
 
-    fn previous(self) -> Self {
+    pub(super) fn previous(self) -> Self {
         match self {
             PanelTab::Problems => PanelTab::DebugConsole,
             PanelTab::Output => PanelTab::Problems,
-            PanelTab::DebugConsole => PanelTab::Output,
+            PanelTab::Terminal => PanelTab::Output,
+            PanelTab::DebugConsole => PanelTab::Terminal,
         }
     }
 }
@@ -94,6 +104,8 @@ pub struct Panel {
     pub task_problems: Vec<ProblemEntry>,
     /// Built-in diagnostics from the last workspace scan.
     pub workspace_problems: Vec<ProblemEntry>,
+    /// Pull-diagnostics reports from language servers, keyed by language.
+    pub lsp_workspace_problems: HashMap<LanguageId, Vec<ProblemEntry>>,
     /// Whether a workspace scan has produced a result for this workspace.
     pub problems_scanned: bool,
     /// Completed task outputs from this session, oldest first.
@@ -112,6 +124,7 @@ impl Default for Panel {
             debug_selected: 0,
             task_problems: Vec::new(),
             workspace_problems: Vec::new(),
+            lsp_workspace_problems: HashMap::new(),
             problems_scanned: false,
             history: Vec::new(),
         }
@@ -173,7 +186,7 @@ impl App {
 
     /// Select a tab, running the one-time workspace scan when Problems is first
     /// shown in this workspace.
-    fn switch_panel_tab(&mut self, tab: PanelTab) {
+    pub(super) fn switch_panel_tab(&mut self, tab: PanelTab) {
         self.panel.tab = tab;
         if tab == PanelTab::Problems && !self.panel.problems_scanned {
             self.refresh_project_problems();
@@ -197,6 +210,8 @@ impl App {
             .collect();
         self.background
             .project_diagnostics(self.workspace.root().to_path_buf(), skip, revision);
+        self.panel.lsp_workspace_problems.clear();
+        self.request_workspace_lsp_diagnostics();
         self.set_status("Scanning project problems…");
     }
 
@@ -266,6 +281,9 @@ impl App {
         }
         problems.extend(self.panel.task_problems.iter().cloned());
         problems.extend(self.panel.workspace_problems.iter().cloned());
+        for entries in self.panel.lsp_workspace_problems.values() {
+            problems.extend(entries.iter().cloned());
+        }
         // The same problem can arrive from a live document and a workspace
         // scan; keep one copy so the count is honest.
         let mut seen = std::collections::HashSet::new();
@@ -308,7 +326,8 @@ impl App {
             KeyCode::BackTab => self.switch_panel_tab(self.panel.tab.previous()),
             KeyCode::Char('1') => self.switch_panel_tab(PanelTab::Problems),
             KeyCode::Char('2') => self.switch_panel_tab(PanelTab::Output),
-            KeyCode::Char('3') => self.switch_panel_tab(PanelTab::DebugConsole),
+            KeyCode::Char('3') => self.switch_panel_tab(PanelTab::Terminal),
+            KeyCode::Char('4') => self.switch_panel_tab(PanelTab::DebugConsole),
             KeyCode::Up => self.move_panel_selection(-1),
             KeyCode::Down => self.move_panel_selection(1),
             KeyCode::PageUp => self.move_panel_selection(-PANEL_PAGE),
@@ -344,6 +363,10 @@ impl App {
                     run.select_by(delta);
                 }
             }
+            PanelTab::Terminal => {
+                // Dragging through the scrollback mirrors the arrow keys.
+                self.terminals.scroll_active(-delta as isize);
+            }
             PanelTab::DebugConsole => {
                 let last = self.panel.debug.len().saturating_sub(1);
                 let next = self.panel.debug_selected as i64 + delta;
@@ -362,6 +385,13 @@ impl App {
             PanelTab::Output => {
                 if let Some(run) = self.panel.output.as_mut() {
                     run.select_by(if end { i64::MAX } else { i64::MIN });
+                }
+            }
+            PanelTab::Terminal => {
+                if end {
+                    self.terminals.scroll_active_to_bottom();
+                } else {
+                    self.terminals.scroll_active(isize::MAX / 4);
                 }
             }
             PanelTab::DebugConsole => {
@@ -397,6 +427,7 @@ impl App {
                     None => self.set_status("No file reference on the selected line"),
                 }
             }
+            PanelTab::Terminal => {}
             PanelTab::DebugConsole => {}
         }
     }
@@ -410,9 +441,11 @@ impl App {
             PanelTab::Problems => {
                 let had_task = !self.panel.task_problems.is_empty();
                 let had_workspace = !self.panel.workspace_problems.is_empty();
+                let had_lsp = !self.panel.lsp_workspace_problems.is_empty();
                 self.panel.task_problems.clear();
                 self.panel.workspace_problems.clear();
-                if had_task || had_workspace {
+                self.panel.lsp_workspace_problems.clear();
+                if had_task || had_workspace || had_lsp {
                     self.set_status("Task and project problems cleared");
                 } else {
                     self.set_status(
@@ -423,6 +456,11 @@ impl App {
             PanelTab::Output => {
                 self.panel.output = None;
                 self.set_status("Output cleared");
+            }
+            PanelTab::Terminal => {
+                // Ctrl+L is the shell's own clear-screen command.
+                self.terminals.write_active(b"\x0c");
+                self.set_status("Sent clear to the terminal");
             }
             PanelTab::DebugConsole => {
                 self.panel.debug.clear();

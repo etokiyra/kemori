@@ -13,13 +13,20 @@ mod availability;
 mod background;
 mod commands;
 mod completion;
+pub mod debug;
 mod diagnostics;
 mod editor;
 mod files;
 mod git;
+mod java_debug;
 mod keys;
 mod language;
 mod lsp;
+mod lsp_decorations;
+mod lsp_documents;
+mod lsp_highlights;
+mod lsp_pending;
+mod lsp_response;
 mod mouse;
 mod panes;
 pub mod project_search;
@@ -28,8 +35,11 @@ mod search;
 mod session;
 mod settings;
 mod setup;
+mod snippets;
 mod status;
 mod tasks;
+mod terminal_panel;
+mod trust;
 mod view;
 
 use std::cmp::Reverse;
@@ -63,11 +73,13 @@ use crate::project::tasks::Task;
 use crate::recent::Recent;
 use crate::session::Session;
 use crate::terminal;
+use crate::terminal::session::Terminals;
+use crate::trust::TrustStore;
 use crate::ui;
 use overlay::{
     CompletionState, DiffState, DirPicker, Help, HoverState, NewProject, NewProjectStep, Overlay,
-    Picker, PickerAction, PickerItem, Prompt, PromptKind, Search, SearchField, SignatureState,
-    TreeFilter,
+    Picker, PickerAction, PickerItem, Prompt, PromptKind, ReplacePreview, ReplacePreviewRow,
+    Search, SearchField, SignatureState, TreeFilter,
 };
 
 /// How long typing must pause before diagnostics are recomputed. Short enough to
@@ -180,6 +192,13 @@ struct PendingCompletion {
     version: u64,
 }
 
+/// The remaining tab stops of an inserted snippet.
+struct SnippetState {
+    doc: usize,
+    stops: Vec<Position>,
+    index: usize,
+}
+
 /// A document-sensitive language-server request.
 ///
 /// The response may only be applied if it is still the newest request for its
@@ -206,6 +225,15 @@ impl PendingDocRequest {
             .find(|doc| same_file(doc.buffer.path.as_deref(), &self.path))
             .is_some_and(|doc| doc.buffer.version == self.version)
     }
+}
+
+/// Which hierarchy the user asked for after preparing a symbol.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum HierarchyGoal {
+    Incoming,
+    Outgoing,
+    Super,
+    Sub,
 }
 
 /// An action offered on the welcome screen.
@@ -263,6 +291,8 @@ pub struct App {
     pub tree_filter: Option<TreeFilter>,
     /// Completion popup, when open.
     pub completion: Option<CompletionState>,
+    /// Active snippet tab-stop navigation, when a snippet was inserted.
+    snippet: Option<SnippetState>,
     /// When a paused keystroke should offer automatic completion.
     completion_due: Option<PendingCompletion>,
     /// The id of the newest language-server completion request (with its
@@ -297,6 +327,18 @@ pub struct App {
     pub focus: Focus,
     /// The bottom panel and its per-tab state.
     pub panel: panel::Panel,
+    /// PTY-backed terminal sessions shown in the panel.
+    pub terminals: Terminals,
+    /// An optional shell override for a terminal session. `None` uses `$SHELL`.
+    pub terminal_shell: Option<String>,
+    /// The debugger session and the stack/variables it reported.
+    pub debug: debug::DebugState,
+    /// A pending jdtls `workspace/executeCommand` in the Java debug pipeline.
+    pending_java_debug: Option<debug::JavaDebugPending>,
+    /// Project roots the user has trusted for running code.
+    pub trust: TrustStore,
+    /// The action waiting for a workspace-trust answer.
+    pending_trust: Option<trust::TrustIntent>,
     pub status: Status,
     /// Transient notifications shown above the statusline.
     pub toasts: Vec<Toast>,
@@ -316,11 +358,31 @@ pub struct App {
     format_seq: u64,
     /// The format request awaiting a result, if any.
     pending_format: Option<(PathBuf, u64)>,
+    /// A file saved while format-on-save is waiting to write the result.
+    format_save_pending: Option<PathBuf>,
     /// A language-server formatting request awaiting a result, with the buffer
     /// version it was computed against.
     pending_lsp_format: Option<(PathBuf, LanguageId, i64, u64)>,
     /// An in-flight folding-range request.
     pending_folding: Option<PendingDocRequest>,
+    /// An in-flight document-highlight request.
+    pending_highlights: Option<PendingDocRequest>,
+    /// An in-flight inlay-hint request.
+    pending_inlay_hints: Option<PendingDocRequest>,
+    /// An in-flight code-lens request.
+    pending_code_lens: Option<PendingDocRequest>,
+    /// An in-flight selection-range request and the cursor it was for.
+    pending_selection_ranges: Option<(PendingDocRequest, Position)>,
+    /// An in-flight hierarchy prepare request and what to do with the result.
+    pending_hierarchy_prepare: Option<(PendingDocRequest, HierarchyGoal)>,
+    /// An in-flight incoming/outgoing/supertype/subtype request.
+    pending_hierarchy: Option<PendingDocRequest>,
+    /// Prepared hierarchy nodes awaiting the user's choice.
+    hierarchy_items: Vec<crate::language::lsp::hierarchy::HierarchyItem>,
+    /// Which follow-up the prepared nodes should use.
+    hierarchy_goal: Option<HierarchyGoal>,
+    /// An in-flight document-link request.
+    pending_document_links: Option<PendingDocRequest>,
     /// An in-flight definition request.
     pending_definition: Option<PendingDocRequest>,
     /// An in-flight references request.
@@ -351,6 +413,10 @@ pub struct App {
     project_diagnostics_seq: u64,
     /// The workspace diagnostics scan awaiting a result, if any.
     pending_project_diagnostics: Option<u64>,
+    /// In-flight document pull-diagnostics requests, keyed by server and id.
+    pending_document_diagnostics: HashMap<(LanguageId, i64), (PathBuf, u64)>,
+    /// In-flight workspace pull-diagnostics requests, keyed by server and id.
+    pending_workspace_diagnostics: HashMap<(LanguageId, i64), ()>,
     /// Animation frame, advanced while something on screen animates.
     pub anim_phase: usize,
     /// When the animation frame last advanced.
@@ -433,6 +499,9 @@ impl App {
             settings.theme = crate::settings::ThemeId::Ansi;
         }
         let mut app = App::new_with_settings(target.as_deref(), settings)?;
+        // Trust is a user decision stored in Kemori's state directory; tests
+        // build an app with an empty store instead of reading the real one.
+        app.trust = TrustStore::load();
         let mut terminal = terminal::init()?;
         let result = app.run(&mut terminal);
         terminal::restore();
@@ -479,6 +548,7 @@ impl App {
             pending_project: false,
             tree_filter: None,
             completion: None,
+            snippet: None,
             completion_due: None,
             completion_request: None,
             hover: None,
@@ -496,6 +566,12 @@ impl App {
             focus_pane: Pane::Primary,
             focus: Focus::Editor,
             panel: panel::Panel::default(),
+            terminals: Terminals::default(),
+            terminal_shell: None,
+            debug: debug::DebugState::default(),
+            pending_java_debug: None,
+            trust: TrustStore::default(),
+            pending_trust: None,
             status: Status::default(),
             toasts: Vec::new(),
             viewport_height: 20,
@@ -507,8 +583,18 @@ impl App {
             diagnostics_dirty_at: None,
             format_seq: 0,
             pending_format: None,
+            format_save_pending: None,
             pending_lsp_format: None,
             pending_folding: None,
+            pending_highlights: None,
+            pending_inlay_hints: None,
+            pending_code_lens: None,
+            pending_selection_ranges: None,
+            pending_hierarchy_prepare: None,
+            pending_hierarchy: None,
+            hierarchy_items: Vec::new(),
+            hierarchy_goal: None,
+            pending_document_links: None,
             pending_definition: None,
             pending_references: None,
             pending_rename_request: None,
@@ -524,6 +610,8 @@ impl App {
             pending_project_replace: None,
             project_diagnostics_seq: 0,
             pending_project_diagnostics: None,
+            pending_document_diagnostics: HashMap::new(),
+            pending_workspace_diagnostics: HashMap::new(),
             anim_phase: 0,
             anim_last: Instant::now(),
             motion: true,
@@ -655,135 +743,8 @@ impl App {
 
 /// A sibling copy path that does not yet exist: `name copy.ext`,
 /// `name copy 2.ext`, and so on.
-fn unique_copy_path(path: &Path) -> PathBuf {
-    let parent = path.parent().unwrap_or_else(|| Path::new("."));
-    let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("file");
-    let extension = path.extension().and_then(|e| e.to_str());
-    for index in 1..1000 {
-        let base = if index == 1 {
-            format!("{stem} copy")
-        } else {
-            format!("{stem} copy {index}")
-        };
-        let name = match extension {
-            Some(ext) => format!("{base}.{ext}"),
-            None => base,
-        };
-        let candidate = parent.join(name);
-        if !candidate.exists() {
-            return candidate;
-        }
-    }
-    parent.join(format!("{stem} copy"))
-}
-
-/// A compact display path, using `~` for the home directory when possible.
-fn display_path(path: &Path) -> String {
-    if let Some(home) = std::env::var_os("HOME").map(PathBuf::from)
-        && let Ok(relative) = path.strip_prefix(&home)
-    {
-        return format!("~/{}", relative.display());
-    }
-    path.display().to_string()
-}
-
-/// Validate a project name against the chosen parent directory.
-fn validate_project_name(parent: &Path, name: &str) -> Result<(), String> {
-    create::validate_name(name)?;
-    let target = parent.join(name.trim());
-    if target.exists() {
-        return Err(format!("{} already exists", target.display()));
-    }
-    Ok(())
-}
-
-/// Pick a sensible file to open in a freshly created project.
-fn entry_file(files: &[PathBuf]) -> Option<PathBuf> {
-    const PREFERRED: &[&str] = &["main.rs", "main.go", "__main__.py", "main.py"];
-    files
-        .iter()
-        .find(|path| {
-            path.file_name()
-                .and_then(|name| name.to_str())
-                .is_some_and(|name| PREFERRED.contains(&name))
-        })
-        .or_else(|| {
-            files.iter().find(|path| {
-                matches!(
-                    path.extension().and_then(|extension| extension.to_str()),
-                    Some("rs" | "go" | "py" | "sh" | "bash")
-                )
-            })
-        })
-        .cloned()
-}
-
-/// Whether two optional/actual paths refer to the same file.
-fn same_file(a: Option<&Path>, b: &Path) -> bool {
-    let Some(a) = a else {
-        return false;
-    };
-    let a = a.canonicalize().unwrap_or_else(|_| a.to_path_buf());
-    let b = b.canonicalize().unwrap_or_else(|_| b.to_path_buf());
-    a == b
-}
-fn apply_text_edits(text: &str, edits: &[convert::TextEdit]) -> String {
-    let mut chars: Vec<char> = text.chars().collect();
-    // Character offset where each line begins.
-    let mut line_starts = vec![0usize];
-    for (index, ch) in chars.iter().enumerate() {
-        if *ch == '\n' {
-            line_starts.push(index + 1);
-        }
-    }
-    let total = chars.len();
-    let offset = |line: usize, character: usize| -> usize {
-        let start = line_starts.get(line).copied().unwrap_or(total);
-        (start + character).min(total)
-    };
-
-    let mut sorted: Vec<&convert::TextEdit> = edits.iter().collect();
-    sorted.sort_by_key(|edit| Reverse((edit.start.0, edit.start.1)));
-    for edit in sorted {
-        let start = offset(edit.start.0, edit.start.1);
-        let end = offset(edit.end.0, edit.end.1).max(start);
-        chars.splice(start..end, edit.new_text.chars());
-    }
-    chars.into_iter().collect()
-}
-
-/// Whether a key is "shifted".
-///
-/// Real terminals vary: some report `Shift` explicitly, some report an
-/// uppercase character for a shifted letter, and some (without the kitty
-/// keyboard protocol) conflate `Ctrl+Shift+P` with `Ctrl+P`. Treating an
-/// uppercase character as shifted recovers the former cases, so `Ctrl+Shift+P`
-/// opens the command palette rather than quick open.
-fn key_shift(key: &KeyEvent) -> bool {
-    key.modifiers.contains(KeyModifiers::SHIFT)
-        || matches!(key.code, KeyCode::Char(c) if c.is_ascii_uppercase())
-}
-
-/// Identifier words already present in a document, deduplicated in order.
-///
-/// Buffer completion is language-agnostic and always useful; providers only add
-/// the parts a language knows (keywords, types, builtins).
-fn document_words(text: &str) -> Vec<Completion> {
-    let mut seen = std::collections::HashSet::new();
-    let mut words = Vec::new();
-    for word in text.split(|c: char| !is_word_char(c)) {
-        if word.chars().count() < 2 {
-            continue;
-        }
-        if seen.insert(word.to_string()) {
-            words.push(Completion::new(word.to_string(), CompletionKind::Variable));
-        }
-        if words.len() >= 2000 {
-            break;
-        }
-    }
-    words
-}
+mod helpers;
+use helpers::*;
 
 #[cfg(test)]
 mod tests;

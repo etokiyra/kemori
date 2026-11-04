@@ -8,7 +8,7 @@ impl App {
         if self
             .editor
             .active_document()
-            .is_some_and(|doc| doc.diagnostics_dirty())
+            .is_some_and(|doc| !doc.is_large_file() && doc.diagnostics_dirty())
         {
             self.diagnostics_dirty_at = Some(Instant::now());
         }
@@ -26,7 +26,8 @@ impl App {
         }
 
         let needs_first_pass = self.editor.active_document().is_some_and(|doc| {
-            doc.diagnostics_revision() == 0
+            !doc.is_large_file()
+                && doc.diagnostics_revision() == 0
                 && self
                     .language
                     .provider(doc.buffer.language)
@@ -40,6 +41,13 @@ impl App {
 
     /// Send the active document's text to the background worker for analysis.
     pub(super) fn dispatch_diagnostics(&mut self) {
+        if self
+            .editor
+            .active_document()
+            .is_some_and(|doc| doc.is_large_file())
+        {
+            return;
+        }
         let (path, language) = match self.editor.active_document() {
             Some(doc) => (doc.buffer.path.clone(), doc.buffer.language),
             None => return,
@@ -72,6 +80,9 @@ impl App {
                 && let Some(path) = path.as_deref()
             {
                 server.did_change(path, &text);
+            }
+            if let Some(path) = path.as_deref() {
+                self.request_document_diagnostic(language, path);
             }
             return;
         }

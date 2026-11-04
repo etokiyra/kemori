@@ -12,8 +12,17 @@ use std::path::{Path, PathBuf};
 
 use serde_json::{Value, json};
 
+/// One file's persisted undo history.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PersistedHistory {
+    pub path: PathBuf,
+    /// FNV-1a of the buffer text the history was recorded against.
+    pub fingerprint: u64,
+    pub history: Value,
+}
+
 /// A snapshot of the UI state worth restoring.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Session {
     /// Open files, in tab order.
     pub files: Vec<PathBuf>,
@@ -25,6 +34,8 @@ pub struct Session {
     pub expanded: Vec<PathBuf>,
     /// Whether dotfiles and ignored directories are shown.
     pub show_hidden: bool,
+    /// Undo histories for clean files.
+    pub histories: Vec<PersistedHistory>,
 }
 
 impl Session {
@@ -40,6 +51,11 @@ impl Session {
             "cursors": self.cursors.iter().map(|(row, col)| json!([row, col])).collect::<Vec<_>>(),
             "expanded": self.expanded.iter().map(|p| p.to_string_lossy()).collect::<Vec<_>>(),
             "show_hidden": self.show_hidden,
+            "histories": self.histories.iter().map(|entry| json!({
+                "path": entry.path.to_string_lossy(),
+                "fingerprint": entry.fingerprint,
+                "history": entry.history,
+            })).collect::<Vec<_>>(),
         });
         let text = serde_json::to_string_pretty(&value).map_err(std::io::Error::other)?;
         crate::filesystem::write_atomic(path, &text)
@@ -65,6 +81,25 @@ impl Session {
             .map(|index| raw.get(index).copied().flatten().unwrap_or((0, 0)))
             .collect();
         let active = value.get("active").and_then(Value::as_u64).unwrap_or(0) as usize;
+        let histories = value
+            .get("histories")
+            .and_then(Value::as_array)
+            .map(|items| {
+                items
+                    .iter()
+                    .filter_map(|item| {
+                        let path = item.get("path")?.as_str()?;
+                        let fingerprint = item.get("fingerprint")?.as_u64()?;
+                        let history = item.get("history")?.clone();
+                        Some(PersistedHistory {
+                            path: PathBuf::from(path),
+                            fingerprint,
+                            history,
+                        })
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
         Session {
             files,
             active,
@@ -74,6 +109,7 @@ impl Session {
                 .get("show_hidden")
                 .and_then(Value::as_bool)
                 .unwrap_or(false),
+            histories,
         }
     }
 }
@@ -97,6 +133,17 @@ fn cursor_pair(item: &Value) -> Option<(usize, usize)> {
         pair.first()?.as_u64()? as usize,
         pair.get(1)?.as_u64()? as usize,
     ))
+}
+
+/// FNV-1a of text, used to refuse restoring undo history recorded against a
+/// different file contents.
+pub fn fingerprint(text: &str) -> u64 {
+    let mut hash = 0xcbf2_9ce4_8422_2325u64;
+    for byte in text.as_bytes() {
+        hash ^= *byte as u64;
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    hash
 }
 
 /// The state file for a project root, if a state directory is available.
@@ -138,6 +185,11 @@ mod tests {
             cursors: vec![(3, 4), (0, 0)],
             expanded: vec![PathBuf::from("/tmp/src")],
             show_hidden: true,
+            histories: vec![PersistedHistory {
+                path: PathBuf::from("/tmp/a.rs"),
+                fingerprint: fingerprint("fn main() {}\n"),
+                history: json!({ "undo": [], "redo": [], "next_id": 1 }),
+            }],
         };
         session.save_to(&path).unwrap();
         assert_eq!(Session::load_from(&path), Some(session));

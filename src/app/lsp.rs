@@ -3,17 +3,6 @@
 use super::*;
 
 impl App {
-    /// Tell a language's server that a document was closed, if it had it open.
-    pub(super) fn notify_lsp_close(&mut self, path: &Path, language: LanguageId) {
-        if let Some(server) = self
-            .lsp
-            .get_mut(&(self.workspace.root().to_path_buf(), language))
-            .and_then(|job| job.server.as_mut())
-        {
-            server.did_close(path);
-        }
-    }
-
     /// Start any language server whose delay has elapsed.
     pub(super) fn poll_lsp_start(&mut self) {
         let now = Instant::now();
@@ -253,8 +242,8 @@ impl App {
         let text = match self.editor.documents.iter().find(|doc| {
             same_file(doc.buffer.path.as_deref(), path) && doc.buffer.language == language
         }) {
-            Some(doc) => doc.buffer.text(),
-            None => return,
+            Some(doc) if !doc.is_large_file() => doc.buffer.text(),
+            _ => return,
         };
         if let Some(server) = self
             .lsp
@@ -381,6 +370,7 @@ impl App {
             .documents
             .iter()
             .filter(|doc| doc.buffer.language == language)
+            .filter(|doc| !doc.is_large_file())
             .filter_map(|doc| {
                 doc.buffer
                     .path
@@ -388,6 +378,7 @@ impl App {
                     .map(|path| (path, doc.buffer.text()))
             })
             .collect();
+        let pull_paths: Vec<PathBuf> = documents.iter().map(|(path, _)| path.clone()).collect();
         if let Some(server) = self
             .lsp
             .get_mut(&(self.workspace.root().to_path_buf(), language))
@@ -397,8 +388,18 @@ impl App {
                 server.did_open(&path, &text);
             }
         }
+        for path in pull_paths {
+            self.request_document_diagnostic(language, &path);
+        }
         if self.editor.active_document().map(|doc| doc.buffer.language) == Some(language) {
             self.request_folding_ranges_for_active();
+            self.request_document_highlights();
+            self.request_inlay_hints();
+            self.request_code_lenses();
+            self.request_selection_ranges();
+        }
+        if self.panel.open && self.panel.tab == crate::app::panel::PanelTab::Problems {
+            self.request_workspace_lsp_diagnostics();
         }
     }
 
@@ -409,6 +410,16 @@ impl App {
             .lsp
             .contains_key(&(self.workspace.root().to_path_buf(), language))
         {
+            return;
+        }
+        // A server that cannot receive the only document of this language would
+        // just idle; do not spend startup time on it.
+        let usable_document = self
+            .editor
+            .documents
+            .iter()
+            .any(|doc| doc.buffer.language == language && !doc.is_large_file());
+        if !usable_document {
             return;
         }
         let Some(tools) = &self.tools else {
@@ -488,19 +499,12 @@ impl App {
     pub(super) fn start_lsp(&mut self, language: LanguageId, program: &str, args: &[&str]) {
         self.start_lsp_with_env(language, program, args, &[]);
     }
-    /// The position encoding the server for `language` negotiated, or the
-    /// protocol default when there is no server.
-    pub(super) fn lsp_encoding(&self, language: LanguageId) -> PositionEncoding {
-        self.lsp
-            .get(&(self.workspace.root().to_path_buf(), language))
-            .and_then(|job| job.server.as_ref())
-            .map(Server::position_encoding)
-            .unwrap_or_default()
-    }
-
     /// The language of the active document, when a ready server serves it.
     pub(super) fn lsp_language(&self) -> Option<LanguageId> {
         let doc = self.editor.active_document()?;
+        if doc.is_large_file() {
+            return None;
+        }
         let language = doc.buffer.language;
         let server = self
             .lsp
@@ -607,20 +611,116 @@ impl App {
             .is_some_and(|doc| same_file(doc.buffer.path.as_deref(), path))
     }
 
-    /// Forget the in-flight request bookkeeping for one feature.
-    pub(super) fn clear_lsp_pending_for(&mut self, kind: RequestKind) {
-        match kind {
-            RequestKind::Completion => self.completion_request = None,
-            RequestKind::Hover => self.hover_request = None,
-            RequestKind::SignatureHelp => self.signature_request = None,
-            RequestKind::Definition => self.pending_definition = None,
-            RequestKind::References => self.pending_references = None,
-            RequestKind::Rename => self.pending_rename_request = None,
-            RequestKind::CodeActions => self.pending_code_action_request = None,
-            RequestKind::Formatting => self.pending_lsp_format = None,
-            RequestKind::FoldingRange => self.pending_folding = None,
-            RequestKind::WorkspaceSymbols => self.ws_lsp_pending = false,
+    /// Ask the server for pull diagnostics for one open document.
+    ///
+    /// Servers that only push diagnostics simply do not advertise the
+    /// capability; the caller does not fall back to polling them.
+    pub(super) fn request_document_diagnostic(&mut self, language: LanguageId, path: &Path) {
+        let Some(version) = self.document_version(path) else {
+            return;
+        };
+        let id = {
+            let Some(server) = self
+                .lsp
+                .get_mut(&(self.workspace.root().to_path_buf(), language))
+                .and_then(|job| job.server.as_mut())
+            else {
+                return;
+            };
+            if !server.is_ready()
+                || !server.supports(RequestKind::DocumentDiagnostics)
+                || !server.has_open_document(path)
+            {
+                return;
+            }
+            server.document_diagnostics(path)
+        };
+        if let Some(id) = id {
+            self.pending_document_diagnostics
+                .insert((language, id), (path.to_path_buf(), version));
         }
+    }
+
+    /// Ask every ready server that supports workspace pull diagnostics for a
+    /// fresh report. One report per language is enough; a second refresh while
+    /// one is in flight waits for the first.
+    pub(super) fn request_workspace_lsp_diagnostics(&mut self) {
+        let root = self.workspace.root().to_path_buf();
+        let languages: Vec<LanguageId> = self
+            .lsp
+            .iter()
+            .filter(|((workspace, _), _)| *workspace == root)
+            .filter(|(_, job)| {
+                job.server.as_ref().is_some_and(|server| {
+                    server.is_ready() && server.supports(RequestKind::WorkspaceDiagnostics)
+                })
+            })
+            .map(|((_, language), _)| *language)
+            .collect();
+        for language in languages {
+            if self
+                .pending_workspace_diagnostics
+                .keys()
+                .any(|(pending, _)| *pending == language)
+            {
+                continue;
+            }
+            let id = self
+                .lsp
+                .get_mut(&(root.clone(), language))
+                .and_then(|job| job.server.as_mut())
+                .and_then(Server::workspace_diagnostics);
+            if let Some(id) = id {
+                self.pending_workspace_diagnostics
+                    .insert((language, id), ());
+            }
+        }
+    }
+
+    /// Convert a workspace pull-diagnostics report into panel problems, and
+    /// apply the open documents' entries to their live diagnostics.
+    pub(super) fn apply_workspace_lsp_diagnostics(&mut self, language: LanguageId, value: &Value) {
+        let encoding = self.lsp_encoding(language);
+        let root = self.workspace.root().to_path_buf();
+        let reports = crate::language::lsp::parse_workspace_diagnostics(value);
+        let mut entries = Vec::new();
+        for (path, diagnostics) in reports {
+            let is_open = self
+                .editor
+                .documents
+                .iter()
+                .any(|doc| same_file(doc.buffer.path.as_deref(), &path));
+            if is_open {
+                self.apply_lsp_diagnostics(&path, diagnostics);
+                continue;
+            }
+            // Unopened files have no buffer, so read the text just to convert
+            // the server's position encoding and drop oversized files.
+            let Ok(text) = std::fs::read_to_string(&path) else {
+                continue;
+            };
+            if text.len() > 8 * 1024 * 1024 {
+                continue;
+            }
+            let lines: Vec<&str> = text.lines().collect();
+            let file = path
+                .strip_prefix(&root)
+                .unwrap_or(&path)
+                .display()
+                .to_string();
+            for diagnostic in diagnostics {
+                let line = lines.get(diagnostic.start.line).copied().unwrap_or("");
+                let col = convert::lsp_to_char(line, diagnostic.start.col, encoding);
+                entries.push(crate::app::panel::ProblemEntry {
+                    path: path.clone(),
+                    file: file.clone(),
+                    position: Position::new(diagnostic.start.line, col),
+                    severity: diagnostic.severity,
+                    message: diagnostic.message,
+                });
+            }
+        }
+        self.panel.lsp_workspace_problems.insert(language, entries);
     }
 
     /// The active document's target when a ready server that supports `kind`
@@ -644,8 +744,20 @@ impl App {
         self.pending_code_action_request = None;
         self.pending_lsp_format = None;
         self.pending_folding = None;
+        self.pending_highlights = None;
+        self.pending_inlay_hints = None;
+        self.pending_code_lens = None;
+        self.pending_selection_ranges = None;
+        self.pending_hierarchy_prepare = None;
+        self.pending_hierarchy = None;
+        self.hierarchy_items.clear();
+        self.hierarchy_goal = None;
+        self.pending_document_links = None;
         self.pending_code_actions_context = None;
         self.ws_lsp_pending = false;
+        self.pending_document_diagnostics.clear();
+        self.pending_workspace_diagnostics.clear();
+        self.pending_java_debug = None;
     }
 
     /// The buffer version of the document at `path`, if it is open.
@@ -655,230 +767,5 @@ impl App {
             .iter()
             .find(|doc| same_file(doc.buffer.path.as_deref(), path))
             .map(|doc| doc.buffer.version)
-    }
-    /// Apply a language-server feature response for `language`.
-    pub(super) fn handle_lsp_response(
-        &mut self,
-        language: LanguageId,
-        kind: RequestKind,
-        id: i64,
-        result: Result<Value, String>,
-    ) {
-        let value = match result {
-            Ok(value) => value,
-            Err(message) => {
-                // Clear any loading state this request owned so a timeout or
-                // error cannot leave the UI waiting forever.
-                self.clear_lsp_pending_for(kind);
-                if kind != RequestKind::WorkspaceSymbols {
-                    self.set_error(format!("Language server: {message}"));
-                }
-                return;
-            }
-        };
-        match kind {
-            RequestKind::Completion => {
-                // Ignore a response that a newer request has superseded: the
-                // user typed on, so these candidates no longer match the cursor.
-                if self.completion_request != Some((language, id)) {
-                    return;
-                }
-                self.completion_request = None;
-                let items = convert::completions(&value);
-                if let Some(state) = self.completion.as_mut() {
-                    state.extend(items);
-                }
-            }
-            RequestKind::Hover => {
-                if self.hover_request != Some((language, id)) {
-                    return;
-                }
-                self.hover_request = None;
-                match convert::hover(&value) {
-                    Some(hover) => {
-                        self.hover = Some(HoverState {
-                            title: hover.title,
-                            kind: hover.kind,
-                            body: hover.body,
-                        });
-                    }
-                    None if self.hover.is_none() => {
-                        self.set_status("No information available");
-                    }
-                    None => {}
-                }
-            }
-            RequestKind::Definition => {
-                let Some(request) = self.pending_definition.take() else {
-                    return;
-                };
-                if !request.is_current(self, language, id)
-                    || !self.active_document_is(&request.path)
-                {
-                    self.set_status("The document changed; resolve again");
-                    return;
-                }
-                let locations = convert::locations(&value);
-                match locations.into_iter().next() {
-                    Some(location) => {
-                        self.reveal_lsp(location.path, Position::new(location.line, location.col));
-                    }
-                    None => self.set_status("No definition found"),
-                }
-            }
-            RequestKind::References => {
-                let Some(request) = self.pending_references.take() else {
-                    return;
-                };
-                if !request.is_current(self, language, id)
-                    || !self.active_document_is(&request.path)
-                {
-                    self.set_status("The document changed; find references again");
-                    return;
-                }
-                let locations = convert::locations(&value);
-                if locations.is_empty() {
-                    self.set_status("No references found");
-                } else {
-                    self.open_location_picker("References", locations);
-                }
-            }
-            RequestKind::Rename => {
-                let Some(request) = self.pending_rename_request.take() else {
-                    return;
-                };
-                if !request.is_current(self, language, id) {
-                    self.set_status("The document changed; rename again");
-                    return;
-                }
-                let files = convert::workspace_edit(&value);
-                let applied = self.apply_workspace_edit(files, language);
-                if applied > 0 {
-                    self.set_status(format!("Renamed in {applied} place(s)"));
-                } else {
-                    self.set_status("Nothing to rename");
-                }
-            }
-            RequestKind::CodeActions => {
-                let Some(request) = self.pending_code_action_request.take() else {
-                    return;
-                };
-                if !request.is_current(self, language, id) {
-                    self.set_status("The document changed; run code actions again");
-                    return;
-                }
-                let actions = convert::code_actions(&value);
-                if actions.is_empty() {
-                    self.set_status("No code actions available");
-                    return;
-                }
-                self.pending_code_actions_context = Some((request.path.clone(), request.version));
-                self.pending_code_actions = actions;
-                let items = self
-                    .pending_code_actions
-                    .iter()
-                    .enumerate()
-                    .map(|(index, action)| {
-                        PickerItem::new(
-                            action.title.clone(),
-                            String::new(),
-                            PickerAction::ApplyCodeAction(index),
-                        )
-                    })
-                    .collect();
-                let mut picker = Picker::new("Code Actions", "Filter actions…", items);
-                picker.refilter();
-                self.overlay = Overlay::Picker(picker);
-            }
-            RequestKind::WorkspaceSymbols => {
-                self.ws_lsp_pending = false;
-                let root = self.workspace.root().to_path_buf();
-                let items: Vec<PickerItem> = convert::workspace_symbols(&value)
-                    .into_iter()
-                    .take(2000)
-                    .map(|item| {
-                        let relative = item
-                            .path
-                            .strip_prefix(&root)
-                            .unwrap_or(&item.path)
-                            .display()
-                            .to_string();
-                        let detail =
-                            format!("{}  ·  {relative}:{}", item.kind.label(), item.line + 1);
-                        PickerItem::new(
-                            item.name,
-                            detail,
-                            PickerAction::RevealLsp {
-                                path: item.path,
-                                position: Position::new(item.line, item.col),
-                            },
-                        )
-                    })
-                    .collect();
-                if !items.is_empty() {
-                    self.merge_workspace_symbols(items);
-                }
-            }
-            RequestKind::SignatureHelp => {
-                if self.signature_request != Some((language, id)) {
-                    return;
-                }
-                self.signature_request = None;
-                self.signature = convert::signature_help(&value).map(|help| SignatureState {
-                    help,
-                    anchor: self.cursor_screen,
-                });
-            }
-            RequestKind::Formatting => {
-                // Compare before taking, so a stale response does not cancel
-                // the newer request that is still in flight.
-                let current = self
-                    .pending_lsp_format
-                    .as_ref()
-                    .map(|(_, pending_language, pending_id, _)| (*pending_language, *pending_id));
-                if current != Some((language, id)) {
-                    return;
-                }
-                let Some((path, _, _, version)) = self.pending_lsp_format.take() else {
-                    return;
-                };
-                // A formatting response computed against older text must not be
-                // applied to the current buffer.
-                if self.document_version(&path) != Some(version) {
-                    self.set_status("Formatting response was stale; try again");
-                    return;
-                }
-                let edits = convert::formatting_edits(&value);
-                if edits.is_empty() {
-                    self.set_status("No formatting changes");
-                    return;
-                }
-                let applied =
-                    self.apply_workspace_edit(vec![convert::FileEdit { path, edits }], language);
-                if applied > 0 {
-                    self.after_edit();
-                    self.set_status("Formatted");
-                } else {
-                    self.set_status("Nothing to format");
-                }
-            }
-            RequestKind::FoldingRange => {
-                let Some(request) = self.pending_folding.take() else {
-                    return;
-                };
-                if !request.is_current(self, language, id) {
-                    return;
-                }
-                let ranges = crate::language::lsp::folding::ranges(&value);
-                if let Some(doc) = self
-                    .editor
-                    .documents
-                    .iter_mut()
-                    .find(|doc| same_file(doc.buffer.path.as_deref(), &request.path))
-                {
-                    doc.set_server_folds(ranges);
-                }
-            }
-        }
     }
 }

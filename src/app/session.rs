@@ -21,11 +21,21 @@ impl App {
                 if self
                     .editor
                     .active_document()
-                    .map(|doc| doc.is_read_only())
+                    .map(|doc| doc.is_lossy_read_only())
                     .unwrap_or(false)
                 {
                     self.set_status(format!(
                         "Opened {} (read-only: not valid UTF-8)",
+                        path.display()
+                    ));
+                } else if self
+                    .editor
+                    .active_document()
+                    .map(|doc| doc.is_large_file())
+                    .unwrap_or(false)
+                {
+                    self.set_status(format!(
+                        "Opened {} (large file: highlighting, diagnostics and completion are limited)",
                         path.display()
                     ));
                 } else {
@@ -106,12 +116,28 @@ impl App {
             .and_then(|doc| doc.buffer.path.clone())
             .and_then(|path| files.iter().position(|file| *file == path))
             .unwrap_or(0);
+        let histories = self
+            .editor
+            .documents
+            .iter()
+            .filter(|doc| !doc.is_dirty() && (doc.can_undo() || doc.can_redo()))
+            .filter_map(|doc| {
+                let path = doc.buffer.path.clone()?;
+                let text = doc.buffer.text();
+                Some(crate::session::PersistedHistory {
+                    path,
+                    fingerprint: crate::session::fingerprint(&text),
+                    history: doc.history_snapshot(),
+                })
+            })
+            .collect();
         Session {
             files,
             active,
             cursors,
             expanded: self.workspace.tree.expanded_paths(),
             show_hidden: self.workspace.tree.show_hidden,
+            histories,
         }
     }
 
@@ -132,6 +158,22 @@ impl App {
                 && let Some(doc) = self.editor.active_document_mut()
             {
                 doc.move_to(Position::new(row, col));
+            }
+        }
+
+        for entry in &session.histories {
+            let Some(doc) = self
+                .editor
+                .documents
+                .iter_mut()
+                .find(|doc| same_file(doc.buffer.path.as_deref(), &entry.path))
+            else {
+                continue;
+            };
+            // The file may have changed outside Kemori; undo offsets would then
+            // point at the wrong text, so refuse the history.
+            if crate::session::fingerprint(&doc.buffer.text()) == entry.fingerprint {
+                doc.restore_history(&entry.history);
             }
         }
 

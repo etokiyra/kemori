@@ -87,7 +87,8 @@ editing a file.
 
 **Done (0.1.x).** A keyboard-driven **Settings** screen (opened from the
 palette) changes theme, line numbers, animations, soft wrap, indentation width,
-spaces vs tabs, inline diagnostics and automatic completion. Each change applies
+spaces vs tabs, inline diagnostics, automatic completion and format on save.
+Each change applies
 immediately and can be reset to the defaults; a settings file is written on quit
 only once something changed, so a fresh install still needs no file. The store
 lives under Kemori's state directory, tolerates a missing or malformed file (the
@@ -164,10 +165,11 @@ offers per project instead of per language.
 **Goal.** Install Kemori without a Rust toolchain, and update it easily.
 
 **Done (0.1.x).** `cargo install kemori` works from crates.io; a `Makefile`
-installs to `/usr/local` (or a staged `PREFIX`/`DESTDIR`); AUR packages (`kemori`
-and `kemori-git`) install `/usr/bin/kemori`; and the release workflow attaches
-`.deb`/`.rpm` packages plus checksummed prebuilt tarballs. The README install
-section covers every path and the `sudo`/`secure_path` behaviour.
+installs to `/usr/local` (or a staged `PREFIX`/`DESTDIR`); AUR packaging for
+`kemori` and `kemori-git` is prepared but cannot be published while AUR account
+registration is disabled; and the release workflow attaches `.deb`/`.rpm`
+packages plus checksummed prebuilt tarballs. The README install section covers
+every path and the `sudo`/`secure_path` behaviour.
 
 **Remaining.**
 - A one-line installer (`curl … | sh`) installs the right prebuilt binary and
@@ -200,25 +202,30 @@ part of the core IDE loop below.
 
 **Goal.** Run, test, search and navigate without leaving Kemori.
 
-**Done (3.x).** A bottom panel (`Ctrl+J`) holds **Problems**, **Output** and
-**Debug Console** tabs with their own state. Problems gathers diagnostics across
-the open files, groups them by file and jumps to the source; task output streams
-live, can be cancelled or rerun, keeps a session history, adds its
-`file:line` references to Problems, and runs a standalone script with its
-interpreter (`Run Active File`); **Problems** also scans every unopened project
-file with the built-in structural checks; debug-adapter messages land in their
-tab instead of a modal; the panel resizes and leaves the editor readable on a
-short terminal. Project-wide search and replace (`Ctrl+Shift+F`) supports
-literal or regex queries, case/word toggles, include/exclude globs, grouped
-results, a replacement preview, atomic writes that skip unsaved buffers, and
-immediate reload of clean open files. The full execution plan and acceptance
-criteria are in [NEXT.md](NEXT.md) Phase 1.
+**Done (3.x).** A bottom panel (`Ctrl+J`) holds **Problems**, **Output**,
+**Terminal** and **Debug Console** tabs with their own state. Problems gathers
+diagnostics across the open files, groups them by file and jumps to the source;
+task output streams live, can be cancelled or rerun, keeps a session history,
+adds its `file:line` references to Problems, and runs a standalone script with
+its interpreter (`Run Active File`); **Problems** also scans every unopened
+project file with the built-in structural checks and merges language-server
+pull diagnostics when a server advertises `textDocument/diagnostic` or
+`workspace/diagnostic`; debug-adapter messages land in their tab instead of a
+modal; the panel resizes and leaves the editor readable on a short terminal.
+The **Terminal** tab is a real PTY-backed shell rooted at the project, with
+several sessions, copy/paste, scrollback, live resize and process-group
+shutdown. Project-wide search and replace (`Ctrl+Shift+F`) supports literal or
+regex queries, case/word toggles, include/exclude globs, grouped results, a
+replacement preview, atomic writes that skip unsaved buffers, and immediate
+reload of clean open files. Running project code — tasks, the debugger and
+the terminal — asks once per root and remembers the answer in Kemori's state
+directory; editing and language intelligence never need trust. The full
+execution plan and acceptance criteria are in [NEXT.md](NEXT.md) Phase 1.
 
-**Remaining.**
-- An integrated terminal (PTY), with sessions, copy/paste, resize and signals.
-- Workspace-wide LSP pull diagnostics.
-- A workspace-trust gate before running project tasks, debug adapters or
-  project-specific servers.
+**Remaining.** Nothing in the core loop is missing. Depth work (provisioned
+debug adapters, a variable tree and watch expressions, formatter gaps, editor
+conveniences such as format on save and line-ending conversion) lives in Phase 2
+of [NEXT.md](NEXT.md).
 
 **Depends on:** nothing.
 
@@ -251,8 +258,10 @@ Real, but deferred; none of them is required for the core promise.
   session, but does not present several roots at once.
 - **Interactive diff/merge** for conflicting files.
 - **Remote development over SSH.**
-- **Debug adapter support.** The current command is an explicit handshake preview
-  only (see [docs/LIMITATIONS.md](docs/LIMITATIONS.md#debugging)).
+- **Debugger depth.** A real DAP client ships today (sessions, breakpoints,
+  stack, scopes, variables, stepping). Conditional/log breakpoints, watch
+  expressions, attach targets, a variable tree and provisioned adapters are
+  deferred (see [docs/LIMITATIONS.md](docs/LIMITATIONS.md#debugging)).
 - **Highlighting engine comparison.** Measure the hand-written tokenizers
   against tree-sitter and record a recommendation in
   [docs/DECISIONS.md](docs/DECISIONS.md); do not migrate without an explicit OK.

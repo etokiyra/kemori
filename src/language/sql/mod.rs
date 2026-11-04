@@ -9,11 +9,14 @@
 use crate::language::completion::{Completion, CompletionKind};
 use crate::language::data::{push_merged, scan_number};
 use crate::language::detection::LanguageDescriptor;
+use crate::language::format::FormatOutcome;
 use crate::language::id::LanguageId;
 use crate::language::provider::{
     Capability, HighlightSpan, HighlightState, LanguageProvider, TokenKind,
 };
 use crate::language::symbols::{Location, Symbol, SymbolKind, word_at};
+
+use std::path::Path;
 
 /// Keywords common to most SQL dialects.
 const KEYWORDS: &[&str] = &[
@@ -177,6 +180,7 @@ impl LanguageProvider for SqlProvider {
             Capability::GotoReference,
             Capability::Completion,
             Capability::Hover,
+            Capability::Formatting,
         ]
     }
 
@@ -218,6 +222,14 @@ impl LanguageProvider for SqlProvider {
                 .map(|word| Completion::new(*word, CompletionKind::Type)),
         );
         completions
+    }
+
+    fn format(&self, path: &Path, text: &str) -> FormatOutcome {
+        crate::language::format::sqlfluff(path, text)
+    }
+
+    fn formatter(&self) -> Option<&'static str> {
+        Some("sqlfluff")
     }
 
     fn hover(&self, text: &str, line: usize, col: usize) -> Option<crate::language::hover::Hover> {
@@ -464,5 +476,17 @@ CREATE INDEX idx_users ON users(id);
     fn diagnostics_report_unbalanced_parentheses() {
         let diagnostics = SqlProvider.diagnostics("SELECT count(id FROM users;\n");
         assert!(diagnostics.iter().any(|d| d.message.contains("unclosed")));
+    }
+
+    #[test]
+    fn sql_offers_sqlfluff_formatting() {
+        assert!(SqlProvider.capabilities().contains(&Capability::Formatting));
+        assert_eq!(SqlProvider.formatter(), Some("sqlfluff"));
+        match SqlProvider.format(Path::new("/tmp/query.sql"), "select * from t;\n") {
+            FormatOutcome::Formatted(_)
+            | FormatOutcome::ToolMissing { .. }
+            | FormatOutcome::Failed(_) => {}
+            FormatOutcome::Unsupported => panic!("SQL should advertise a formatter"),
+        }
     }
 }

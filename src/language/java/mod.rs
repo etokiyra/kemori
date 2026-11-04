@@ -195,6 +195,7 @@ impl LanguageProvider for JavaProvider {
             Capability::GotoReference,
             Capability::Completion,
             Capability::Hover,
+            Capability::Formatting,
         ]
     }
 
@@ -253,8 +254,8 @@ impl LanguageProvider for JavaProvider {
         completions
     }
 
-    fn format(&self, _path: &Path, _text: &str) -> FormatOutcome {
-        FormatOutcome::Unsupported
+    fn format(&self, _path: &Path, text: &str) -> FormatOutcome {
+        crate::language::format::google_java_format(text)
     }
 
     fn hover(&self, text: &str, line: usize, col: usize) -> Option<crate::language::hover::Hover> {

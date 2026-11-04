@@ -41,6 +41,69 @@ pub fn is_available(tool: &str) -> bool {
     crate::language::tools::locate(tool).is_some()
 }
 
+/// Format Python with `ruff format`, falling back to `black`.
+///
+/// Both read a snapshot from stdin, so unsaved edits are formatted. Ruff is
+/// preferred when present because it is fast and opinionated; Black remains the
+/// long-standing fallback.
+pub fn python(text: &str) -> FormatOutcome {
+    if is_available("ruff") {
+        run(
+            "ruff",
+            &["format", "-"],
+            text,
+            "ruff",
+            "install it with `pip install ruff`",
+        )
+    } else if is_available("black") {
+        run(
+            "black",
+            &["-"],
+            text,
+            "black",
+            "install it with `pip install black`",
+        )
+    } else {
+        FormatOutcome::ToolMissing {
+            tool: "ruff or black".to_string(),
+            hint: "install one with `pip install ruff` (or `pip install black`)".to_string(),
+        }
+    }
+}
+
+/// Format Lua with `stylua`.
+pub fn stylua(text: &str) -> FormatOutcome {
+    run(
+        "stylua",
+        &["-"],
+        text,
+        "stylua",
+        "install it with `cargo install stylua`",
+    )
+}
+
+/// Format Swift with the toolchain's `swift-format`.
+pub fn swift_format(text: &str) -> FormatOutcome {
+    run(
+        "swift-format",
+        &["format", "-"],
+        text,
+        "swift-format",
+        "it ships with the Swift toolchain",
+    )
+}
+
+/// Format Java with `google-java-format`.
+pub fn google_java_format(text: &str) -> FormatOutcome {
+    run(
+        "google-java-format",
+        &["-"],
+        text,
+        "google-java-format",
+        "install it from its releases or your package manager",
+    )
+}
+
 /// Format Rust source with `rustfmt`, matching the project's edition when a
 /// `Cargo.toml` can be found above `path`.
 pub fn rustfmt(path: &Path, text: &str) -> FormatOutcome {
@@ -118,6 +181,135 @@ pub fn nixfmt(text: &str) -> FormatOutcome {
         text,
         "nixfmt",
         "install it from Language Setup… (or your distribution's package manager)",
+    )
+}
+
+/// Format C# with CSharpier's stdin mode.
+///
+/// CSharpier accepts a buffer on stdin and prints the formatted source to
+/// stdout; `--stdin-path` lets it resolve the project's `.csharpierrc`/ignore
+/// files. Prefer the installed tool, then `dotnet csharpier` when only the SDK is
+/// present.
+pub fn csharpier(path: &Path, text: &str) -> FormatOutcome {
+    let filename = path.to_string_lossy().into_owned();
+    if crate::language::tools::locate("csharpier").is_some() {
+        run(
+            "csharpier",
+            &["format", "--stdin-path", &filename],
+            text,
+            "csharpier",
+            "install it with `dotnet tool install -g csharpier`",
+        )
+    } else if crate::language::tools::locate("dotnet").is_some() {
+        run(
+            "dotnet",
+            &["csharpier", "format", "--stdin-path", &filename],
+            text,
+            "csharpier",
+            "install it with `dotnet tool install -g csharpier`",
+        )
+    } else {
+        FormatOutcome::ToolMissing {
+            tool: "csharpier".to_string(),
+            hint: "install the .NET SDK and run `dotnet tool install -g csharpier`".to_string(),
+        }
+    }
+}
+
+/// Format PHP with PHP-CS-Fixer's stdin mode.
+///
+/// `php-cs-fixer fix --stdin` prints the formatted source to stdout, so the
+/// unsaved buffer is formatted in place. A project config supplies its rules;
+/// without one, the PSR-12 rule set is used so a standalone file still formats.
+pub fn php_cs_fixer(path: &Path, text: &str) -> FormatOutcome {
+    let root = path.ancestors().find(|dir| {
+        dir.join(".php-cs-fixer.php").is_file()
+            || dir.join(".php-cs-fixer.dist.php").is_file()
+            || dir.join("composer.json").is_file()
+    });
+    let mut args = vec!["fix", "--stdin", "--using-cache=no"];
+    if !root.is_some_and(|dir| {
+        dir.join(".php-cs-fixer.php").is_file() || dir.join(".php-cs-fixer.dist.php").is_file()
+    }) {
+        args.extend(["--rules=@PSR12"]);
+    }
+    run_full(
+        "php-cs-fixer",
+        &args,
+        text,
+        "php-cs-fixer",
+        "install it with `composer global require friendsofphp/php-cs-fixer`",
+        root,
+        &[],
+    )
+}
+
+/// Format SQL with SQLFluff's stdin formatter.
+///
+/// `sqlfluff format -` prints the corrected query to stdout. A project
+/// `.sqlfluff` config supplies its dialect; without one, ANSI is used so a
+/// standalone query still formats.
+pub fn sqlfluff(path: &Path, text: &str) -> FormatOutcome {
+    let root = path.ancestors().find(|dir| dir.join(".sqlfluff").is_file());
+    let args: &[&str] = if root.is_some() {
+        &["format", "-"]
+    } else {
+        &["format", "--dialect", "ansi", "-"]
+    };
+    run_full(
+        "sqlfluff",
+        args,
+        text,
+        "sqlfluff",
+        "install it with `pip install sqlfluff`",
+        root,
+        &[],
+    )
+}
+
+/// Format Kotlin with ktlint's stdin formatter.
+///
+/// `--stdin --format` reads the snapshot and prints corrected code to stdout;
+/// `--stdin-path` keeps filename/editorconfig rules meaningful for the real file.
+pub fn ktlint(path: &Path, text: &str) -> FormatOutcome {
+    let filename = path.to_string_lossy().into_owned();
+    run(
+        "ktlint",
+        &[
+            "--stdin",
+            "--format",
+            "--log-level=none",
+            "--stdin-path",
+            &filename,
+        ],
+        text,
+        "ktlint",
+        "install it with `brew install ktlint` or from its GitHub releases",
+    )
+}
+
+/// Format Ruby with RuboCop's autocorrect mode.
+///
+/// `--stdin <file>` plus `--autocorrect-all` makes RuboCop print the corrected
+/// source to stdout (`--stderr` keeps offense reports out of the buffer). It is
+/// run from the nearest project root with a `.rubocop.yml` or `Gemfile` so the
+/// project's own configuration applies.
+pub fn rubocop(path: &Path, text: &str) -> FormatOutcome {
+    let filename = path
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "source.rb".to_string());
+    let root = path
+        .ancestors()
+        .find(|dir| dir.join(".rubocop.yml").is_file() || dir.join("Gemfile").is_file());
+    run_full(
+        "rubocop",
+        &["--autocorrect-all", "--stderr", "--stdin", &filename],
+        text,
+        "rubocop",
+        "install it with `gem install rubocop`",
+        root,
+        &[],
     )
 }
 

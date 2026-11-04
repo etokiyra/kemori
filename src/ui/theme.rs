@@ -102,6 +102,7 @@ pub struct Theme {
     pub border_focus: Color,
     pub search_bg: Color,
     pub search_current_bg: Color,
+    pub document_highlight_bg: Color,
     pub bracket_match: Color,
     pub syntax: Syntax,
 }
@@ -131,6 +132,7 @@ const MELLOW: Theme = Theme {
     border_focus: mellow::BLUE,
     search_bg: mellow::GRAY02,
     search_current_bg: mellow::GRAY03,
+    document_highlight_bg: mellow::GRAY02,
     bracket_match: mellow::YELLOW,
     syntax: Syntax {
         plain: mellow::FG,
@@ -172,6 +174,7 @@ const MIDNIGHT: Theme = Theme {
     border_focus: Color::Rgb(0x6e, 0xa8, 0xfe),
     search_bg: Color::Rgb(0x2f, 0x3a, 0x4f),
     search_current_bg: Color::Rgb(0x3d, 0x4a, 0x63),
+    document_highlight_bg: Color::Rgb(0x24, 0x2e, 0x40),
     bracket_match: Color::Rgb(0xe0, 0xaf, 0x68),
     syntax: Syntax {
         plain: Color::Rgb(0xd7, 0xdc, 0xe6),
@@ -213,6 +216,7 @@ const DAYLIGHT: Theme = Theme {
     border_focus: Color::Rgb(0x3b, 0x5b, 0xdb),
     search_bg: Color::Rgb(0xf5, 0xe6, 0xa8),
     search_current_bg: Color::Rgb(0xf0, 0xd9, 0x8a),
+    document_highlight_bg: Color::Rgb(0xe4, 0xea, 0xfb),
     bracket_match: Color::Rgb(0x9a, 0x6b, 0x00),
     syntax: Syntax {
         plain: Color::Rgb(0x2b, 0x2b, 0x33),
@@ -259,6 +263,7 @@ const ANSI: Theme = Theme {
     border_focus: Color::Indexed(12),
     search_bg: Color::Indexed(3),
     search_current_bg: Color::Indexed(11),
+    document_highlight_bg: Color::Indexed(8),
     bracket_match: Color::Indexed(11),
     syntax: Syntax {
         plain: Color::Indexed(7),
@@ -456,6 +461,9 @@ pub fn search_bg() -> Color {
 }
 pub fn search_current_bg() -> Color {
     resolve(current().search_current_bg)
+}
+pub fn document_highlight_bg() -> Color {
+    resolve(current().document_highlight_bg)
 }
 pub fn bracket_match_color() -> Color {
     resolve(current().bracket_match)

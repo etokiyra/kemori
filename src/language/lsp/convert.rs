@@ -13,6 +13,8 @@ use crate::language::hover::Hover;
 
 use super::{PositionEncoding, uri_to_path};
 
+include!("document_highlights.rs");
+
 /// Convert a Kemori **character** column into the `character` unit the server
 /// negotiated for a line.
 ///
@@ -494,6 +496,19 @@ fn parameter_label(parameter: &Value, label: &str) -> Option<String> {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn parses_document_highlight_ranges() {
+        let value = json!([
+            { "range": { "start": { "line": 1, "character": 8 }, "end": { "line": 1, "character": 13 } }, "kind": 1 },
+            { "range": { "start": { "line": 3, "character": 2 }, "end": { "line": 3, "character": 4 } } }
+        ]);
+        assert_eq!(
+            document_highlights(&value),
+            vec![((1, 8), (1, 13)), ((3, 2), (3, 4)),]
+        );
+        assert!(document_highlights(&json!(null)).is_empty());
+    }
 
     #[test]
     fn parses_formatting_edits() {

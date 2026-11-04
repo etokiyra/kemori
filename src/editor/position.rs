@@ -39,11 +39,30 @@ impl Position {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct Selection {
     pub anchor: Position,
+    /// A rectangular selection keeps the anchor column fixed while the cursor
+    /// moves across rows, so every touched row selects the same column span.
+    pub column: bool,
 }
 
 impl Selection {
     pub fn new(anchor: Position) -> Self {
-        Selection { anchor }
+        Selection {
+            anchor,
+            column: false,
+        }
+    }
+
+    /// A rectangular (column) selection anchored at `anchor`.
+    pub fn rect(anchor: Position) -> Self {
+        Selection {
+            anchor,
+            column: true,
+        }
+    }
+
+    /// Whether this is a rectangular selection.
+    pub fn is_column(self) -> bool {
+        self.column
     }
 
     /// The normalized `(start, end)` range for a selection whose cursor is `cursor`.

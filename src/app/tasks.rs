@@ -100,7 +100,7 @@ impl App {
             ));
             return;
         };
-        self.run_task(task);
+        self.ensure_trust(super::trust::TrustIntent::RunTask(task));
     }
 
     /// Cancel the running task.
@@ -120,7 +120,7 @@ impl App {
             return;
         }
         match self.last_task.clone() {
-            Some(task) => self.run_task(task),
+            Some(task) => self.ensure_trust(super::trust::TrustIntent::RunTask(task)),
             None => self.set_status("No task to rerun"),
         }
     }

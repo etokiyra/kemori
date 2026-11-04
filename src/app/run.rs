@@ -15,6 +15,8 @@ impl App {
             let lsp_health_changed = self.poll_lsp_health();
             let lsp_changed = self.poll_lsp() || lsp_health_changed;
             let completion_changed = self.poll_auto_completion();
+            let terminal_changed = self.poll_terminal();
+            let debug_changed = self.poll_debug();
             let background_changed = self.apply_background_events();
             let animated = self.tick_animation();
             let external_changed = self.poll_external_changes();
@@ -30,6 +32,8 @@ impl App {
                 || background_changed
                 || lsp_changed
                 || completion_changed
+                || terminal_changed
+                || debug_changed
                 || animated
                 || external_changed
                 || offered
@@ -53,6 +57,19 @@ impl App {
                     timeout.min(pending.due_at.saturating_duration_since(Instant::now()))
                 }
                 None => timeout,
+            };
+            // A live shell or debugger can emit at any moment; poll promptly so
+            // the panel follows output without waiting for the idle timeout.
+            let timeout = if self
+                .terminals
+                .sessions()
+                .iter()
+                .any(|session| session.is_alive())
+                || self.debug.session.is_some()
+            {
+                timeout.min(Duration::from_millis(33))
+            } else {
+                timeout
             };
             if event::poll(timeout)? {
                 match event::read()? {
@@ -81,6 +98,7 @@ impl App {
                 }
             }
         }
+        self.terminals.kill_all();
         Ok(())
     }
 }

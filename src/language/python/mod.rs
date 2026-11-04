@@ -128,6 +128,7 @@ impl LanguageProvider for PythonProvider {
             Capability::GotoReference,
             Capability::Completion,
             Capability::Hover,
+            Capability::Formatting,
         ]
     }
 
@@ -186,8 +187,8 @@ impl LanguageProvider for PythonProvider {
         completions
     }
 
-    fn format(&self, _path: &Path, _text: &str) -> FormatOutcome {
-        FormatOutcome::Unsupported
+    fn format(&self, _path: &Path, text: &str) -> FormatOutcome {
+        crate::language::format::python(text)
     }
 
     fn hover(&self, text: &str, line: usize, col: usize) -> Option<crate::language::hover::Hover> {
@@ -529,5 +530,20 @@ def main():
         assert_eq!(symbols[0].kind, SymbolKind::Constant);
         assert_eq!(symbols[1].kind, SymbolKind::Type);
         assert_eq!(symbols[2].kind, SymbolKind::Function);
+    }
+
+    #[test]
+    fn python_can_format_through_ruff_or_black() {
+        assert!(
+            PythonProvider
+                .capabilities()
+                .contains(&Capability::Formatting)
+        );
+        match PythonProvider.format(Path::new("/tmp/a.py"), "x=1\n") {
+            FormatOutcome::Formatted(_)
+            | FormatOutcome::ToolMissing { .. }
+            | FormatOutcome::Failed(_) => {}
+            FormatOutcome::Unsupported => panic!("Python should advertise a formatter"),
+        }
     }
 }

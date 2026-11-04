@@ -4,16 +4,21 @@
 //! about text and positions; providers are consulted by the UI layer.
 
 pub mod buffer;
+pub mod code_lens;
 pub mod document;
 mod folding;
 pub mod history;
+pub mod inlay;
 pub mod layout;
 pub mod position;
+pub mod snippet;
 
 use std::path::Path;
 
 pub use buffer::{Buffer, LineEnding};
+pub use code_lens::CodeLens;
 pub use document::Document;
+pub use inlay::{InlayHint, InlayHintKind};
 pub use layout::{LineLayout, segment_index, wrap_segments};
 pub use position::{Cursor, Position, Selection};
 
