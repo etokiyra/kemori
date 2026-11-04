@@ -1,8 +1,8 @@
 # NEXT — the working plan for turning Kemori into a full IDE
 
-**Status snapshot:** 2026-11-04, version 3.2.0.
+**Status snapshot:** 2026-11-04, version 3.2.1.
 **Verification at the time of writing:** `cargo check --all-targets`, `cargo clippy --all-targets` clean; `cargo test` green (756 library tests, 52 render tests, plus tooling suites with ignored live tests).
-**Release status:** `kemori` 3.2.0 is on crates.io, docs.rs and the GitHub `v3.2.0` release. AUR publication remains blocked because AUR account registration is disabled; the packaging sources are ready to refresh when registration reopens.
+**Release status:** `kemori` 3.2.1 is on crates.io, docs.rs and the GitHub `v3.2.1` release. AUR publication remains blocked because AUR account registration is disabled; the packaging sources are ready to refresh when registration reopens.
 
 ### What this session completed
 
@@ -793,7 +793,8 @@ Keep this table current so the next session knows where to resume.
 | 0. Oversized-file splits | done | unreleased | Every file under `src/` is under 800 lines; largest is 798 |
 | Release / identity | done | dd64f6b | Renamed to Kemori; 3.0.0 on crates.io, docs.rs and GitHub; old `koda-ide` deprecated |
 | Release 3.1.0 | done | 36c349e | crates.io, docs.rs, GitHub release with four tarballs, deb/rpm and verified checksums |
-| Release 3.2.0 | done | v3.2.0 | crates.io, docs.rs and GitHub release; 756 library and 52 render tests before tagging |
+| Release 3.2.0 | done | v3.2.0 | Superseded by 3.2.1 after a musl-only test failure; crates.io and GitHub assets remain published |
+| Release 3.2.1 | done | v3.2.1 | Fixes the musl netcoredbg test; crates.io, docs.rs and GitHub release |
 | AUR publication | blocked | dd64f6b | AUR account registration is disabled; packages remain at 3.0.0 and cannot be pushed until registration reopens |
 | 1. Bottom panel | done | 3f1083e | Problems, Output and Debug Console; `Ctrl+J`, tab switching, resize, per-tab state |
 | 1. Integrated terminal | done | unreleased | PTY via `libc`, four-tab panel, sessions, scrollback, copy/paste, resize, process-group shutdown |

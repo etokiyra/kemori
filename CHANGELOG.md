@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Kemori was previously published as **Koda** (crate `koda-ide`, binary `koda`).
 Historical entries below retain the old name; 3.0.0 is the rename release.
 
+## [3.2.1] - 2026-11-04
+
+### Fixed
+- The tool-provisioning test suite no longer expects a managed `netcoredbg`
+  install plan on musl. That archive links glibc/libstdc++, so musl builds
+  intentionally have no plan; the assertion is now skipped there instead of
+  failing CI.
+
 ## [3.2.0] - 2026-11-04
 
 ### Added
@@ -665,6 +673,7 @@ starts working.
 > tool. See [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md#provisioning). Windows is
 > not supported.
 
+[3.2.1]: https://github.com/etokiyra/kemori/releases/tag/v3.2.1
 [3.2.0]: https://github.com/etokiyra/kemori/releases/tag/v3.2.0
 [3.1.0]: https://github.com/etokiyra/kemori/releases/tag/v3.1.0
 [3.0.0]: https://github.com/etokiyra/kemori/releases/tag/v3.0.0

@@ -415,10 +415,14 @@ fn install_commands_use_trusted_managers() {
         Tool::for_language(LanguageId::CSharp, ToolPurpose::DebugAdapter),
         Some(Tool::Netcoredbg)
     );
-    assert!(Tool::Netcoredbg.install_attempts().iter().any(|attempt| attempt
-        .steps
-        .iter()
-        .any(|step| matches!(step, InstallStep::GithubRelease { repo, .. } if repo == "Samsung/netcoredbg"))));
+    // netcoredbg's Linux archive links glibc/libstdc++, so a musl build
+    // intentionally has no managed install plan.
+    if !super::libc_is_musl() {
+        assert!(Tool::Netcoredbg.install_attempts().iter().any(|attempt| attempt
+            .steps
+            .iter()
+            .any(|step| matches!(step, InstallStep::GithubRelease { repo, .. } if repo == "Samsung/netcoredbg"))));
+    }
     assert_eq!(Tool::DartDebug.purpose(), ToolPurpose::DebugAdapter);
     assert_eq!(
         Tool::for_language(LanguageId::Dart, ToolPurpose::DebugAdapter),
