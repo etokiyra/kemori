@@ -466,7 +466,7 @@ impl Drop for Terminals {
 fn open_pty(cols: usize, rows: usize) -> io::Result<(File, File)> {
     let mut master = 0;
     let mut slave = 0;
-    let size = libc::winsize {
+    let mut size = libc::winsize {
         ws_row: rows.max(1).min(u16::MAX as usize) as u16,
         ws_col: cols.max(1).min(u16::MAX as usize) as u16,
         ws_xpixel: 0,
@@ -478,7 +478,9 @@ fn open_pty(cols: usize, rows: usize) -> io::Result<(File, File)> {
             &mut slave,
             std::ptr::null_mut(),
             std::ptr::null_mut(),
-            &size,
+            // Linux takes `*const winsize`, Apple takes `*mut winsize`; a
+            // mutable pointer coerces to the const form where needed.
+            &mut size as *mut libc::winsize,
         )
     };
     if result != 0 {
