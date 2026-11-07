@@ -17,7 +17,16 @@ pub fn render_completion(
         .map(|item| item.label.chars().count())
         .max()
         .unwrap_or(0);
-    let width = ((label_width + 7).clamp(14, 48) as u16).min(area.width);
+    let selected_doc = state.selected_item().and_then(|item| {
+        let text = if item.documentation.is_empty() {
+            &item.detail
+        } else {
+            &item.documentation
+        };
+        text.lines().next().filter(|line| !line.trim().is_empty())
+    });
+    let doc_width = selected_doc.map(|line| line.chars().count()).unwrap_or(0);
+    let width = ((label_width + doc_width + 7).clamp(14, 72) as u16).min(area.width);
     let rows = state.items.len().min(MAX_ROWS);
     let height = (rows as u16 + 2).min(area.height);
 
@@ -76,12 +85,17 @@ pub fn render_completion(
         } else {
             Span::raw("   ")
         };
-        let mut line = Line::from(vec![
+        let mut spans = vec![
             marker,
             Span::styled(format!("{} ", item.kind.glyph()), kind_style),
             Span::styled(item.label.clone(), label_style),
-        ])
-        .style(Style::default().bg(theme::panel_bg()));
+        ];
+        if selected
+            && let Some(doc) = selected_doc
+        {
+            spans.push(Span::styled(format!("  {doc}"), theme::dim()));
+        }
+        let mut line = Line::from(spans).style(Style::default().bg(theme::panel_bg()));
         if selected {
             line = line.style(theme::selectable(theme::menu_selected_bg()));
         }

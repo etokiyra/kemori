@@ -737,6 +737,7 @@ impl App {
     /// restart, so stale callbacks cannot touch the new connection's state.
     pub(super) fn clear_lsp_pending(&mut self) {
         self.completion_request = None;
+        self.pending_completion_resolve = None;
         self.hover_request = None;
         self.signature_request = None;
         self.pending_definition = None;

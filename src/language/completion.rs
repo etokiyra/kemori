@@ -35,6 +35,10 @@ impl CompletionKind {
 pub struct Completion {
     pub label: String,
     pub kind: CompletionKind,
+    pub detail: String,
+    pub documentation: String,
+    /// The original LSP item, serialized for `completionItem/resolve`.
+    pub raw: Option<String>,
 }
 
 impl Completion {
@@ -42,6 +46,32 @@ impl Completion {
         Completion {
             label: label.into(),
             kind,
+            detail: String::new(),
+            documentation: String::new(),
+            raw: None,
+        }
+    }
+
+    /// Attach the short detail line and long documentation.
+    pub fn with_metadata(
+        mut self,
+        detail: String,
+        documentation: String,
+        raw: Option<String>,
+    ) -> Self {
+        self.detail = detail;
+        self.documentation = documentation;
+        self.raw = raw;
+        self
+    }
+
+    /// Replace the resolved detail/documentation.
+    pub fn set_metadata(&mut self, detail: String, documentation: String) {
+        if !detail.is_empty() {
+            self.detail = detail;
+        }
+        if !documentation.is_empty() {
+            self.documentation = documentation;
         }
     }
 }

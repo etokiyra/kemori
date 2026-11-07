@@ -7,6 +7,7 @@ impl App {
     pub(super) fn clear_lsp_pending_for(&mut self, kind: RequestKind) {
         match kind {
             RequestKind::Completion => self.completion_request = None,
+            RequestKind::CompletionResolve => self.pending_completion_resolve = None,
             RequestKind::Hover => self.hover_request = None,
             RequestKind::SignatureHelp => self.signature_request = None,
             RequestKind::Definition | RequestKind::Implementation | RequestKind::TypeDefinition => {

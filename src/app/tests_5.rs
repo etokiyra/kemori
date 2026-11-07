@@ -279,7 +279,7 @@ while read -r header; do
   method=$(printf '%s' "$body" | sed -n 's/.*"method":"\([^"]*\)".*/\1/p')
   [ -z "$id" ] && continue
   case "$method" in
-    initialize) result='{"capabilities":{"completionProvider":true,"hoverProvider":true,"definitionProvider":true,"referencesProvider":true,"renameProvider":true,"codeActionProvider":true,"workspaceSymbolProvider":true,"documentHighlightProvider":true,"inlayHintProvider":true,"codeLensProvider":true,"selectionRangeProvider":true,"callHierarchyProvider":true,"typeHierarchyProvider":true,"implementationProvider":true,"typeDefinitionProvider":true,"documentLinkProvider":true,"documentRangeFormattingProvider":true}}' ;;
+    initialize) result='{"capabilities":{"completionProvider":{"resolveProvider":true},"hoverProvider":true,"definitionProvider":true,"referencesProvider":true,"renameProvider":true,"codeActionProvider":true,"workspaceSymbolProvider":true,"documentHighlightProvider":true,"inlayHintProvider":true,"codeLensProvider":true,"selectionRangeProvider":true,"callHierarchyProvider":true,"typeHierarchyProvider":true,"implementationProvider":true,"typeDefinitionProvider":true,"documentLinkProvider":true,"documentRangeFormattingProvider":true}}' ;;
     textDocument/documentHighlight) result='[{"range":{"start":{"line":1,"character":8},"end":{"line":1,"character":13}},"kind":1}]' ;;
     textDocument/inlayHint) result='[{"position":{"line":1,"character":4},"label":": i32","kind":1,"paddingLeft":true}]' ;;
     textDocument/codeLens) result='[{"range":{"start":{"line":0,"character":0},"end":{"line":0,"character":8}},"command":{"title":"run test","command":"test.run","arguments":[]}}]' ;;
@@ -290,6 +290,7 @@ while read -r header; do
     typeHierarchy/supertypes) result='[{"name":"Base","kind":12,"detail":"detail","uri":"file://$target","range":{"start":{"line":1,"character":0},"end":{"line":1,"character":5}},"selectionRange":{"start":{"line":1,"character":4},"end":{"line":1,"character":9}}}]' ;;
     textDocument/hover) result='{"contents":{"kind":"plaintext","value":"LSP HOVER TEXT"}}' ;;
     textDocument/completion) result='{"items":[{"label":"kemori_lsp_item","kind":3}]}' ;;
+    completionItem/resolve) result='{"label":"kemori_lsp_item","detail":"resolved detail","documentation":{"kind":"markdown","value":"RESOLVED DOC"}}' ;;
     textDocument/definition) result="[{\"uri\":\"file://$target\",\"range\":{\"start\":{\"line\":2,\"character\":0},\"end\":{\"line\":2,\"character\":5}}}]" ;;
     textDocument/implementation) result="[{\"uri\":\"file://$target\",\"range\":{\"start\":{\"line\":3,\"character\":0},\"end\":{\"line\":3,\"character\":1}}}]" ;;
     textDocument/typeDefinition) result="[{\"uri\":\"file://$target\",\"range\":{\"start\":{\"line\":1,\"character\":4},\"end\":{\"line\":1,\"character\":9}}}]" ;;
@@ -474,6 +475,26 @@ done
                 .any(|item| item.label == "kemori_lsp_item")
         )),
         "expected the server's completion"
+    );
+
+    // Completion resolve fills in documentation for the selected item.
+    if let Some(state) = app.completion.as_mut()
+        && let Some(index) = state
+            .items
+            .iter()
+            .position(|item| item.label == "kemori_lsp_item")
+    {
+        state.selected = index;
+    }
+    app.resolve_selected_completion();
+    assert!(
+        wait(&mut app, &|app| app.completion.as_ref().is_some_and(
+            |state| state
+                .items
+                .iter()
+                .any(|item| item.documentation.contains("RESOLVED DOC"))
+        )),
+        "expected resolved completion documentation"
     );
 
     // Definition (same file, line 2 column 0).
@@ -747,36 +768,6 @@ fn reloads_clean_files_changed_on_disk() {
     assert_eq!(
         app.editor.active_document().unwrap().buffer.text(),
         "fn changed() {}\n"
-    );
-    fs::remove_dir_all(&dir).ok();
-}
-
-#[test]
-fn detects_markup_and_config_languages() {
-    let dir = temp_project("config-langs");
-    let cases = [
-        ("notes.md", "# Title\n", LanguageId::Markdown),
-        ("data.json", "{\"a\": 1}\n", LanguageId::Json),
-        ("config.yaml", "a: true\n", LanguageId::Yaml),
-        (
-            "configuration.nix",
-            "{ pkgs, ... }: { environment.systemPackages = [ ]; }\n",
-            LanguageId::Nix,
-        ),
-    ];
-    for (name, content, expected) in cases {
-        let file = dir.join(name);
-        fs::write(&file, content).unwrap();
-        let app = app_with_file(&file);
-        let language = app.editor.active_document().unwrap().buffer.language;
-        assert_eq!(language, expected, "detected {name} as {language:?}");
-    }
-    // `Cargo.toml` is a TOML file, even though it marks a Rust project.
-    let manifest = dir.join("Cargo.toml");
-    let app = app_with_file(&manifest);
-    assert_eq!(
-        app.editor.active_document().unwrap().buffer.language,
-        LanguageId::Toml
     );
     fs::remove_dir_all(&dir).ok();
 }

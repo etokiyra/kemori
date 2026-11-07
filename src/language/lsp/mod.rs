@@ -12,6 +12,7 @@
 
 pub mod change;
 pub mod code_lens;
+pub mod completion;
 pub mod convert;
 pub mod folding;
 pub mod hierarchy;
@@ -88,6 +89,8 @@ pub enum SaveKind {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 struct ServerCapabilities {
     completion: bool,
+    /// `completionItem/resolve`.
+    completion_resolve: bool,
     hover: bool,
     definition: bool,
     references: bool,
@@ -129,6 +132,7 @@ struct ServerCapabilities {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RequestKind {
     Completion,
+    CompletionResolve,
     Hover,
     Definition,
     References,

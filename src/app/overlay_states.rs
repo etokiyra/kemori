@@ -161,11 +161,16 @@ impl CompletionState {
     /// Merge additional candidates (e.g. from a language server) and re-filter.
     pub fn extend(&mut self, items: Vec<Completion>) {
         for item in items {
-            if !self
+            if let Some(existing) = self
                 .pool
-                .iter()
-                .any(|existing| existing.label == item.label)
+                .iter_mut()
+                .find(|existing| existing.label == item.label)
             {
+                existing.set_metadata(item.detail, item.documentation);
+                if item.raw.is_some() {
+                    existing.raw = item.raw;
+                }
+            } else {
                 self.pool.push(item);
             }
         }
@@ -200,5 +205,19 @@ impl CompletionState {
 
     pub fn selected_item(&self) -> Option<&Completion> {
         self.items.get(self.selected)
+    }
+
+    /// Merge resolved metadata into every copy of `label`.
+    pub fn update_item(&mut self, label: &str, detail: String, documentation: String) {
+        for item in &mut self.pool {
+            if item.label == label {
+                item.set_metadata(detail.clone(), documentation.clone());
+            }
+        }
+        for item in &mut self.items {
+            if item.label == label {
+                item.set_metadata(detail.clone(), documentation.clone());
+            }
+        }
     }
 }

@@ -35,6 +35,24 @@ impl App {
                 if let Some(state) = self.completion.as_mut() {
                     state.extend(items);
                 }
+                self.resolve_selected_completion();
+            }
+            RequestKind::CompletionResolve => {
+                let current = self.pending_completion_resolve.as_ref().is_some_and(
+                    |(pending_language, pending_id, _)| {
+                        *pending_language == language && *pending_id == id
+                    },
+                );
+                if !current {
+                    return;
+                }
+                let Some((_, _, label)) = self.pending_completion_resolve.take() else {
+                    return;
+                };
+                let (detail, documentation) = crate::language::lsp::completion::resolved(&value);
+                if let Some(state) = self.completion.as_mut() {
+                    state.update_item(&label, detail, documentation);
+                }
             }
             RequestKind::Hover => {
                 if self.hover_request != Some((language, id)) {

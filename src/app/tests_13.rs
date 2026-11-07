@@ -65,7 +65,11 @@ done
     );
     let deadline = Instant::now() + Duration::from_secs(15);
     let mut progress = None;
-    while Instant::now() < deadline && progress.is_none() {
+    while Instant::now() < deadline
+        && !progress
+            .as_ref()
+            .is_some_and(|progress: &crate::language::lsp::LspProgress| progress.percentage == Some(40))
+    {
         app.poll_lsp();
         progress = app.lsp_progress.values().next().cloned();
         std::thread::sleep(Duration::from_millis(5));

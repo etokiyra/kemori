@@ -8,9 +8,9 @@ use std::path::PathBuf;
 
 use serde_json::Value;
 
-use crate::language::completion::{Completion, CompletionKind};
 use crate::language::hover::Hover;
 
+pub use super::completion::completions;
 use super::{PositionEncoding, uri_to_path};
 
 include!("document_highlights.rs");
@@ -232,42 +232,6 @@ fn parse_edits(value: &Value) -> Option<Vec<TextEdit>> {
             })
             .collect(),
     )
-}
-
-/// Completion items from a `textDocument/completion` result.
-///
-/// The result may be a bare array or a `CompletionList` object.
-pub fn completions(value: &Value) -> Vec<Completion> {
-    let items = value
-        .get("items")
-        .and_then(Value::as_array)
-        .or_else(|| value.as_array());
-    let Some(items) = items else {
-        return Vec::new();
-    };
-    items
-        .iter()
-        .filter_map(|item| {
-            let label = item.get("label")?.as_str()?;
-            if label.is_empty() {
-                return None;
-            }
-            let kind = completion_kind(item.get("kind").and_then(Value::as_u64));
-            Some(Completion::new(label, kind))
-        })
-        .collect()
-}
-
-fn completion_kind(kind: Option<u64>) -> CompletionKind {
-    match kind {
-        Some(2..=4) => CompletionKind::Function,
-        Some(5 | 6 | 10 | 12 | 20) => CompletionKind::Variable,
-        Some(7 | 8 | 13 | 22 | 25) => CompletionKind::Type,
-        Some(9 | 19) => CompletionKind::Text,
-        Some(14) => CompletionKind::Keyword,
-        Some(21) => CompletionKind::Constant,
-        _ => CompletionKind::Text,
-    }
 }
 
 /// Hover text from a `textDocument/hover` result.
@@ -495,6 +459,7 @@ fn parameter_label(parameter: &Value, label: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::language::completion::CompletionKind;
     use serde_json::json;
 
     #[test]

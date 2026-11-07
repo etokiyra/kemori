@@ -37,7 +37,7 @@ fn reads_capabilities_and_position_encoding() {
     let (encoding, caps) = parse_initialize(&json!({
         "capabilities": {
             "positionEncoding": "utf-8",
-            "completionProvider": {},
+            "completionProvider": { "resolveProvider": true },
             "hoverProvider": true,
             "renameProvider": { "prepareProvider": false },
             "documentHighlightProvider": true,
@@ -55,6 +55,7 @@ fn reads_capabilities_and_position_encoding() {
     }));
     assert_eq!(encoding, PositionEncoding::Utf8);
     assert!(caps.completion);
+    assert!(caps.completion_resolve);
     assert!(caps.hover);
     assert!(caps.rename);
     assert!(caps.document_highlight);

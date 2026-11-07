@@ -4,7 +4,17 @@ use super::watched::WatchedFiles;
 use super::*;
 
 impl Server {
-    /// Ask the server for the document highlights at a position.
+    /// Ask the server to resolve documentation and edits for a completion item.
+    pub fn resolve_completion(&mut self, item: &Value) -> Option<i64> {
+        self.send_request(
+            RequestKind::CompletionResolve,
+            "completionItem/resolve",
+            item.clone(),
+        )
+        .ok()
+    }
+
+    /// Ask for the document highlights at a position.
     pub fn document_highlight(&mut self, path: &Path, line: usize, col: usize) -> Option<i64> {
         self.send_request(
             RequestKind::DocumentHighlight,
@@ -207,6 +217,7 @@ impl Server {
     pub fn supports(&self, kind: RequestKind) -> bool {
         match kind {
             RequestKind::Completion => self.capabilities.completion,
+            RequestKind::CompletionResolve => self.capabilities.completion_resolve,
             RequestKind::Hover => self.capabilities.hover,
             RequestKind::Definition => self.capabilities.definition,
             RequestKind::Implementation => self.capabilities.implementation,

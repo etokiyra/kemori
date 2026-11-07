@@ -214,6 +214,12 @@ this file, and add or change a test.
   inserts them before the character at their position as dim virtual text, so
   they never affect widths, selection, undo or saving. Re-requesting is keyed to
   the version, not cursor movement, and large files opt out.
+- **Completion metadata is preserved and resolved lazily.** Each server item keeps
+  its raw JSON, detail and documentation; the popup previews the selected item.
+  When the server advertises `completionItem/resolve`, selecting an item without
+  documentation sends its raw item back and merges the result into both the pool
+  and the visible list. Built-in completions carry no raw item and are never
+  resolved.
 - **One workspace folder and token-keyed progress.** Initialize declares the
   current project root as a folder and advertises the client capability; a
   request for workspace folders returns the same single entry. Work-done tokens

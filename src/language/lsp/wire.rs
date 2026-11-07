@@ -23,10 +23,16 @@ pub(super) fn parse_initialize(result: &Value) -> (PositionEncoding, ServerCapab
         .and_then(|value| value.get("workspaceDiagnostics"))
         .and_then(Value::as_bool)
         .unwrap_or(false);
+    let completion_resolve = capabilities
+        .get("completionProvider")
+        .and_then(|provider| provider.get("resolveProvider"))
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
     (
         encoding,
         ServerCapabilities {
             completion: advertised("completionProvider"),
+            completion_resolve,
             hover: advertised("hoverProvider"),
             definition: advertised("definitionProvider"),
             references: advertised("referencesProvider"),

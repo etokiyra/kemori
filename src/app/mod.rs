@@ -312,6 +312,8 @@ pub struct App {
     /// The id of the newest hover request, so a late answer cannot replace a
     /// newer one.
     hover_request: Option<(LanguageId, i64)>,
+    /// An in-flight completion-item resolve request.
+    pending_completion_resolve: Option<(LanguageId, i64, String)>,
     /// Screen position of the editor cursor, updated during rendering.
     pub cursor_screen: Option<(u16, u16)>,
     pub tree_visible: bool,
@@ -563,6 +565,7 @@ impl App {
             signature: None,
             signature_request: None,
             hover_request: None,
+            pending_completion_resolve: None,
             cursor_screen: None,
             tree_visible: true,
             inline_diagnostics: true,

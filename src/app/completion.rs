@@ -241,6 +241,43 @@ impl App {
         });
     }
 
+    /// Resolve documentation for the selected server completion.
+    pub(super) fn resolve_selected_completion(&mut self) {
+        let Some(language) = self.lsp_language() else {
+            return;
+        };
+        if !self.lsp_supports(RequestKind::CompletionResolve) {
+            return;
+        }
+        let Some((label, raw)) = self.completion.as_ref().and_then(|state| {
+            let item = state.selected_item()?;
+            if !item.documentation.is_empty() {
+                return None;
+            }
+            Some((item.label.clone(), item.raw.clone()?))
+        }) else {
+            return;
+        };
+        if self
+            .pending_completion_resolve
+            .as_ref()
+            .is_some_and(|(_, _, pending)| *pending == label)
+        {
+            return;
+        }
+        let Ok(item) = serde_json::from_str::<Value>(&raw) else {
+            return;
+        };
+        let id = self
+            .lsp
+            .get_mut(&(self.workspace.root().to_path_buf(), language))
+            .and_then(|job| job.server.as_mut())
+            .and_then(|server| server.resolve_completion(&item));
+        if let Some(id) = id {
+            self.pending_completion_resolve = Some((language, id, label));
+        }
+    }
+
     /// Ask the language server for completions at the cursor.
     pub(super) fn request_lsp_completion(&mut self) {
         let Some(language) = self.lsp_language() else {
