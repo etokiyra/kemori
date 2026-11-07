@@ -212,6 +212,7 @@ cat >/dev/null
                 ServerEvent::Diagnostics { diagnostics: d, .. } => diagnostics = Some(d),
                 ServerEvent::Response { .. } => {}
                 ServerEvent::ApplyEdit { .. } => {}
+                ServerEvent::Progress(_) => {}
                 ServerEvent::Failed(_) => {}
             }
         }

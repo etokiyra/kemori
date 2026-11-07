@@ -29,6 +29,11 @@ describes the current state.
 - **`perf` is untested at the extremes.** There is no budget test for a 50 MB
   file or for startup time; large-file behaviour is only known to be
   rope-backed, not measured.
+- **Workspace folders cover one root, and progress is statusline-only.** Kemori
+  advertises the active project root rather than a multi-root list; multi-root
+  workspaces remain Phase 4. Progress messages are not a navigable log and a
+  server that never sends `end` leaves its token in the statusline until the
+  session closes.
 - **Cancellation is per-feature and server-dependent.** Kemori cancels older
   requests of the same feature (except diagnostics and commands) and timed-out
   requests, but it cannot guarantee a server stops computing or ignores the

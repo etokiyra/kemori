@@ -346,6 +346,9 @@ impl Server {
                 self.unregister_capabilities(params);
                 Value::Null
             }
+            // A progress token was created by the server; no client-side setup
+            // is needed before `$/progress` arrives.
+            "window/workDoneProgress/create" => Value::Null,
             // Return one `null` configuration per requested item.
             "workspace/configuration" => {
                 let count = params

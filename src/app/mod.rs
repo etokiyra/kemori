@@ -26,6 +26,7 @@ mod lsp_decorations;
 mod lsp_documents;
 mod lsp_highlights;
 mod lsp_pending;
+mod lsp_progress;
 mod lsp_response;
 mod mouse;
 mod panes;
@@ -266,6 +267,8 @@ pub struct App {
     pub commands: CommandRegistry,
     pub overlay: Overlay,
     pub search: Search,
+    /// Active `$/progress` reports, keyed by the server's token.
+    pub lsp_progress: std::collections::BTreeMap<String, crate::language::lsp::LspProgress>,
     pub clipboard: String,
     /// Recent kills, most recent last, for yank-pop.
     kill_ring: Vec<String>,
@@ -539,6 +542,7 @@ impl App {
             commands: CommandRegistry::builtin(),
             overlay: Overlay::None,
             search: Search::default(),
+            lsp_progress: std::collections::BTreeMap::new(),
             clipboard: String::new(),
             kill_ring: Vec::new(),
             kill_index: 0,

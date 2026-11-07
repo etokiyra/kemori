@@ -60,6 +60,20 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             ));
         }
 
+        if let Some(progress) = app.lsp_progress.values().next() {
+            let label = match (progress.percentage, progress.message.is_empty()) {
+                (Some(percent), _) => format!("  lsp: {} {}%", progress.title, percent),
+                (None, false) => format!("  lsp: {} {}", progress.title, progress.message),
+                (None, true) => format!("  lsp: {}", progress.title),
+            };
+            spans.push(Span::styled(
+                label,
+                Style::default()
+                    .fg(theme::info_color())
+                    .bg(theme::panel_bg()),
+            ));
+        }
+
         if let Some(selected) = doc.selected_text() {
             let lines = selected.matches('\n').count() + 1;
             let label = if lines > 1 {

@@ -127,6 +127,8 @@ keep you productive **offline**.
   receive create/change/delete events.
 - **Request cancellation** — superseded and timed-out server requests send
   `$/cancelRequest` instead of leaving the server working.
+- **Workspace folders and progress** — the project root is advertised as a
+  workspace folder, and server progress reports appear in the statusline.
 - **Symbols** — `Ctrl+Shift+O` for the file, `Ctrl+T` for the whole workspace
   (from the language server when attached, with Kemori's built-in scan as the
   instant, offline fallback).

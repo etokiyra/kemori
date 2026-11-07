@@ -214,6 +214,11 @@ this file, and add or change a test.
   inserts them before the character at their position as dim virtual text, so
   they never affect widths, selection, undo or saving. Re-requesting is keyed to
   the version, not cursor movement, and large files opt out.
+- **One workspace folder and token-keyed progress.** Initialize declares the
+  current project root as a folder and advertises the client capability; a
+  request for workspace folders returns the same single entry. Work-done tokens
+  are keyed by their JSON spelling, so string and numeric tokens cannot collide;
+  reports merge into the begin state instead of replacing its title.
 - **Superseded requests are cancelled before replacement.** `send_request`
   sends `$/cancelRequest` for older pending requests of the same feature, then
   forgets them; timeout expiry does the same. Diagnostics and execute-command

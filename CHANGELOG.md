@@ -26,6 +26,11 @@ Historical entries below retain the old name; 3.0.0 is the rename release.
   older one of the same feature, Kemori sends `$/cancelRequest` and forgets the
   old pending id; timed-out requests are cancelled the same way. Diagnostics and
   `workspace/executeCommand` are exempt because they can legitimately overlap.
+- **LSP workspace folders and progress.** `initialize` now advertises the
+  workspace root as a `workspaceFolder` and the client capability for folder
+  support; `workspace/workspaceFolders` returns it. Servers can create work-done
+  tokens, and `$/progress` begin/report/end updates are merged by token and shown
+  in the statusline until they finish.
 
 ## [3.2.1] - 2026-11-04
 

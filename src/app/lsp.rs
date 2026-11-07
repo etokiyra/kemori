@@ -470,6 +470,7 @@ impl App {
                     ServerEvent::Response { kind, id, result } => {
                         self.handle_lsp_response(language, kind, id, result);
                     }
+                    ServerEvent::Progress(progress) => self.apply_lsp_progress(progress),
                     ServerEvent::ApplyEdit { id, params } => {
                         let edit = params.get("edit").cloned().unwrap_or(Value::Null);
                         let files = convert::workspace_edit(&edit);

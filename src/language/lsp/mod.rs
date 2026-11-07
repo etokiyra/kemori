@@ -18,7 +18,9 @@ pub mod hierarchy;
 pub mod inlay;
 pub mod jsonrpc;
 pub mod links;
+pub mod progress;
 pub mod selection;
+pub use progress::{LspProgress, ProgressKind};
 pub use watched::WatchedFileChange;
 pub mod watched;
 
@@ -183,6 +185,8 @@ pub enum ServerEvent {
     /// The server asked Kemori to apply a workspace edit. The app must apply it
     /// and then call [`Server::apply_edit_response`].
     ApplyEdit { id: Value, params: Value },
+    /// A `$/progress` report from the server.
+    Progress(LspProgress),
     /// The server could not start or exited unexpectedly.
     Failed(String),
 }
@@ -376,12 +380,16 @@ impl Server {
                     },
                     "workspace": {
                         "configuration": true,
+                        "workspaceFolders": true,
                         "symbol": {},
                         "didChangeWatchedFiles": { "dynamicRegistration": true },
                         "diagnostics": { "refreshSupport": false }
-                    }
+                    },
+                    "window": { "workDoneProgress": true }
                 },
-                "workspaceFolders": null
+                "workspaceFolders": [
+                    { "uri": path_to_uri(root), "name": "workspace" }
+                ]
             }),
         )?;
         server.init_id = Some(id);
@@ -685,6 +693,10 @@ impl Server {
                         && !self.is_stale_diagnostics(&event)
                     {
                         events.push(event);
+                    } else if method == "$/progress"
+                        && let Some(progress) = progress::parse(&params)
+                    {
+                        events.push(ServerEvent::Progress(progress));
                     }
                 }
                 Ok(Message::Request { id, method, params }) => {
