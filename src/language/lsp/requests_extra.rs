@@ -380,3 +380,54 @@ impl Server {
         let _ = self.notify("textDocument/didSave", params);
     }
 }
+
+/// Whether a newer request of this kind should cancel every older one.
+fn request_supersedes(kind: RequestKind) -> bool {
+    !matches!(
+        kind,
+        RequestKind::DocumentDiagnostics
+            | RequestKind::WorkspaceDiagnostics
+            | RequestKind::ExecuteCommand
+    )
+}
+
+impl Server {
+    pub(super) fn send_request(
+        &mut self,
+        kind: RequestKind,
+        method: &str,
+        params: Value,
+    ) -> io::Result<i64> {
+        // Most feature requests are one-at-a-time in the app. Tell the server not
+        // to waste work on an older one before replacing it. Diagnostics and
+        // commands can legitimately have several requests in flight, so they are
+        // excluded.
+        if request_supersedes(kind) {
+            let superseded: Vec<i64> = self
+                .pending
+                .iter()
+                .filter(|(_, pending)| pending.kind == kind)
+                .map(|(id, _)| *id)
+                .collect();
+            for id in superseded {
+                self.pending.remove(&id);
+                let _ = self.notify("$/cancelRequest", json!({ "id": id }));
+            }
+        }
+        let id = self.request(method, params)?;
+        self.pending.insert(
+            id,
+            PendingRequest {
+                kind,
+                deadline: Instant::now() + request_timeout(kind),
+            },
+        );
+        Ok(id)
+    }
+
+    /// Cancel a request that the app no longer needs and forget its pending state.
+    pub fn cancel_request(&mut self, id: i64) {
+        self.pending.remove(&id);
+        let _ = self.notify("$/cancelRequest", json!({ "id": id }));
+    }
+}

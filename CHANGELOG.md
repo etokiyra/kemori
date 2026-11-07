@@ -22,6 +22,10 @@ Historical entries below retain the old name; 3.0.0 is the rename release.
   through `client/registerCapability` receive matching create/change/delete
   notifications for file operations, saves and external disk changes; watcher
   globs are respected and registrations can be withdrawn.
+- **Superseded LSP requests are cancelled.** When a newer request replaces an
+  older one of the same feature, Kemori sends `$/cancelRequest` and forgets the
+  old pending id; timed-out requests are cancelled the same way. Diagnostics and
+  `workspace/executeCommand` are exempt because they can legitimately overlap.
 
 ## [3.2.1] - 2026-11-04
 

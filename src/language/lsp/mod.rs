@@ -639,6 +639,9 @@ impl Server {
         // and the UI is not left waiting forever.
         let expired = expire_requests(&mut self.pending, Instant::now());
         for (id, kind) in expired {
+            // The request is no longer tracked, but the server may still be
+            // working on it; ask it to stop.
+            let _ = self.notify("$/cancelRequest", json!({ "id": id }));
             events.push(ServerEvent::Response {
                 kind,
                 id,
@@ -731,18 +734,6 @@ impl Server {
             &mut self.stdin,
             &json!({ "jsonrpc": "2.0", "id": id, "method": method, "params": params }),
         )?;
-        Ok(id)
-    }
-
-    fn send_request(&mut self, kind: RequestKind, method: &str, params: Value) -> io::Result<i64> {
-        let id = self.request(method, params)?;
-        self.pending.insert(
-            id,
-            PendingRequest {
-                kind,
-                deadline: Instant::now() + request_timeout(kind),
-            },
-        );
         Ok(id)
     }
 

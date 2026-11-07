@@ -214,6 +214,11 @@ this file, and add or change a test.
   inserts them before the character at their position as dim virtual text, so
   they never affect widths, selection, undo or saving. Re-requesting is keyed to
   the version, not cursor movement, and large files opt out.
+- **Superseded requests are cancelled before replacement.** `send_request`
+  sends `$/cancelRequest` for older pending requests of the same feature, then
+  forgets them; timeout expiry does the same. Diagnostics and execute-command
+  requests are excluded because multiple can legitimately be in flight. This
+  keeps servers from spending work on results the app can no longer use.
 - **Save and watched-file notifications are negotiated.** `textDocumentSync.save`
   selects URI-only or include-text `didSave`; the client advertises dynamic
   watched-file registration, stores the server's glob patterns, and filters app

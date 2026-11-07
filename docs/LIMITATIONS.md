@@ -29,6 +29,10 @@ describes the current state.
 - **`perf` is untested at the extremes.** There is no budget test for a 50 MB
   file or for startup time; large-file behaviour is only known to be
   rope-backed, not measured.
+- **Cancellation is per-feature and server-dependent.** Kemori cancels older
+  requests of the same feature (except diagnostics and commands) and timed-out
+  requests, but it cannot guarantee a server stops computing or ignores the
+  cancelled id. The app still validates every response before using it.
 - **Watched-file notifications depend on server registration and simple globs.**
   Kemori only sends them after a server registers through
   `client/registerCapability`; a pattern relative to a `RelativePattern` base

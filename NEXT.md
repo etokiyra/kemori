@@ -76,6 +76,10 @@
   `client/registerCapability` watchers are stored, matched against workspace
   globs, and fed create/change/delete notifications from saves, file operations
   and external disk changes; unregister requests remove them.
+- **Superseded and timed-out requests are cancelled.** The server receives
+  `$/cancelRequest` for an older request when a newer one of the same feature
+  replaces it, and for requests past their deadline. Diagnostics and commands
+  are exempt because several can run at once.
 - **Search in selection is scoped, not pre-filled.** **Find in Selection** and
   **Replace in Selection** store the contiguous selection as a range and filter
   every match against it; `Alt+S` clears the scope and returns to the whole
@@ -183,7 +187,7 @@
   diagnostics and workspace trust are all implemented, and Phase 0's
   oversized-file splits are complete.
 
-> Next action: LSP workspace folders, progress and cancellation, then completion depth.
+> Next action: LSP workspace folders and progress reporting, then completion depth.
 
 
 - **Released 3.1.0.** crates.io, docs.rs and the GitHub `v3.1.0` release carry
@@ -570,7 +574,7 @@ jump to errors, replace across the project, all without config.
 
 **Status:** in progress — editor depth, formatter coverage, the DAP debugger,
 adapter provisioning, attach and the main LSP intelligence features have landed.
-Remaining: LSP workspace folders/progress/cancellation, completion depth, Swift
+Remaining: LSP workspace folders and progress, completion depth, Swift
 debugging, Java/Ruby attach, formatter provisioning and a dedicated variable
 tree.
 
@@ -585,11 +589,11 @@ tree.
       document links, `source.organizeImports` code actions and
       `textDocument/rangeFormatting`. Stale responses are dropped and edits
       clear old ranges.*
-- [ ] LSP lifecycle: workspace folders, progress reporting, `$/cancelRequest`.
+- [ ] LSP lifecycle: workspace folders and progress reporting.
       *Shipped: pull diagnostics, `didSave` with optional text, dynamic
       watched-file registration and `workspace/didChangeWatchedFiles`
-      notifications. Workspace folders, progress reporting and request
-      cancellation remain.*
+      notifications, and `$/cancelRequest` for superseded or timed-out
+      requests. Workspace folders and progress reporting remain.*
 - [ ] Completion: snippets, documentation, resolve, better signature help.
 - [x] Editor: snippet engine, format on save, trim trailing whitespace, final
       newline, line-ending conversion, persistent undo, read-only toggle,
