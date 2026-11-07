@@ -26,12 +26,10 @@ fn project_replace_requires_confirmation_before_deleting_matches() {
         panic!("expected the project search form");
     };
     assert!(state.confirm_empty);
-    assert!(
-        state
-            .status
-            .as_deref()
-            .is_some_and(|status| status.contains("again"))
-    );
+    assert!(state
+        .status
+        .as_deref()
+        .is_some_and(|status| status.contains("again")));
     assert_eq!(fs::read_to_string(&file).unwrap(), "needle\n");
 
     // Typing a replacement clears the pending confirmation.
@@ -72,12 +70,10 @@ fn project_search_lists_matches_across_files() {
     };
     assert_eq!(state.results.len(), 2, "expected both files to match");
     assert_eq!(state.file_count(), 2);
-    assert!(
-        state
-            .status
-            .as_deref()
-            .is_some_and(|s| s.contains("2 match"))
-    );
+    assert!(state
+        .status
+        .as_deref()
+        .is_some_and(|s| s.contains("2 match")));
     fs::remove_dir_all(&dir).ok();
 }
 
@@ -203,11 +199,10 @@ fn commit_flow_reports_state_and_prompts() {
     app.workspace.git = crate::git::GitInfo::default();
     app.execute_command(ids::GIT_COMMIT);
     assert!(matches!(app.overlay, Overlay::None));
-    assert!(
-        app.status_message()
-            .unwrap_or("")
-            .contains("Not a git repository")
-    );
+    assert!(app
+        .status_message()
+        .unwrap_or("")
+        .contains("Not a git repository"));
 
     // With changes, it opens a commit-message prompt and dispatches work.
     let mut files = std::collections::HashMap::new();
@@ -368,28 +363,26 @@ fn diff_active_file_shows_working_tree_changes() {
             .output()
     };
     assert!(git(&["init", "-q"]).unwrap().status.success());
-    assert!(
-        git(&["config", "user.email", "kemori@example.com"])
-            .unwrap()
-            .status
-            .success()
-    );
-    assert!(
-        git(&["config", "user.name", "Kemori Test"])
-            .unwrap()
-            .status
-            .success()
-    );
+    assert!(git(&["config", "user.email", "kemori@example.com"])
+        .unwrap()
+        .status
+        .success());
+    assert!(git(&["config", "user.name", "Kemori Test"])
+        .unwrap()
+        .status
+        .success());
     assert!(git(&["add", "-A"]).unwrap().status.success());
-    assert!(
-        git(&["commit", "-q", "-m", "init"])
-            .unwrap()
-            .status
-            .success()
-    );
+    assert!(git(&["commit", "-q", "-m", "init"])
+        .unwrap()
+        .status
+        .success());
 
     let file = dir.join("src/main.rs");
     let mut app = app_with_file(&file);
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while !app.workspace.git.available && Instant::now() < deadline {
+        app.pump_background(Duration::from_millis(50));
+    }
     assert!(app.workspace.git.available, "expected a git repository");
 
     // Change the file on disk so the working tree differs from the index.
@@ -738,4 +731,3 @@ fn automatic_restart_stops_after_the_budget() {
     );
     fs::remove_dir_all(&dir).ok();
 }
-
