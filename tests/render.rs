@@ -161,6 +161,10 @@ fn renders_the_signature_help_popup() {
                 label: "fn add(a: i32, b: i32) -> i32".to_string(),
                 parameters: vec!["a: i32".to_string(), "b: i32".to_string()],
                 documentation: Some("Adds two numbers".to_string()),
+                parameter_documentation: vec![
+                    "The first number".to_string(),
+                    "The second number".to_string(),
+                ],
             }],
             active: 0,
             parameter: 1,
@@ -173,6 +177,10 @@ fn renders_the_signature_help_popup() {
     assert!(
         screen.contains("Adds two numbers"),
         "signature documentation missing:\n{screen}"
+    );
+    assert!(
+        screen.contains("param: The second number"),
+        "parameter documentation missing:\n{screen}"
     );
 
     cleanup(&dir);

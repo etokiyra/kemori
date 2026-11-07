@@ -214,6 +214,11 @@ this file, and add or change a test.
   inserts them before the character at their position as dim virtual text, so
   they never affect widths, selection, undo or saving. Re-requesting is keyed to
   the version, not cursor movement, and large files opt out.
+- **Signature help is per-overload, not a single string.** Each signature keeps
+  its label, parameter labels, signature documentation and aligned per-parameter
+  documentation. The server's active parameter is clamped to the selected
+  overload; PgUp/PgDn cycle overloads without dismissing the popup, and the UI
+  highlights the clamped parameter while showing its docs.
 - **Snippet completions reuse the editor snippet engine.** `insertTextFormat: 2`
   text (from `textEdit.newText` or `insertText`) expands through the same
   lexical `$1`/`${1:default}`/`$0` engine as built-in snippets, and the resulting

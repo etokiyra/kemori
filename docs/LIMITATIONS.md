@@ -29,6 +29,10 @@ describes the current state.
 - **`perf` is untested at the extremes.** There is no budget test for a 50 MB
   file or for startup time; large-file behaviour is only known to be
   rope-backed, not measured.
+- **Signature help renders one documentation line per level.** Signature and
+  parameter documentation are flattened to their first non-empty line; markdown
+  is not rendered. Overload cycling uses unmodified PgUp/PgDn while the popup is
+  visible.
 - **Completion snippets are a subset of LSP snippet syntax.** `insertText`/
   `textEdit`, `$1`, `${1:default}` and `$0` work, but variables, choices,
   transforms and `additionalTextEdits` are not implemented. Unsupported

@@ -93,6 +93,10 @@
   `insertTextFormat: 2` expand `$1`/`${1:default}`/`$0` as one edit and leave
   Tab/Shift+Tab navigation active. `textEdit` ranges are converted before
   insertion; `additionalTextEdits` are not applied yet.
+- **Signature help keeps every overload and parameter detail.** The active
+  parameter from the server is clamped to the selected signature, per-parameter
+  documentation is shown under the overload, and PgUp/PgDn cycle signatures
+  while the popup is open.
 - **Search in selection is scoped, not pre-filled.** **Find in Selection** and
   **Replace in Selection** store the contiguous selection as a range and filter
   every match against it; `Alt+S` clears the scope and returns to the whole
@@ -200,7 +204,7 @@
   diagnostics and workspace trust are all implemented, and Phase 0's
   oversized-file splits are complete.
 
-> Next action: LSP signature-help depth, then Swift debugging.
+> Next action: Swift debug adapter (lldb-dap) and Java/Ruby attach.
 
 
 - **Released 3.1.0.** crates.io, docs.rs and the GitHub `v3.1.0` release carry
@@ -587,8 +591,8 @@ jump to errors, replace across the project, all without config.
 
 **Status:** in progress — editor depth, formatter coverage, the DAP debugger,
 adapter provisioning, attach and the main LSP intelligence features have landed.
-Remaining: signature-help depth, Swift debugging, Java/Ruby attach, formatter
-provisioning and a dedicated variable tree.
+Remaining: Swift debugging, Java/Ruby attach, formatter provisioning and a
+dedicated variable tree.
 
 **Goal:** the editor and LSP feel like a modern IDE, not a collection of pickers.
 
@@ -607,11 +611,11 @@ provisioning and a dedicated variable tree.
       notifications, `$/cancelRequest` for superseded or timed-out requests,
       one workspace folder advertised to the server, and `$/progress`
       begin/report/end shown in the statusline.*
-- [ ] Completion: better signature help.
-      *Shipped: completion item detail/documentation, `completionItem/resolve`
-      for servers that advertise it, documentation preview in the popup, and
-      snippet insertion (`insertTextFormat: 2`, `insertText`/`textEdit`) with
-      tab stops. Richer signature help remains.*
+- [x] Completion: signature-help depth.
+      *Shipped: completion item detail/documentation, `completionItem/resolve`,
+      documentation preview, snippet insertion with tab stops, multiple
+      signature overloads with per-parameter documentation, active-parameter
+      clamping and PgUp/PgDn cycling.*
 - [x] Editor: snippet engine, format on save, trim trailing whitespace, final
       newline, line-ending conversion, persistent undo, read-only toggle,
       column/rectangular selection, search in selection, replace preview,
@@ -837,7 +841,7 @@ Keep this table current so the next session knows where to resume.
 | 1. LSP pull diagnostics | done | unreleased | Per-document pull plus `workspace/diagnostic` merged into Problems |
 | 1. Project search/replace | done | 9be6382 | Form overlay, literals/regex, globs, preview, atomic replace, unsaved-buffer safety |
 | 1. Workspace trust | done | unreleased | Per-root `trust.json`; tasks, debug preview and terminal gated |
-| 2. LSP depth | partial | unreleased | All LSP feature requests shipped (highlights, hints, lens, selection, hierarchies, implementation/type definition, links, organize imports, range formatting); lifecycle and completion depth remain |
+| 2. LSP depth | done | unreleased | All feature requests, lifecycle (folders/progress/cancel/save/watched files) and completion depth shipped |
 | 2. Editor depth | done | unreleased | Snippets with tab stops, persistent undo, format on save, column selection, search in selection, replace preview, large-file mode, read-only toggle, trim/newline/line-ending commands |
 | 2. Formatter gaps | partial | v3.2.0 | All listed languages wired through installed tools; Kemori does not provision the formatters yet |
 | 2. Real DAP debugger | partial | v3.2.0 | Sessions, conditional/log breakpoints, watch, stack/scopes/variables, stepping, launch/stop; a dedicated variable tree remains |

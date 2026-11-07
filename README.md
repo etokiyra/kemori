@@ -102,8 +102,9 @@ keep you productive **offline**.
   expand with working tab stops.
 - **Hover** — `Ctrl+Shift+H`, with the symbol's kind, definition and usage count.
 - **Signature help** — parameter hints appear automatically as you type `(` or `,`
-  in a call, highlighting the argument you are on. It comes from the language
-  server and disappears when you leave the call.
+  in a call, highlighting the argument you are on. All overloads and their
+  documentation are kept, the active parameter’s docs are shown, and
+  PgUp/PgDn cycle signatures while the popup is open.
 - **Navigation** — `F12` go-to-definition and `Shift+F12` find-references,
   across files when a server is attached; without one, `F12` falls back to a
   project-wide symbol search so it still works offline.

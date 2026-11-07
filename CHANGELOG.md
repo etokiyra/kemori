@@ -26,6 +26,11 @@ Historical entries below retain the old name; 3.0.0 is the rename release.
   older one of the same feature, Kemori sends `$/cancelRequest` and forgets the
   old pending id; timed-out requests are cancelled the same way. Diagnostics and
   `workspace/executeCommand` are exempt because they can legitimately overlap.
+- **Richer signature help.** Every overload is retained with its own
+  documentation and parameter documentation, the server's active parameter is
+  clamped to the selected signature, and PgUp/PgDn cycle overloads while the
+  popup is open. The active parameter's documentation is shown beneath the
+  signature.
 - **Completion snippets are inserted.** The client advertises snippet support;
   completion items with `insertTextFormat: 2`, `insertText` or `textEdit` are
   expanded through the editor snippet engine. `$1`/`${1:default}`/`$0` stops

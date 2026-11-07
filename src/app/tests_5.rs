@@ -279,7 +279,7 @@ while read -r header; do
   method=$(printf '%s' "$body" | sed -n 's/.*"method":"\([^"]*\)".*/\1/p')
   [ -z "$id" ] && continue
   case "$method" in
-    initialize) result='{"capabilities":{"completionProvider":{"resolveProvider":true},"hoverProvider":true,"definitionProvider":true,"referencesProvider":true,"renameProvider":true,"codeActionProvider":true,"workspaceSymbolProvider":true,"documentHighlightProvider":true,"inlayHintProvider":true,"codeLensProvider":true,"selectionRangeProvider":true,"callHierarchyProvider":true,"typeHierarchyProvider":true,"implementationProvider":true,"typeDefinitionProvider":true,"documentLinkProvider":true,"documentRangeFormattingProvider":true}}' ;;
+    initialize) result='{"capabilities":{"completionProvider":{"resolveProvider":true},"signatureHelpProvider":{},"hoverProvider":true,"definitionProvider":true,"referencesProvider":true,"renameProvider":true,"codeActionProvider":true,"workspaceSymbolProvider":true,"documentHighlightProvider":true,"inlayHintProvider":true,"codeLensProvider":true,"selectionRangeProvider":true,"callHierarchyProvider":true,"typeHierarchyProvider":true,"implementationProvider":true,"typeDefinitionProvider":true,"documentLinkProvider":true,"documentRangeFormattingProvider":true}}' ;;
     textDocument/documentHighlight) result='[{"range":{"start":{"line":1,"character":8},"end":{"line":1,"character":13}},"kind":1}]' ;;
     textDocument/inlayHint) result='[{"position":{"line":1,"character":4},"label":": i32","kind":1,"paddingLeft":true}]' ;;
     textDocument/codeLens) result='[{"range":{"start":{"line":0,"character":0},"end":{"line":0,"character":8}},"command":{"title":"run test","command":"test.run","arguments":[]}}]' ;;
@@ -288,6 +288,7 @@ while read -r header; do
     callHierarchy/incomingCalls) result='[{"from":{"name":"main","kind":12,"detail":"detail","uri":"file://$target","range":{"start":{"line":0,"character":0},"end":{"line":0,"character":5}},"selectionRange":{"start":{"line":0,"character":4},"end":{"line":0,"character":9}}},"fromRanges":[]}]' ;;
     textDocument/prepareTypeHierarchy) result='[{"name":"Thing","kind":12,"detail":"detail","uri":"file://$target","range":{"start":{"line":2,"character":0},"end":{"line":2,"character":5}},"selectionRange":{"start":{"line":2,"character":4},"end":{"line":2,"character":9}}}]' ;;
     typeHierarchy/supertypes) result='[{"name":"Base","kind":12,"detail":"detail","uri":"file://$target","range":{"start":{"line":1,"character":0},"end":{"line":1,"character":5}},"selectionRange":{"start":{"line":1,"character":4},"end":{"line":1,"character":9}}}]' ;;
+    textDocument/signatureHelp) result='{"signatures":[{"label":"fn first(a: i32)","parameters":[{"label":"a: i32","documentation":"first parameter"}],"documentation":"First overload"},{"label":"fn second(a: i32, b: i32)","parameters":[{"label":"a: i32","documentation":"first parameter"},{"label":"b: i32","documentation":"second parameter"}],"documentation":"Second overload"}],"activeSignature":1,"activeParameter":1}' ;;
     textDocument/hover) result='{"contents":{"kind":"plaintext","value":"LSP HOVER TEXT"}}' ;;
     textDocument/completion) result='{"items":[{"label":"kemori_lsp_item","kind":3}]}' ;;
     completionItem/resolve) result='{"label":"kemori_lsp_item","detail":"resolved detail","documentation":{"kind":"markdown","value":"RESOLVED DOC"}}' ;;
@@ -496,6 +497,27 @@ done
         )),
         "expected resolved completion documentation"
     );
+
+    // Signature help keeps overloads, the active parameter and docs.
+    app.request_lsp_signature();
+    assert!(
+        wait(&mut app, &|app| app.signature.as_ref().is_some_and(
+            |state| state.help.signatures.len() == 2
+        )),
+        "expected two signature overloads"
+    );
+    {
+        let help = &app.signature.as_ref().unwrap().help;
+        assert_eq!(help.active, 1);
+        assert_eq!(help.parameter, 1);
+        assert_eq!(
+            help.signatures[1].parameter_documentation[1],
+            "second parameter"
+        );
+    }
+    app.cycle_signature(1);
+    assert_eq!(app.signature.as_ref().unwrap().help.active, 0);
+    app.signature = None;
 
     // Definition (same file, line 2 column 0).
     app.completion = None;

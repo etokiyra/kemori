@@ -377,6 +377,8 @@ pub struct Signature {
     pub parameters: Vec<String>,
     /// The signature's documentation, flattened to plain lines.
     pub documentation: Option<String>,
+    /// Documentation for each parsed parameter, aligned with `parameters`.
+    pub parameter_documentation: Vec<String>,
 }
 
 /// The active parameter hints for a call.
@@ -399,16 +401,25 @@ pub fn signature_help(value: &Value) -> Option<SignatureHelp> {
     let mut items = Vec::new();
     for signature in signatures {
         let label = signature.get("label")?.as_str()?.to_string();
-        let parameters = signature
+        let mut parameters = Vec::new();
+        let mut parameter_documentation = Vec::new();
+        for parameter in signature
             .get("parameters")
             .and_then(Value::as_array)
-            .map(|parameters| {
-                parameters
-                    .iter()
-                    .filter_map(|parameter| parameter_label(parameter, &label))
-                    .collect()
-            })
-            .unwrap_or_default();
+            .map(Vec::as_slice)
+            .unwrap_or_default()
+        {
+            let Some(label) = parameter_label(parameter, &label) else {
+                continue;
+            };
+            parameters.push(label);
+            parameter_documentation.push(
+                parameter
+                    .get("documentation")
+                    .map(markup_text)
+                    .unwrap_or_default(),
+            );
+        }
         let documentation = signature
             .get("documentation")
             .map(markup_text)
@@ -417,6 +428,7 @@ pub fn signature_help(value: &Value) -> Option<SignatureHelp> {
             label,
             parameters,
             documentation,
+            parameter_documentation,
         });
     }
     if items.is_empty() {
@@ -429,6 +441,12 @@ pub fn signature_help(value: &Value) -> Option<SignatureHelp> {
         .or_else(|| signatures.get(active)?.get("activeParameter"))
         .and_then(Value::as_u64)
         .unwrap_or(0) as usize;
+    let parameter_count = items[active].parameters.len();
+    let parameter = if parameter_count == 0 {
+        0
+    } else {
+        parameter.min(parameter_count - 1)
+    };
     Some(SignatureHelp {
         signatures: items,
         active,
@@ -485,6 +503,29 @@ mod tests {
         assert_eq!(edits[0].start, (0, 0));
         assert_eq!(edits[0].new_text, "let");
         assert!(formatting_edits(&json!(null)).is_empty());
+    }
+
+    #[test]
+    fn keeps_parameter_documentation_and_clamps_the_active_parameter() {
+        let value = json!({
+            "signatures": [{
+                "label": "fn add(a: i32, b: i32)",
+                "parameters": [
+                    { "label": "a: i32", "documentation": "First addend" },
+                    { "label": "b: i32", "documentation": { "kind": "markdown", "value": "Second addend" } }
+                ]
+            }],
+            "activeParameter": 9
+        });
+        let help = signature_help(&value).expect("help");
+        assert_eq!(
+            help.signatures[0].parameter_documentation,
+            vec!["First addend", "Second addend"]
+        );
+        assert_eq!(
+            help.parameter, 1,
+            "the active parameter is clamped to the signature"
+        );
     }
 
     #[test]

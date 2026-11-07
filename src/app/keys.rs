@@ -311,6 +311,13 @@ impl App {
         if self.handle_snippet_key(key) {
             return;
         }
+        if self.signature.is_some()
+            && key.modifiers.is_empty()
+            && matches!(key.code, KeyCode::PageUp | KeyCode::PageDown)
+        {
+            self.cycle_signature(if key.code == KeyCode::PageDown { 1 } else { -1 });
+            return;
+        }
         let shift = key_shift(&key);
         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
         let alt = key.modifiers.contains(KeyModifiers::ALT);

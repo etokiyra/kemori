@@ -182,6 +182,19 @@ impl App {
         self.schedule_auto_completion();
     }
 
+    /// Cycle the visible signature overload while the popup is open.
+    pub(super) fn cycle_signature(&mut self, delta: isize) {
+        let Some(state) = self.signature.as_mut() else {
+            return;
+        };
+        let count = state.help.signatures.len();
+        if count == 0 {
+            return;
+        }
+        let current = state.help.active as isize;
+        state.help.active = (current + delta).rem_euclid(count as isize) as usize;
+    }
+
     /// Ask the language server for signature help at the cursor.
     pub(super) fn request_lsp_signature(&mut self) {
         let Some(language) = self.lsp_language() else {

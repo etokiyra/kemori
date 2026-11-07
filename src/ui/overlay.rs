@@ -413,8 +413,13 @@ pub fn render_signature(
     let on_panel = Style::default().bg(theme::panel_bg());
 
     // The label with the active parameter emphasised.
+    let active_parameter = if signature.parameters.is_empty() {
+        0
+    } else {
+        help.parameter.min(signature.parameters.len() - 1)
+    };
     let (before, parameter, after) =
-        split_parameter(&signature.label, &signature.parameters, help.parameter);
+        split_parameter(&signature.label, &signature.parameters, active_parameter);
     let mut spans = vec![Span::styled("✦ ", theme::star())];
     match parameter {
         Some(parameter) => {
@@ -429,9 +434,16 @@ pub fn render_signature(
         .documentation
         .as_deref()
         .and_then(|text| text.lines().find(|line| !line.trim().is_empty()));
+    let parameter_documentation = signature
+        .parameter_documentation
+        .get(active_parameter)
+        .map(String::as_str)
+        .and_then(|text| text.lines().find(|line| !line.trim().is_empty()));
     let label_width = signature.label.chars().count();
     let doc_width = documentation.map_or(0, |line| line.trim().chars().count());
-    let width = ((label_width.max(doc_width) + 4).clamp(24, 84) as u16).min(area.width);
+    let param_width = parameter_documentation.map_or(0, |line| line.trim().chars().count());
+    let width =
+        ((label_width.max(doc_width).max(param_width) + 4).clamp(24, 84) as u16).min(area.width);
     let inner_width = width.saturating_sub(2) as usize;
 
     let mut rows: Vec<Line> = vec![Line::from(spans)];
@@ -441,9 +453,19 @@ pub fn render_signature(
             theme::muted(),
         )));
     }
+    if let Some(documentation) = parameter_documentation {
+        rows.push(Line::from(Span::styled(
+            truncate(&format!("param: {}", documentation.trim()), inner_width),
+            theme::dim(),
+        )));
+    }
     if help.signatures.len() > 1 {
         rows.push(Line::from(Span::styled(
-            format!("{}/{} signatures", help.active + 1, help.signatures.len()),
+            format!(
+                "{}/{} signatures · PgUp/PgDn switch",
+                help.active + 1,
+                help.signatures.len()
+            ),
             theme::dim(),
         )));
     }
