@@ -1,5 +1,6 @@
 //! Extra document requests kept out of the main module.
 
+use super::watched::WatchedFiles;
 use super::*;
 
 impl Server {
@@ -236,5 +237,146 @@ impl Server {
             // uses it for its own Java debug commands.
             RequestKind::ExecuteCommand => true,
         }
+    }
+
+    /// Record watched-file registrations from `client/registerCapability`.
+    pub(super) fn register_capabilities(&mut self, params: &Value) {
+        let Some(registrations) = params.get("registrations").and_then(Value::as_array) else {
+            return;
+        };
+        for registration in registrations {
+            if registration.get("method").and_then(Value::as_str)
+                != Some("workspace/didChangeWatchedFiles")
+            {
+                continue;
+            }
+            let Some(id) = registration.get("id").and_then(Value::as_str) else {
+                continue;
+            };
+            let globs = registration
+                .pointer("/registerOptions/watchers")
+                .and_then(Value::as_array)
+                .map(|watchers| {
+                    watchers
+                        .iter()
+                        .filter_map(|watcher| {
+                            watcher.get("globPattern").and_then(|pattern| {
+                                pattern.as_str().map(str::to_string).or_else(|| {
+                                    pattern
+                                        .get("pattern")
+                                        .and_then(Value::as_str)
+                                        .map(str::to_string)
+                                })
+                            })
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default();
+            if globs.is_empty() {
+                continue;
+            }
+            self.watched_files
+                .retain(|registration| registration.id != id);
+            self.watched_files.push(WatchedFiles {
+                id: id.to_string(),
+                globs,
+            });
+        }
+    }
+
+    /// Remove watched-file registrations from `client/unregisterCapability`.
+    pub(super) fn unregister_capabilities(&mut self, params: &Value) {
+        let Some(registrations) = params
+            .get("unregisterations")
+            .or_else(|| params.get("unregistrations"))
+            .and_then(Value::as_array)
+        else {
+            return;
+        };
+        for registration in registrations {
+            if let Some(id) = registration.get("id").and_then(Value::as_str) {
+                self.watched_files.retain(|entry| entry.id != id);
+            }
+        }
+    }
+
+    /// Send `workspace/didChangeWatchedFiles` for changes matching a registration.
+    pub fn did_change_watched_files(&mut self, changes: &[(PathBuf, WatchedFileChange)]) {
+        if self.watched_files.is_empty() {
+            return;
+        }
+        let mut payload = Vec::new();
+        for (path, kind) in changes {
+            let relative = path
+                .strip_prefix(&self.root)
+                .unwrap_or(path)
+                .to_string_lossy()
+                .replace('\\', "/");
+            let relative = relative.trim_start_matches("./");
+            let matched = self.watched_files.iter().any(|registration| {
+                registration.globs.iter().any(|glob| {
+                    crate::filesystem::gitignore::glob_matches(
+                        glob.trim_start_matches("./"),
+                        relative,
+                    )
+                })
+            });
+            if matched {
+                payload.push(json!({
+                    "uri": path_to_uri(path),
+                    "type": *kind as u8
+                }));
+            }
+        }
+        if !payload.is_empty() {
+            let _ = self.notify(
+                "workspace/didChangeWatchedFiles",
+                json!({ "changes": payload }),
+            );
+        }
+    }
+
+    pub(super) fn server_request_result(&mut self, method: &str, params: &Value) -> Value {
+        match method {
+            "client/registerCapability" => {
+                self.register_capabilities(params);
+                Value::Null
+            }
+            "client/unregisterCapability" => {
+                self.unregister_capabilities(params);
+                Value::Null
+            }
+            // Return one `null` configuration per requested item.
+            "workspace/configuration" => {
+                let count = params
+                    .get("items")
+                    .and_then(Value::as_array)
+                    .map(Vec::len)
+                    .unwrap_or(0);
+                Value::Array(vec![Value::Null; count])
+            }
+            "workspace/workspaceFolders" => {
+                json!([{ "uri": path_to_uri(&self.root), "name": "workspace" }])
+            }
+            _ => Value::Null,
+        }
+    }
+
+    /// Notify the server that a saved document was written.
+    pub fn did_save(&mut self, path: &Path, text: &str) {
+        if !self.versions.contains_key(path) {
+            return;
+        }
+        let params = match self.capabilities.save {
+            SaveKind::No => return,
+            SaveKind::Save => json!({
+                "textDocument": { "uri": path_to_uri(path) }
+            }),
+            SaveKind::IncludeText => json!({
+                "textDocument": { "uri": path_to_uri(path) },
+                "text": text
+            }),
+        };
+        let _ = self.notify("textDocument/didSave", params);
     }
 }

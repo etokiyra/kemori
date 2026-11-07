@@ -49,6 +49,7 @@ pub(super) fn parse_initialize(result: &Value) -> (PositionEncoding, ServerCapab
             document_diagnostics,
             workspace_diagnostics,
             sync,
+            save: parse_save(capabilities.get("textDocumentSync")),
         },
     )
 }
@@ -69,6 +70,24 @@ pub(super) fn parse_sync(value: Option<&Value>) -> TextDocumentSyncKind {
         Some(0) => TextDocumentSyncKind::None,
         Some(2) => TextDocumentSyncKind::Incremental,
         _ => TextDocumentSyncKind::Full,
+    }
+}
+
+/// Parse the optional `save` field of `textDocumentSync`.
+pub(super) fn parse_save(value: Option<&Value>) -> SaveKind {
+    let Some(save) = value.and_then(|value| value.get("save")) else {
+        return SaveKind::No;
+    };
+    match save {
+        Value::Bool(true) => SaveKind::Save,
+        Value::Object(object) => {
+            if object.get("includeText").and_then(Value::as_bool) == Some(true) {
+                SaveKind::IncludeText
+            } else {
+                SaveKind::Save
+            }
+        }
+        _ => SaveKind::No,
     }
 }
 

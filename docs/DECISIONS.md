@@ -214,6 +214,12 @@ this file, and add or change a test.
   inserts them before the character at their position as dim virtual text, so
   they never affect widths, selection, undo or saving. Re-requesting is keyed to
   the version, not cursor movement, and large files opt out.
+- **Save and watched-file notifications are negotiated.** `textDocumentSync.save`
+  selects URI-only or include-text `didSave`; the client advertises dynamic
+  watched-file registration, stores the server's glob patterns, and filters app
+  file events through the same `.gitignore`-style matcher used by project search.
+  Unregister requests remove the registration, so a server can change its
+  interests without a restart.
 - **Organize imports is a restricted code-action request.** Sending
   `textDocument/codeAction` with `only: ["source.organizeImports"]` lets the
   server choose its own implementation; the app applies the first returned edit

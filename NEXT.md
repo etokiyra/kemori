@@ -71,6 +71,11 @@
   and applies the returned edit or command; Format Selection sends
   `textDocument/rangeFormatting` for the active range and validates the buffer
   version before applying edits.
+- **Saves and watched files are reported.** A server that requests `didSave`
+  receives it after writes, with text only when `includeText` is requested.
+  `client/registerCapability` watchers are stored, matched against workspace
+  globs, and fed create/change/delete notifications from saves, file operations
+  and external disk changes; unregister requests remove them.
 - **Search in selection is scoped, not pre-filled.** **Find in Selection** and
   **Replace in Selection** store the contiguous selection as a range and filter
   every match against it; `Alt+S` clears the scope and returns to the whole
@@ -178,7 +183,7 @@
   diagnostics and workspace trust are all implemented, and Phase 0's
   oversized-file splits are complete.
 
-> Next action: LSP lifecycle notifications and completion depth.
+> Next action: LSP workspace folders, progress and cancellation, then completion depth.
 
 
 - **Released 3.1.0.** crates.io, docs.rs and the GitHub `v3.1.0` release carry
@@ -565,8 +570,9 @@ jump to errors, replace across the project, all without config.
 
 **Status:** in progress — editor depth, formatter coverage, the DAP debugger,
 adapter provisioning, attach and the main LSP intelligence features have landed.
-Remaining: LSP lifecycle and completion depth, Swift debugging, Java/Ruby attach,
-formatter provisioning and a dedicated variable tree.
+Remaining: LSP workspace folders/progress/cancellation, completion depth, Swift
+debugging, Java/Ruby attach, formatter provisioning and a dedicated variable
+tree.
 
 **Goal:** the editor and LSP feel like a modern IDE, not a collection of pickers.
 
@@ -579,10 +585,11 @@ formatter provisioning and a dedicated variable tree.
       document links, `source.organizeImports` code actions and
       `textDocument/rangeFormatting`. Stale responses are dropped and edits
       clear old ranges.*
-- [ ] LSP lifecycle: `didSave`, watched-file notifications, pull diagnostics,
-      workspace folders, progress reporting, `$/cancelRequest`.
-      *Pull diagnostics are shipped. `didSave`, watched files, workspace
-      folders, progress reporting and request cancellation remain.*
+- [ ] LSP lifecycle: workspace folders, progress reporting, `$/cancelRequest`.
+      *Shipped: pull diagnostics, `didSave` with optional text, dynamic
+      watched-file registration and `workspace/didChangeWatchedFiles`
+      notifications. Workspace folders, progress reporting and request
+      cancellation remain.*
 - [ ] Completion: snippets, documentation, resolve, better signature help.
 - [x] Editor: snippet engine, format on save, trim trailing whitespace, final
       newline, line-ending conversion, persistent undo, read-only toggle,

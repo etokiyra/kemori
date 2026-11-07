@@ -6,10 +6,16 @@ impl App {
     pub(super) fn save_all(&mut self) {
         let mut saved = 0usize;
         let mut error = None;
+        let mut saved_docs = Vec::new();
         for doc in &mut self.editor.documents {
             if doc.is_dirty() && doc.buffer.path.is_some() {
                 match doc.save() {
-                    Ok(true) => saved += 1,
+                    Ok(true) => {
+                        saved += 1;
+                        if let Some(path) = doc.buffer.path.clone() {
+                            saved_docs.push((path, doc.buffer.language, doc.buffer.text()));
+                        }
+                    }
                     Ok(false) => {}
                     Err(err) => {
                         error = Some(err);
@@ -21,6 +27,10 @@ impl App {
         if let Some(err) = error {
             self.set_error(format!("Save failed: {err}"));
             return;
+        }
+        for (path, language, text) in saved_docs {
+            self.notify_lsp_save(&path, language, &text);
+            self.notify_lsp_watched(&[(path, crate::language::lsp::WatchedFileChange::Changed)]);
         }
         if saved > 0 {
             self.request_git_refresh();
@@ -105,11 +115,19 @@ impl App {
                 self.request_git_refresh();
                 self.quit_armed = false;
                 self.set_status("Saved");
-                let path = self
-                    .editor
-                    .active_document()
-                    .and_then(|doc| doc.buffer.path.clone());
-                if let Some(path) = path {
+                let saved = self.editor.active_document().and_then(|doc| {
+                    Some((
+                        doc.buffer.path.clone()?,
+                        doc.buffer.language,
+                        doc.buffer.text(),
+                    ))
+                });
+                if let Some((path, language, text)) = saved {
+                    self.notify_lsp_save(&path, language, &text);
+                    self.notify_lsp_watched(&[(
+                        path.clone(),
+                        crate::language::lsp::WatchedFileChange::Changed,
+                    )]);
                     self.maybe_format_after_save(&path);
                 }
             }
@@ -165,6 +183,19 @@ impl App {
             .map(|doc| doc.save());
         match saved {
             Some(Ok(true)) => {
+                let saved = self
+                    .editor
+                    .documents
+                    .iter()
+                    .find(|doc| same_file(doc.buffer.path.as_deref(), path))
+                    .map(|doc| (doc.buffer.language, doc.buffer.text()));
+                if let Some((language, text)) = saved {
+                    self.notify_lsp_save(path, language, &text);
+                    self.notify_lsp_watched(&[(
+                        path.to_path_buf(),
+                        crate::language::lsp::WatchedFileChange::Changed,
+                    )]);
+                }
                 self.request_git_refresh();
                 self.quit_armed = false;
                 self.set_status("Saved (formatted)");
@@ -221,6 +252,17 @@ impl App {
             .map(|doc| doc.save_as(&path));
         match result {
             Some(Ok(true)) => {
+                let saved = self
+                    .editor
+                    .active_document()
+                    .map(|doc| (doc.buffer.language, doc.buffer.text()));
+                if let Some((language, text)) = saved {
+                    self.notify_lsp_save(&path, language, &text);
+                    self.notify_lsp_watched(&[(
+                        path.clone(),
+                        crate::language::lsp::WatchedFileChange::Created,
+                    )]);
+                }
                 self.request_detection_for_active();
                 self.request_git_refresh();
                 self.set_status(format!("Saved {}", path.display()));
@@ -242,6 +284,10 @@ impl App {
         let destination = unique_copy_path(&source);
         match filesystem::copy_file(&source, &destination) {
             Ok(()) => {
+                self.notify_lsp_watched(&[(
+                    destination.clone(),
+                    crate::language::lsp::WatchedFileChange::Created,
+                )]);
                 self.workspace.tree.refresh();
                 self.workspace.tree.select_path(&destination);
                 self.open_path(destination);
@@ -362,6 +408,10 @@ impl App {
         }
         match filesystem::remove_path(path) {
             Ok(()) => {
+                self.notify_lsp_watched(&[(
+                    path.to_path_buf(),
+                    crate::language::lsp::WatchedFileChange::Deleted,
+                )]);
                 let mut closed: Vec<(PathBuf, LanguageId)> = Vec::new();
                 let mut index = self.editor.documents.len();
                 while index > 0 {

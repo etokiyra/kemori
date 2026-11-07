@@ -18,6 +18,21 @@ fn decodes_windows_drive_uris() {
 }
 
 #[test]
+fn parses_did_save_options() {
+    assert_eq!(parse_save(Some(&json!({ "save": true }))), SaveKind::Save);
+    assert_eq!(
+        parse_save(Some(&json!({ "save": { "includeText": true } }))),
+        SaveKind::IncludeText
+    );
+    assert_eq!(
+        parse_save(Some(&json!({ "save": { "includeText": false } }))),
+        SaveKind::Save
+    );
+    assert_eq!(parse_save(Some(&json!({ "change": 1 }))), SaveKind::No);
+    assert_eq!(parse_save(None), SaveKind::No);
+}
+
+#[test]
 fn reads_capabilities_and_position_encoding() {
     let (encoding, caps) = parse_initialize(&json!({
         "capabilities": {
@@ -34,7 +49,8 @@ fn reads_capabilities_and_position_encoding() {
             "implementationProvider": true,
             "typeDefinitionProvider": true,
             "documentLinkProvider": true,
-            "documentRangeFormattingProvider": true
+            "documentRangeFormattingProvider": true,
+            "textDocumentSync": { "change": 1, "save": { "includeText": true } }
         }
     }));
     assert_eq!(encoding, PositionEncoding::Utf8);
@@ -51,6 +67,7 @@ fn reads_capabilities_and_position_encoding() {
     assert!(caps.type_definition);
     assert!(caps.document_link);
     assert!(caps.document_range_formatting);
+    assert_eq!(caps.save, SaveKind::IncludeText);
     assert!(!caps.definition);
     assert!(!caps.workspace_symbol);
     assert!(!caps.document_diagnostics);

@@ -19,6 +19,8 @@ pub mod inlay;
 pub mod jsonrpc;
 pub mod links;
 pub mod selection;
+pub use watched::WatchedFileChange;
+pub mod watched;
 
 use std::collections::HashMap;
 use std::io::{self, BufRead, BufReader};
@@ -68,6 +70,18 @@ pub enum TextDocumentSyncKind {
     Incremental,
 }
 
+/// How a server wants saves reported, from `textDocumentSync.save`.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum SaveKind {
+    /// No `didSave` notification.
+    #[default]
+    No,
+    /// Send `didSave` with the document URI only.
+    Save,
+    /// Send `didSave` with the full text.
+    IncludeText,
+}
+
 /// The server features Kemori knows how to use, from its `initialize` result.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 struct ServerCapabilities {
@@ -106,6 +120,7 @@ struct ServerCapabilities {
     /// `workspace/diagnostic` (workspace-wide pull diagnostics).
     workspace_diagnostics: bool,
     sync: TextDocumentSyncKind,
+    save: SaveKind,
 }
 
 /// The Kemori feature a server request belongs to.
@@ -197,6 +212,8 @@ pub struct Server {
     encoding: PositionEncoding,
     /// The features the server advertised.
     capabilities: ServerCapabilities,
+    /// Watch registrations requested through `client/registerCapability`.
+    watched_files: Vec<watched::WatchedFiles>,
     /// The last few stderr lines, for a more useful failure message.
     stderr: Arc<Mutex<String>>,
 }
@@ -308,6 +325,7 @@ impl Server {
             language,
             encoding: PositionEncoding::default(),
             capabilities: ServerCapabilities::default(),
+            watched_files: Vec::new(),
             stderr,
         };
 
@@ -334,7 +352,7 @@ impl Server {
                 "capabilities": {
                     "general": { "positionEncodings": ["utf-8", "utf-16"] },
                     "textDocument": {
-                        "synchronization": { "dynamicRegistration": false, "didSave": false },
+                        "synchronization": { "dynamicRegistration": false, "didSave": true },
                         "publishDiagnostics": { "relatedInformation": false },
                         "completion": { "completionItem": { "snippetSupport": false } },
                         "hover": { "contentFormat": ["markdown", "plaintext"] },
@@ -359,6 +377,7 @@ impl Server {
                     "workspace": {
                         "configuration": true,
                         "symbol": {},
+                        "didChangeWatchedFiles": { "dynamicRegistration": true },
                         "diagnostics": { "refreshSupport": false }
                     }
                 },
@@ -745,24 +764,6 @@ impl Server {
         let version = self.versions.entry(path.to_path_buf()).or_insert(0);
         *version += 1;
         *version
-    }
-
-    fn server_request_result(&self, method: &str, params: &Value) -> Value {
-        match method {
-            // Return one `null` configuration per requested item.
-            "workspace/configuration" => {
-                let count = params
-                    .get("items")
-                    .and_then(Value::as_array)
-                    .map(Vec::len)
-                    .unwrap_or(0);
-                Value::Array(vec![Value::Null; count])
-            }
-            "workspace/workspaceFolders" => {
-                json!([{ "uri": path_to_uri(&self.root), "name": "workspace" }])
-            }
-            _ => Value::Null,
-        }
     }
 }
 

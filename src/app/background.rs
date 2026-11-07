@@ -30,6 +30,7 @@ impl App {
         self.last_disk_check = Instant::now();
 
         let mut message: Option<(bool, String)> = None;
+        let mut watched = Vec::new();
         for doc in &mut self.editor.documents {
             let Some(path) = doc.buffer.path.clone() else {
                 continue;
@@ -43,14 +44,17 @@ impl App {
             if doc.is_dirty() {
                 // Remember the new time so we warn once, not every tick.
                 doc.record_disk_mtime();
+                watched.push((path, crate::language::lsp::WatchedFileChange::Changed));
                 message = Some((
                     false,
                     format!("{} changed on disk — save to overwrite", doc.file_name()),
                 ));
             } else if doc.reload_from_disk().is_ok() {
+                watched.push((path, crate::language::lsp::WatchedFileChange::Changed));
                 message = Some((true, format!("{} reloaded from disk", doc.file_name())));
             }
         }
+        self.notify_lsp_watched(&watched);
 
         match message {
             Some((true, message)) => {

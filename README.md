@@ -122,6 +122,9 @@ keep you productive **offline**.
 - **Organize imports and format selection** — palette commands use
   `source.organizeImports` and `textDocument/rangeFormatting` when the server
   supports them.
+- **Save and watched-file notifications** — servers requesting `didSave` get
+  it after writes, and registered `workspace/didChangeWatchedFiles` globs
+  receive create/change/delete events.
 - **Symbols** — `Ctrl+Shift+O` for the file, `Ctrl+T` for the whole workspace
   (from the language server when attached, with Kemori's built-in scan as the
   instant, offline fallback).

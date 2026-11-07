@@ -16,6 +16,12 @@ Historical entries below retain the old name; 3.0.0 is the rename release.
   edit or command. **Format Selection** uses `textDocument/rangeFormatting` on
   the active selection, validates the buffer version, and applies the returned
   edits. Both report missing server support and empty results precisely.
+- **LSP save and watched-file notifications.** Saves now send
+  `textDocument/didSave` when the server requests it, including the full text
+  when it asks for it. Servers that register `workspace/didChangeWatchedFiles`
+  through `client/registerCapability` receive matching create/change/delete
+  notifications for file operations, saves and external disk changes; watcher
+  globs are respected and registrations can be withdrawn.
 
 ## [3.2.1] - 2026-11-04
 

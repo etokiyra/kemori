@@ -29,6 +29,12 @@ describes the current state.
 - **`perf` is untested at the extremes.** There is no budget test for a 50 MB
   file or for startup time; large-file behaviour is only known to be
   rope-backed, not measured.
+- **Watched-file notifications depend on server registration and simple globs.**
+  Kemori only sends them after a server registers through
+  `client/registerCapability`; a pattern relative to a `RelativePattern` base
+  other than the workspace root is matched as a plain workspace-relative glob.
+  Directory deletes are reported as one delete at the directory URI, not one per
+  contained file.
 - **Organize imports and format selection depend on server support.** Organize
   Imports needs `source.organizeImports` code actions and applies only the first
   returned action; Format Selection needs `documentRangeFormattingProvider` and

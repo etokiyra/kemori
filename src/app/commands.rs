@@ -105,6 +105,10 @@ impl App {
                 };
                 match filesystem::create_empty_file(&path) {
                     Ok(()) => {
+                        self.notify_lsp_watched(&[(
+                            path.clone(),
+                            crate::language::lsp::WatchedFileChange::Created,
+                        )]);
                         self.tree_visible = true;
                         self.workspace.tree.refresh();
                         self.workspace.tree.select_path(&path);
@@ -134,6 +138,16 @@ impl App {
                 }
                 match filesystem::rename_path(&old, &new) {
                     Ok(()) => {
+                        self.notify_lsp_watched(&[
+                            (
+                                old.clone(),
+                                crate::language::lsp::WatchedFileChange::Deleted,
+                            ),
+                            (
+                                new.clone(),
+                                crate::language::lsp::WatchedFileChange::Created,
+                            ),
+                        ]);
                         self.after_file_rename(&old, &new);
                         self.set_status(format!("Renamed to {}", new.display()));
                     }
@@ -155,6 +169,10 @@ impl App {
                 };
                 match filesystem::copy_file(&source, &destination) {
                     Ok(()) => {
+                        self.notify_lsp_watched(&[(
+                            destination.clone(),
+                            crate::language::lsp::WatchedFileChange::Created,
+                        )]);
                         self.workspace.tree.refresh();
                         self.workspace.tree.select_path(&destination);
                         self.set_status(format!("Copied to {}", destination.display()));
