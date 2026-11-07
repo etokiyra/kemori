@@ -99,6 +99,8 @@ struct ServerCapabilities {
     type_definition: bool,
     /// `textDocument/documentLink`.
     document_link: bool,
+    /// `textDocument/rangeFormatting`.
+    document_range_formatting: bool,
     /// `textDocument/diagnostic` (pull diagnostics).
     document_diagnostics: bool,
     /// `workspace/diagnostic` (workspace-wide pull diagnostics).
@@ -132,6 +134,8 @@ pub enum RequestKind {
     Implementation,
     TypeDefinition,
     DocumentLink,
+    OrganizeImports,
+    RangeFormatting,
     /// Pull diagnostics for one document (`textDocument/diagnostic`).
     DocumentDiagnostics,
     /// Pull diagnostics for the whole workspace (`workspace/diagnostic`).

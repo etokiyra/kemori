@@ -35,6 +35,7 @@ pub(super) fn parse_initialize(result: &Value) -> (PositionEncoding, ServerCapab
             workspace_symbol: advertised("workspaceSymbolProvider"),
             signature_help: advertised("signatureHelpProvider"),
             document_formatting: advertised("documentFormattingProvider"),
+            document_range_formatting: advertised("documentRangeFormattingProvider"),
             folding_range: advertised("foldingRangeProvider"),
             document_highlight: advertised("documentHighlightProvider"),
             inlay_hint: advertised("inlayHintProvider"),

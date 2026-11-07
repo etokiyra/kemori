@@ -126,6 +126,57 @@ impl Server {
         .ok()
     }
 
+    /// Ask the server to organize imports over a document range.
+    pub fn organize_imports(
+        &mut self,
+        path: &Path,
+        start: (usize, usize),
+        end: (usize, usize),
+    ) -> Option<i64> {
+        let params = json!({
+            "textDocument": { "uri": path_to_uri(path) },
+            "range": {
+                "start": { "line": start.0, "character": start.1 },
+                "end": { "line": end.0, "character": end.1 }
+            },
+            "context": {
+                "diagnostics": [],
+                "only": [ "source.organizeImports" ]
+            }
+        });
+        self.send_request(
+            RequestKind::OrganizeImports,
+            "textDocument/codeAction",
+            params,
+        )
+        .ok()
+    }
+
+    /// Ask the server to format only a range.
+    pub fn range_formatting(
+        &mut self,
+        path: &Path,
+        start: (usize, usize),
+        end: (usize, usize),
+        tab_size: usize,
+        insert_spaces: bool,
+    ) -> Option<i64> {
+        let params = json!({
+            "textDocument": { "uri": path_to_uri(path) },
+            "range": {
+                "start": { "line": start.0, "character": start.1 },
+                "end": { "line": end.0, "character": end.1 }
+            },
+            "options": { "tabSize": tab_size, "insertSpaces": insert_spaces }
+        });
+        self.send_request(
+            RequestKind::RangeFormatting,
+            "textDocument/rangeFormatting",
+            params,
+        )
+        .ok()
+    }
+
     /// Ask for pull diagnostics for one document.
     ///
     /// Only meaningful when the server advertised a `diagnosticProvider`; the
@@ -166,6 +217,8 @@ impl Server {
             RequestKind::WorkspaceSymbols => self.capabilities.workspace_symbol,
             RequestKind::SignatureHelp => self.capabilities.signature_help,
             RequestKind::Formatting => self.capabilities.document_formatting,
+            RequestKind::RangeFormatting => self.capabilities.document_range_formatting,
+            RequestKind::OrganizeImports => self.capabilities.code_action,
             RequestKind::FoldingRange => self.capabilities.folding_range,
             RequestKind::DocumentHighlight => self.capabilities.document_highlight,
             RequestKind::InlayHint => self.capabilities.inlay_hint,

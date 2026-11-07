@@ -340,6 +340,8 @@ impl App {
             ids::SUPERTYPES => self.supertypes(),
             ids::SUBTYPES => self.subtypes(),
             ids::FORMAT => self.format_document(),
+            ids::FORMAT_SELECTION => self.format_selection(),
+            ids::ORGANIZE_IMPORTS => self.organize_imports(),
             ids::GOTO_DEFINITION => self.goto_definition(),
             ids::IMPLEMENTATION => self.goto_implementation(),
             ids::TYPE_DEFINITION => self.goto_type_definition(),

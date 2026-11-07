@@ -7,3 +7,4 @@ include!("tests_6.rs");
 include!("tests_7.rs");
 include!("tests_8.rs");
 include!("tests_9.rs");
+include!("tests_10.rs");

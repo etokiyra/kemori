@@ -553,6 +553,92 @@ impl App {
         let _ = self.format_document_request();
     }
 
+    /// Format only the active selection through `textDocument/rangeFormatting`.
+    pub(super) fn format_selection(&mut self) {
+        if self.read_only_block() {
+            return;
+        }
+        let Some(language) = self.lsp_language() else {
+            self.set_status("Format Selection needs a language server");
+            return;
+        };
+        let Some((path, _, _)) = self.lsp_target_for(RequestKind::RangeFormatting) else {
+            self.set_status("This language server cannot format a range");
+            return;
+        };
+        let Some((start, end, version, tab_size)) = self.editor.active_document().and_then(|doc| {
+            let (start, end) = doc.selection_range()?;
+            Some((start, end, doc.buffer.version, doc.indent_width()))
+        }) else {
+            self.set_status("Select a range to format");
+            return;
+        };
+        let start = (
+            start.row,
+            self.lsp_col(language, &path, start.row, start.col),
+        );
+        let end = (end.row, self.lsp_col(language, &path, end.row, end.col));
+        let id = self
+            .lsp
+            .get_mut(&(self.workspace.root().to_path_buf(), language))
+            .and_then(|job| job.server.as_mut())
+            .and_then(|server| server.range_formatting(&path, start, end, tab_size, true));
+        match id {
+            Some(id) => {
+                self.pending_range_format = Some(PendingDocRequest {
+                    language,
+                    id,
+                    path,
+                    version,
+                });
+                self.set_status("Formatting selection…");
+            }
+            None => self.set_status("The language server did not accept the range format"),
+        }
+    }
+
+    /// Ask the server to organize imports for the whole document.
+    pub(super) fn organize_imports(&mut self) {
+        if self.read_only_block() {
+            return;
+        }
+        let Some(language) = self.lsp_language() else {
+            self.set_status("Organize Imports needs a language server");
+            return;
+        };
+        let Some((path, _, _)) = self.lsp_target_for(RequestKind::OrganizeImports) else {
+            self.set_status("This language server cannot organize imports");
+            return;
+        };
+        let Some((version, end)) = self.editor.active_document().map(|doc| {
+            let last = doc.buffer.len_lines().saturating_sub(1);
+            let end = (last, doc.buffer.line_char_len(last));
+            (doc.buffer.version, end)
+        }) else {
+            return;
+        };
+        let end = (end.0, self.lsp_col(language, &path, end.0, end.1));
+        let id = self
+            .lsp
+            .get_mut(&(self.workspace.root().to_path_buf(), language))
+            .and_then(|job| job.server.as_mut())
+            .and_then(|server| server.organize_imports(&path, (0, 0), end));
+        match id {
+            Some(id) => {
+                self.pending_organize_imports = Some(PendingDocRequest {
+                    language,
+                    id,
+                    path,
+                    version,
+                });
+                self.set_status("Organizing imports…");
+            }
+            None => {
+                self.set_status("The language server did not accept the organize-imports request")
+            }
+        }
+    }
+
     /// Start a format request, returning whether one was actually dispatched.
     pub(super) fn format_document_request(&mut self) -> bool {
         if self.read_only_block() {

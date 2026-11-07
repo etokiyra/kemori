@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Kemori was previously published as **Koda** (crate `koda-ide`, binary `koda`).
 Historical entries below retain the old name; 3.0.0 is the rename release.
 
+## [Unreleased]
+
+### Added
+- **Organize imports and format selection.** **Organize Imports** asks the
+  server for `source.organizeImports` code actions and applies the returned
+  edit or command. **Format Selection** uses `textDocument/rangeFormatting` on
+  the active selection, validates the buffer version, and applies the returned
+  edits. Both report missing server support and empty results precisely.
+
 ## [3.2.1] - 2026-11-04
 
 ### Fixed

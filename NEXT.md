@@ -1,6 +1,6 @@
 # NEXT — the working plan for turning Kemori into a full IDE
 
-**Status snapshot:** 2026-11-04, version 3.2.1.
+**Status snapshot:** 2026-11-07, version 3.2.1 plus unreleased work.
 **Verification at the time of writing:** `cargo check --all-targets`, `cargo clippy --all-targets` clean; `cargo test` green (756 library tests, 52 render tests, plus tooling suites with ignored live tests).
 **Release status:** `kemori` 3.2.1 is on crates.io, docs.rs and the GitHub `v3.2.1` release. AUR publication remains blocked because AUR account registration is disabled; the packaging sources are ready to refresh when registration reopens.
 
@@ -66,6 +66,11 @@
   with tooltip and line; file targets open at the linked position and other
   targets are copied to the clipboard. Links without a resolved target are
   skipped rather than shown as dead entries.
+- **Organize imports and format selection use server requests.** Organize
+  Imports sends a code-action request restricted to `source.organizeImports`
+  and applies the returned edit or command; Format Selection sends
+  `textDocument/rangeFormatting` for the active range and validates the buffer
+  version before applying edits.
 - **Search in selection is scoped, not pre-filled.** **Find in Selection** and
   **Replace in Selection** store the contiguous selection as a range and filter
   every match against it; `Alt+S` clears the scope and returns to the whole
@@ -173,7 +178,7 @@
   diagnostics and workspace trust are all implemented, and Phase 0's
   oversized-file splits are complete.
 
-> Next action: LSP organize imports and format selection.
+> Next action: LSP lifecycle notifications and completion depth.
 
 
 - **Released 3.1.0.** crates.io, docs.rs and the GitHub `v3.1.0` release carry
@@ -560,20 +565,20 @@ jump to errors, replace across the project, all without config.
 
 **Status:** in progress — editor depth, formatter coverage, the DAP debugger,
 adapter provisioning, attach and the main LSP intelligence features have landed.
-Remaining: organize imports/format selection, LSP lifecycle and completion depth,
-Swift debugging, Java/Ruby attach, formatter provisioning and a dedicated
-variable tree.
+Remaining: LSP lifecycle and completion depth, Swift debugging, Java/Ruby attach,
+formatter provisioning and a dedicated variable tree.
 
 **Goal:** the editor and LSP feel like a modern IDE, not a collection of pickers.
 
-- [ ] LSP: organize imports and format selection.
-      *Shipped: document highlights on cursor movement (theme background),
-      type/parameter inlay hints as dim virtual text, code lenses rendered at
-      line end with a runnable picker, server selection ranges with
-      Expand/Shrink Selection, call/type hierarchies through incoming, outgoing,
-      supertype and subtype pickers, Go to Implementation / Go to Type
-      Definition, and a document-links picker. Stale responses are dropped and
-      edits clear old ranges. Organize imports and format selection remain.*
+- [x] LSP features: highlights, inlay hints, code lens, selection ranges,
+      call/type hierarchy, implementation/type definition, document links,
+      organize imports and format selection.
+      *Shipped: document highlights, type/parameter inlay hints, runnable code
+      lenses, Expand/Shrink Selection, incoming/outgoing calls and
+      supertype/subtype pickers, implementation and type-definition jumps,
+      document links, `source.organizeImports` code actions and
+      `textDocument/rangeFormatting`. Stale responses are dropped and edits
+      clear old ranges.*
 - [ ] LSP lifecycle: `didSave`, watched-file notifications, pull diagnostics,
       workspace folders, progress reporting, `$/cancelRequest`.
       *Pull diagnostics are shipped. `didSave`, watched files, workspace
@@ -804,7 +809,7 @@ Keep this table current so the next session knows where to resume.
 | 1. LSP pull diagnostics | done | unreleased | Per-document pull plus `workspace/diagnostic` merged into Problems |
 | 1. Project search/replace | done | 9be6382 | Form overlay, literals/regex, globs, preview, atomic replace, unsaved-buffer safety |
 | 1. Workspace trust | done | unreleased | Per-root `trust.json`; tasks, debug preview and terminal gated |
-| 2. LSP depth | partial | unreleased | Document highlights, inlay hints, code lens, selection ranges, call/type hierarchy, implementation/type definition and document links shipped; pull diagnostics shipped in Phase 1; organize imports and format selection remain |
+| 2. LSP depth | partial | unreleased | All LSP feature requests shipped (highlights, hints, lens, selection, hierarchies, implementation/type definition, links, organize imports, range formatting); lifecycle and completion depth remain |
 | 2. Editor depth | done | unreleased | Snippets with tab stops, persistent undo, format on save, column selection, search in selection, replace preview, large-file mode, read-only toggle, trim/newline/line-ending commands |
 | 2. Formatter gaps | partial | v3.2.0 | All listed languages wired through installed tools; Kemori does not provision the formatters yet |
 | 2. Real DAP debugger | partial | v3.2.0 | Sessions, conditional/log breakpoints, watch, stack/scopes/variables, stepping, launch/stop; a dedicated variable tree remains |

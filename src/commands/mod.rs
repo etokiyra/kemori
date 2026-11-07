@@ -82,6 +82,8 @@ pub mod ids {
     pub const UNFOLD_ALL: &str = "view.unfoldAll";
 
     pub const FORMAT: &str = "language.format";
+    pub const FORMAT_SELECTION: &str = "language.formatSelection";
+    pub const ORGANIZE_IMPORTS: &str = "language.organizeImports";
     pub const HOVER: &str = "language.hover";
     pub const SETUP: &str = "language.setup";
     pub const SET_LANGUAGE: &str = "language.setLanguage";
@@ -490,6 +492,12 @@ impl CommandRegistry {
                 .describes("Format the active file with its language formatter")
                 .needs_doc()
                 .capability(Capability::Formatting),
+            Command::new(FORMAT_SELECTION, "Format Selection", "Language", None)
+                .describes("Format only the selected range with the language server")
+                .needs_doc(),
+            Command::new(ORGANIZE_IMPORTS, "Organize Imports", "Language", None)
+                .describes("Ask the language server to organize the file's imports")
+                .needs_doc(),
             Command::new(HOVER, "Hover", "Language", Some("Ctrl+Shift+H"))
                 .describes("Show information about the symbol under the cursor")
                 .needs_doc()

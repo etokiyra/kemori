@@ -29,6 +29,11 @@ describes the current state.
 - **`perf` is untested at the extremes.** There is no budget test for a 50 MB
   file or for startup time; large-file behaviour is only known to be
   rope-backed, not measured.
+- **Organize imports and format selection depend on server support.** Organize
+  Imports needs `source.organizeImports` code actions and applies only the first
+  returned action; Format Selection needs `documentRangeFormattingProvider` and
+  has no built-in formatter fallback. Empty or unsupported results are reported
+  rather than guessed.
 - **Document links are a picker, not inline click targets.** File links open in
   the editor; URLs and other schemes are copied to the clipboard rather than
   launched. Links that require `documentLink/resolve` are skipped, and the

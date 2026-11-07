@@ -214,6 +214,12 @@ this file, and add or change a test.
   inserts them before the character at their position as dim virtual text, so
   they never affect widths, selection, undo or saving. Re-requesting is keyed to
   the version, not cursor movement, and large files opt out.
+- **Organize imports is a restricted code-action request.** Sending
+  `textDocument/codeAction` with `only: ["source.organizeImports"]` lets the
+  server choose its own implementation; the app applies the first returned edit
+  or executes its command. Format Selection uses `textDocument/rangeFormatting`
+  rather than formatting the whole file, and both validate the document version
+  before applying anything.
 - **Document links are resolved into a picker, not rendered as underlines.**
   The terminal has no reliable modifier for clickable spans, so the command
   presents every target with its tooltip and line. `file:` targets use the

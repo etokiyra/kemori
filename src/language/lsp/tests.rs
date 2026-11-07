@@ -33,7 +33,8 @@ fn reads_capabilities_and_position_encoding() {
             "typeHierarchyProvider": true,
             "implementationProvider": true,
             "typeDefinitionProvider": true,
-            "documentLinkProvider": true
+            "documentLinkProvider": true,
+            "documentRangeFormattingProvider": true
         }
     }));
     assert_eq!(encoding, PositionEncoding::Utf8);
@@ -49,6 +50,7 @@ fn reads_capabilities_and_position_encoding() {
     assert!(caps.implementation);
     assert!(caps.type_definition);
     assert!(caps.document_link);
+    assert!(caps.document_range_formatting);
     assert!(!caps.definition);
     assert!(!caps.workspace_symbol);
     assert!(!caps.document_diagnostics);

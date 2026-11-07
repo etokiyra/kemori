@@ -110,6 +110,84 @@ impl App {
                     self.set_status("Nothing to rename");
                 }
             }
+            RequestKind::OrganizeImports => {
+                let current = self
+                    .pending_organize_imports
+                    .as_ref()
+                    .is_some_and(|request| request.language == language && request.id == id);
+                if !current {
+                    return;
+                }
+                let Some(request) = self.pending_organize_imports.take() else {
+                    return;
+                };
+                if !request.is_current(self, language, id) {
+                    self.set_status("The document changed; organize imports again");
+                    return;
+                }
+                let mut actions = convert::code_actions(&value);
+                if actions.is_empty() {
+                    self.set_status("No import changes");
+                    return;
+                }
+                let action = actions.remove(0);
+                let mut applied = 0;
+                if let Some(edit) = action.edit {
+                    applied = self.apply_workspace_edit(convert::workspace_edit(&edit), language);
+                }
+                let ran = if let Some(command) = action.command {
+                    if let Some(server) = self.active_server_mut() {
+                        server.execute_command(&command.command, command.arguments);
+                        true
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                };
+                if applied > 0 {
+                    self.after_edit();
+                    self.set_status("Organized imports");
+                } else if ran {
+                    self.set_status("Organized imports");
+                } else {
+                    self.set_status("No import changes");
+                }
+            }
+            RequestKind::RangeFormatting => {
+                let current = self
+                    .pending_range_format
+                    .as_ref()
+                    .is_some_and(|request| request.language == language && request.id == id);
+                if !current {
+                    return;
+                }
+                let Some(request) = self.pending_range_format.take() else {
+                    return;
+                };
+                if !request.is_current(self, language, id) {
+                    self.set_status("The document changed; format the selection again");
+                    return;
+                }
+                let edits = convert::formatting_edits(&value);
+                if edits.is_empty() {
+                    self.set_status("No formatting changes");
+                    return;
+                }
+                let applied = self.apply_workspace_edit(
+                    vec![convert::FileEdit {
+                        path: request.path.clone(),
+                        edits,
+                    }],
+                    language,
+                );
+                if applied > 0 {
+                    self.after_edit();
+                    self.set_status("Formatted selection");
+                } else {
+                    self.set_status("Nothing to format");
+                }
+            }
             RequestKind::CodeActions => {
                 let Some(request) = self.pending_code_action_request.take() else {
                     return;

@@ -279,7 +279,7 @@ while read -r header; do
   method=$(printf '%s' "$body" | sed -n 's/.*"method":"\([^"]*\)".*/\1/p')
   [ -z "$id" ] && continue
   case "$method" in
-    initialize) result='{"capabilities":{"completionProvider":true,"hoverProvider":true,"definitionProvider":true,"referencesProvider":true,"renameProvider":true,"codeActionProvider":true,"workspaceSymbolProvider":true,"documentHighlightProvider":true,"inlayHintProvider":true,"codeLensProvider":true,"selectionRangeProvider":true,"callHierarchyProvider":true,"typeHierarchyProvider":true,"implementationProvider":true,"typeDefinitionProvider":true,"documentLinkProvider":true}}' ;;
+    initialize) result='{"capabilities":{"completionProvider":true,"hoverProvider":true,"definitionProvider":true,"referencesProvider":true,"renameProvider":true,"codeActionProvider":true,"workspaceSymbolProvider":true,"documentHighlightProvider":true,"inlayHintProvider":true,"codeLensProvider":true,"selectionRangeProvider":true,"callHierarchyProvider":true,"typeHierarchyProvider":true,"implementationProvider":true,"typeDefinitionProvider":true,"documentLinkProvider":true,"documentRangeFormattingProvider":true}}' ;;
     textDocument/documentHighlight) result='[{"range":{"start":{"line":1,"character":8},"end":{"line":1,"character":13}},"kind":1}]' ;;
     textDocument/inlayHint) result='[{"position":{"line":1,"character":4},"label":": i32","kind":1,"paddingLeft":true}]' ;;
     textDocument/codeLens) result='[{"range":{"start":{"line":0,"character":0},"end":{"line":0,"character":8}},"command":{"title":"run test","command":"test.run","arguments":[]}}]' ;;
@@ -294,6 +294,7 @@ while read -r header; do
     textDocument/implementation) result="[{\"uri\":\"file://$target\",\"range\":{\"start\":{\"line\":3,\"character\":0},\"end\":{\"line\":3,\"character\":1}}}]" ;;
     textDocument/typeDefinition) result="[{\"uri\":\"file://$target\",\"range\":{\"start\":{\"line\":1,\"character\":4},\"end\":{\"line\":1,\"character\":9}}}]" ;;
     textDocument/documentLink) result="[{\"range\":{\"start\":{\"line\":0,\"character\":0},\"end\":{\"line\":0,\"character\":8}},\"target\":\"https://example.com\",\"tooltip\":\"Example\"},{\"range\":{\"start\":{\"line\":1,\"character\":0},\"end\":{\"line\":1,\"character\":4}},\"target\":\"file://$target\"}]" ;;
+    textDocument/rangeFormatting) result='[{"range":{"start":{"line":1,"character":4},"end":{"line":1,"character":9}},"newText":"range"}]' ;;
     textDocument/references) result="[{\"uri\":\"file://$target\",\"range\":{\"start\":{\"line\":1,\"character\":4},\"end\":{\"line\":1,\"character\":9}}}]" ;;
     textDocument/rename) result="{\"changes\":{\"file://$target\":[{\"range\":{\"start\":{\"line\":1,\"character\":8},\"end\":{\"line\":1,\"character\":13}},\"newText\":\"renamed\"}]}}" ;;
     textDocument/codeAction) result="[{\"title\":\"Apply fix\",\"edit\":{\"changes\":{\"file://$target\":[{\"range\":{\"start\":{\"line\":0,\"character\":0},\"end\":{\"line\":0,\"character\":0}},\"newText\":\"FIX \"}]}}}]" ;;
@@ -567,6 +568,27 @@ done
         "expected the server's workspace symbol"
     );
 
+    // Format Selection: the server returns one range edit.
+    app.editor.active_document_mut().unwrap().selection =
+        Some(Selection::new(Position::new(1, 4)));
+    app.editor.active_document_mut().unwrap().cursor = Position::new(1, 9);
+    app.execute_command(ids::FORMAT_SELECTION);
+    assert!(
+        wait(&mut app, &|app| app.editor.active_document().is_some_and(
+            |doc| doc.buffer.line_text(1).contains("range")
+        )),
+        "expected the range formatting edit to apply"
+    );
+
+    // Organize Imports: the server's action edit is applied.
+    app.execute_command(ids::ORGANIZE_IMPORTS);
+    assert!(
+        wait(&mut app, &|app| app.editor.active_document().is_some_and(
+            |doc| doc.buffer.line_text(0).matches("FIX ").count() >= 2
+        )),
+        "expected organize-imports to apply its edit"
+    );
+
     fs::remove_dir_all(&dir).ok();
 }
 
@@ -756,35 +778,5 @@ fn detects_markup_and_config_languages() {
         app.editor.active_document().unwrap().buffer.language,
         LanguageId::Toml
     );
-    fs::remove_dir_all(&dir).ok();
-}
-
-#[test]
-fn detects_c_and_cpp() {
-    let dir = temp_project("c-langs");
-    let cases = [
-        (
-            "main.c",
-            "#include <stdio.h>\nint main(void) { return 0; }\n",
-            LanguageId::C,
-        ),
-        (
-            "app.cpp",
-            "#include <iostream>\nint main() { std::cout << 1; }\n",
-            LanguageId::Cpp,
-        ),
-        (
-            "view.hpp",
-            "class View { public: int w; };\n",
-            LanguageId::Cpp,
-        ),
-    ];
-    for (name, content, expected) in cases {
-        let file = dir.join(name);
-        fs::write(&file, content).unwrap();
-        let app = app_with_file(&file);
-        let language = app.editor.active_document().unwrap().buffer.language;
-        assert_eq!(language, expected, "detected {name} as {language:?}");
-    }
     fs::remove_dir_all(&dir).ok();
 }

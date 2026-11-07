@@ -119,6 +119,9 @@ keep you productive **offline**.
   server's implementation or declared type of the symbol under the cursor.
 - **Document links** — **Document Links…** lists server-extracted targets;
   file links open at their position and other links are copied.
+- **Organize imports and format selection** — palette commands use
+  `source.organizeImports` and `textDocument/rangeFormatting` when the server
+  supports them.
 - **Symbols** — `Ctrl+Shift+O` for the file, `Ctrl+T` for the whole workspace
   (from the language server when attached, with Kemori's built-in scan as the
   instant, offline fallback).

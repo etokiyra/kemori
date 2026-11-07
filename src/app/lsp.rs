@@ -753,6 +753,8 @@ impl App {
         self.hierarchy_items.clear();
         self.hierarchy_goal = None;
         self.pending_document_links = None;
+        self.pending_organize_imports = None;
+        self.pending_range_format = None;
         self.pending_code_actions_context = None;
         self.ws_lsp_pending = false;
         self.pending_document_diagnostics.clear();

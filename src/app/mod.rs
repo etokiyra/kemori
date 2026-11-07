@@ -383,6 +383,10 @@ pub struct App {
     hierarchy_goal: Option<HierarchyGoal>,
     /// An in-flight document-link request.
     pending_document_links: Option<PendingDocRequest>,
+    /// An in-flight organize-imports request.
+    pending_organize_imports: Option<PendingDocRequest>,
+    /// An in-flight range-formatting request.
+    pending_range_format: Option<PendingDocRequest>,
     /// An in-flight definition request.
     pending_definition: Option<PendingDocRequest>,
     /// An in-flight references request.
@@ -595,6 +599,8 @@ impl App {
             hierarchy_items: Vec::new(),
             hierarchy_goal: None,
             pending_document_links: None,
+            pending_organize_imports: None,
+            pending_range_format: None,
             pending_definition: None,
             pending_references: None,
             pending_rename_request: None,

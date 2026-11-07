@@ -16,6 +16,8 @@ impl App {
             RequestKind::References => self.pending_references = None,
             RequestKind::Rename => self.pending_rename_request = None,
             RequestKind::CodeActions => self.pending_code_action_request = None,
+            RequestKind::OrganizeImports => self.pending_organize_imports = None,
+            RequestKind::RangeFormatting => self.pending_range_format = None,
             RequestKind::Formatting => self.pending_lsp_format = None,
             RequestKind::FoldingRange => self.pending_folding = None,
             RequestKind::DocumentHighlight => self.pending_highlights = None,
