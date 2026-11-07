@@ -26,6 +26,10 @@ Historical entries below retain the old name; 3.0.0 is the rename release.
   older one of the same feature, Kemori sends `$/cancelRequest` and forgets the
   old pending id; timed-out requests are cancelled the same way. Diagnostics and
   `workspace/executeCommand` are exempt because they can legitimately overlap.
+- **Swift debugging uses discovered lldb-dap.** SwiftPM builds are found in
+  `.build/debug` (including triple-specific build directories), or beside a
+  standalone source; the plan drives LLVM's discovered `lldb-dap`/`lldb-vscode`.
+  A missing build or adapter is reported as a precise prerequisite.
 - **Richer signature help.** Every overload is retained with its own
   documentation and parameter documentation, the server's active parameter is
   clamped to the selected signature, and PgUp/PgDn cycle overloads while the

@@ -350,9 +350,12 @@ this file, and add or change a test.
   Python prefers the `debugpy-adapter` console script and falls back to
   `python3 -m debugpy.adapter`; `debugpy` is a pinned Kemori-managed tool
   (`debugpy==1.8.22`) with the same isolated Python install strategies as the
-  language server. Rust/C/C++ prefer a discovered `lldb-dap` (or legacy
-  `lldb-vscode`), falling back to `gdb -i=dap`; the program is
-  `target/debug/<package>` or `a.out` when it exists. Go uses a pinned
+  language server. Swift uses a discovered `lldb-dap` and the newest executable
+  under `.build/debug` (including triple-specific directories) or beside the
+  source; there is no gdb fallback for Swift. Rust/C/C++ prefer a discovered
+  `lldb-dap` (or legacy `lldb-vscode`), falling back to `gdb -i=dap`; the
+  program is `target/debug/<package>` or `a.out` when it exists. Go uses a
+  pinned
   `dlv@v1.27.2` and the active file's package directory with `mode: "debug"`.
   JS/TS use a pinned `js-debug-dap-v1.140.0`, managed Node.js, and a reserved
   local TCP port. C# uses a pinned `netcoredbg` and the newest built

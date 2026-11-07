@@ -203,6 +203,53 @@ fn drives_an_lldb_plan_to_a_stopped_event() {
 
 #[cfg(unix)]
 #[test]
+fn drives_a_swift_plan_to_a_stopped_event() {
+    use std::os::unix::fs::PermissionsExt;
+    use std::time::{Duration, Instant};
+
+    let dir = std::env::temp_dir().join(format!("kemori-swift-dap-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let script = dir.join("lldb-dap");
+    std::fs::write(&script, MOCK_ADAPTER).unwrap();
+    let mut permissions = std::fs::metadata(&script).unwrap().permissions();
+    permissions.set_mode(0o755);
+    std::fs::set_permissions(&script, permissions).unwrap();
+
+    let plan = super::super::swift::swift_plan_with(PathBuf::from("/tmp/demo"), script.clone());
+    let mut session = DebugSession::start(&plan.adapter, &plan.adapter_args, &dir)
+        .expect("spawn the mock Swift adapter");
+    session.initialize(&plan.adapter_id).unwrap();
+
+    let mut stopped = false;
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while Instant::now() < deadline && !stopped {
+        for event in session.poll() {
+            match event {
+                DebugEvent::Initialized => {
+                    session
+                        .launch(&plan.program, &dir, plan.launch_mode)
+                        .unwrap();
+                    session.configuration_done().unwrap();
+                }
+                DebugEvent::Stopped {
+                    reason, thread_id, ..
+                } => {
+                    assert_eq!(reason, "breakpoint");
+                    assert_eq!(thread_id, Some(1));
+                    stopped = true;
+                }
+                _ => {}
+            }
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    assert!(stopped, "the Swift plan should stop on a breakpoint");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[cfg(unix)]
+#[test]
 fn drives_a_tcp_dlv_plan_to_a_stopped_event() {
     use std::net::TcpListener;
     use std::os::unix::fs::PermissionsExt;

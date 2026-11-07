@@ -351,13 +351,14 @@ describes the current state.
   `java-debug-0.53.1`, Ruby's `debug` gem `1.11.1` and the
   `vscode-php-debug` bridge `1.40.2`, and uses the managed Dart SDK's
   `dart debug_adapter`. Rust/C/C++ discover `lldb-dap`/`lldb-vscode` and fall
-  back to `gdb -i=dap`; `lldb-dap` itself is not downloaded because LLVM's
-  official bundle is very large. Java requires a ready JDT LS and PHP requires a
-  PHP runtime with Xdebug. Other adapters can be supplied through
-  `KEMORI_DEBUG_ADAPTER` and `KEMORI_DEBUG_ADAPTER_ARGS`.
+  back to `gdb -i=dap`; Swift uses discovered `lldb-dap` with the newest
+  `.build/debug` executable and has no gdb fallback. `lldb-dap` itself is not
+  downloaded because LLVM's official bundle is very large. Java requires a ready
+  JDT LS and PHP requires a PHP runtime with Xdebug. Other adapters can be
+  supplied through `KEMORI_DEBUG_ADAPTER` and `KEMORI_DEBUG_ADAPTER_ARGS`.
 - **Attach support is adapter-specific.** Python, Go, JS/TS, C#, PHP and Dart
-  accept a process id or `host:port`. Java attach needs the JDT LS attach flow
-  and Ruby's rdbg attach is not wired, so both report a precise message.
+  accept a process id or `host:port`. Native/Swift attach, Java attach through
+  JDT LS and Ruby's rdbg attach are not wired, and report precise messages.
 - **Java debugging depends on a ready JDT LS.** Kemori loads the java-debug jar
   at JDT LS initialization, so a server that was already running before the jar
   was installed must be restarted. The active file's main class and runtime

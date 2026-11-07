@@ -178,6 +178,10 @@
   exposes it as a debug adapter. Discovery covers LLVM prefixes and Xcode, and a
   mock DAP test drives the lldb plan to a stop. `lldb-dap` is discovery-only for
   now (LLVM's official bundle is very large).
+- **Swift debugging uses the same discovered lldb-dap.** SwiftPM executables are
+  found under `.build/debug` (including triple-specific directories) or beside a
+  standalone source, then launched through `lldb-dap`/`lldb-vscode`. Missing
+  builds and adapters produce precise prerequisites; Swift attach is still open.
 - **Python's debug adapter is provisioned.** `ToolPurpose::DebugAdapter` and
   `Tool::Debugpy` are part of the provisioning model, with a pinned
   `debugpy==1.8.22` plan through pipx/uv/Kemori's virtualenv/`--user`. Debugging
@@ -204,7 +208,7 @@
   diagnostics and workspace trust are all implemented, and Phase 0's
   oversized-file splits are complete.
 
-> Next action: Swift debug adapter (lldb-dap) and Java/Ruby attach.
+> Next action: Java and Ruby attach.
 
 
 - **Released 3.1.0.** crates.io, docs.rs and the GitHub `v3.1.0` release carry
@@ -591,8 +595,8 @@ jump to errors, replace across the project, all without config.
 
 **Status:** in progress — editor depth, formatter coverage, the DAP debugger,
 adapter provisioning, attach and the main LSP intelligence features have landed.
-Remaining: Swift debugging, Java/Ruby attach, formatter provisioning and a
-dedicated variable tree.
+Remaining: Java/Ruby attach, formatter provisioning and a dedicated variable
+tree.
 
 **Goal:** the editor and LSP feel like a modern IDE, not a collection of pickers.
 
@@ -638,7 +642,7 @@ dedicated variable tree.
       *Shipped: sessions, conditional and log breakpoints, stack, scopes,
       variables, watch expressions, stepping, output, launch and stop. Attach
       and a dedicated variable tree remain.*
-- [ ] **Zero-config adapters** by language/project: Python `debugpy`, Go `dlv`,
+- [x] **Zero-config adapters** by language/project: Python `debugpy`, Go `dlv`,
       Rust/C/C++/Swift `lldb-dap`/codelldb, JS/TS `js-debug`, Java
       `java-debug`, C# `netcoredbg`, Ruby `rdbg`, PHP Xdebug, Dart VM service.
       Provision pinned/verified adapters where possible; otherwise discover and
@@ -646,12 +650,12 @@ dedicated variable tree.
       *Shipped: pinned `debugpy==1.8.22`, `dlv@v1.27.2`, `js-debug-dap-v1.140.0`,
       `netcoredbg-3.2.0-1092`, `java-debug-0.53.1`, Ruby `debug-1.11.1` and
       `php-debug-1.40.2`, the SDK's `dart debug_adapter`, discovered
-      `debugpy-adapter` preferred over the module fallback, Rust/C/C++ discovery
-      of `lldb-dap` (plus `lldb-vscode`) with `gdb -i=dap` fallback, and TCP DAP
-      for `dlv`/js-debug/rdbg. `lldb-dap` itself is not downloaded because
-      LLVM's official bundle is very large. Attach is wired for Python, Go,
-      JS/TS, C#, PHP and Dart; Java/Ruby attach remain. Swift debug plans are
-      still missing.*
+      `debugpy-adapter` preferred over the module fallback, Rust/C/C++/Swift
+      discovery of `lldb-dap` (plus `lldb-vscode`) with `gdb -i=dap` fallback
+      for C-family, SwiftPM `.build/debug` executable discovery, and TCP DAP for
+      `dlv`/js-debug/rdbg. `lldb-dap` itself is not downloaded because LLVM's
+      official bundle is very large. Attach is wired for Python, Go, JS/TS, C#,
+      PHP and Dart; native/Swift, Java and Ruby attach remain.*
 - [x] Add a `DebugAdapter` tool purpose to the provisioning model.
       *Shipped: `ToolPurpose::DebugAdapter`, `Tool::Debugpy`, pinned install
       attempts, and `available_debug_adapter`.*
@@ -845,7 +849,7 @@ Keep this table current so the next session knows where to resume.
 | 2. Editor depth | done | unreleased | Snippets with tab stops, persistent undo, format on save, column selection, search in selection, replace preview, large-file mode, read-only toggle, trim/newline/line-ending commands |
 | 2. Formatter gaps | partial | v3.2.0 | All listed languages wired through installed tools; Kemori does not provision the formatters yet |
 | 2. Real DAP debugger | partial | v3.2.0 | Sessions, conditional/log breakpoints, watch, stack/scopes/variables, stepping, launch/stop; a dedicated variable tree remains |
-| 2. Debug-adapter provisioning | partial | v3.2.0 | `DebugAdapter` purpose; pinned `debugpy`, `dlv`, `js-debug`, `netcoredbg`, `java-debug`, Ruby `debug`, `php-debug`; Dart SDK adapter; lldb-dap discovery; Swift adapter remains |
+| 2. Debug-adapter provisioning | done | unreleased | `DebugAdapter` purpose; pinned `debugpy`, `dlv`, `js-debug`, `netcoredbg`, `java-debug`, Ruby `debug`, `php-debug`; Dart SDK adapter; lldb-dap discovery for native/Swift |
 | 2. DAP attach | partial | v3.2.0 | Prompt + attach plans for Python/Go/JS/TS/C#/PHP/Dart; Java/Ruby attach open |
 | 3. Language expansion | not started | — | — |
 | 4. Git/workspace depth | not started | — | — |

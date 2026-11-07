@@ -411,9 +411,10 @@ The editor is the heart of Kemori, and it is built for real projects.
   Node.js; C# uses provisioned `netcoredbg` and the built project assembly;
   Dart uses the managed SDK's debug adapter; Java uses the pinned java-debug
   extension hosted by the running JDT LS; Ruby uses the provisioned `debug` gem's
-  `rdbg` over TCP; PHP uses the provisioned Xdebug DAP bridge; Rust, C and C++
-  prefer a discovered `lldb-dap` and fall back to `gdb -i=dap`; any other adapter
-  can be named with `KEMORI_DEBUG_ADAPTER`.
+  `rdbg` over TCP; PHP uses the provisioned Xdebug DAP bridge; SwiftPM builds
+  run through a discovered `lldb-dap`; Rust, C and C++ prefer a discovered
+  `lldb-dap` and fall back to `gdb -i=dap`; any other adapter can be named with
+  `KEMORI_DEBUG_ADAPTER`.
 - **Attach to a running debuggee** with **Debug: Attach to Debugger…**: enter a
   process id or `host:port` and Kemori uses the active language's adapter attach
   request. Java and Ruby attach are explicitly not wired yet.

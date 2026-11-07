@@ -13,6 +13,7 @@
 
 pub mod protocol;
 pub mod session;
+mod swift;
 
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
@@ -119,6 +120,7 @@ pub fn plan_for(language: LanguageId, path: &Path, root: &Path) -> Result<Launch
             let program = conventional_binary(path).unwrap_or_else(|| path.to_path_buf());
             native_plan(program)
         }
+        LanguageId::Swift => swift::swift_plan(path, root),
         _ => Err(format!(
             "No zero-config debug adapter for {} — set KEMORI_DEBUG_ADAPTER (and KEMORI_DEBUG_ADAPTER_ARGS) or install one",
             language.name()
