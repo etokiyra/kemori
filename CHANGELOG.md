@@ -26,6 +26,11 @@ Historical entries below retain the old name; 3.0.0 is the rename release.
   older one of the same feature, Kemori sends `$/cancelRequest` and forgets the
   old pending id; timed-out requests are cancelled the same way. Diagnostics and
   `workspace/executeCommand` are exempt because they can legitimately overlap.
+- **Completion snippets are inserted.** The client advertises snippet support;
+  completion items with `insertTextFormat: 2`, `insertText` or `textEdit` are
+  expanded through the editor snippet engine. `$1`/`${1:default}`/`$0` stops
+  work with Tab/Shift+Tab, and server text-edit ranges are converted before the
+  insertion.
 - **Completion documentation and resolve.** Initial completion items keep their
   detail and documentation, and servers with `completionProvider.resolveProvider`
   are asked to resolve the selected item. The popup shows the selected item's

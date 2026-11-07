@@ -362,7 +362,7 @@ impl Server {
                     "textDocument": {
                         "synchronization": { "dynamicRegistration": false, "didSave": true },
                         "publishDiagnostics": { "relatedInformation": false },
-                        "completion": { "completionItem": { "snippetSupport": false } },
+                        "completion": { "completionItem": { "snippetSupport": true } },
                         "hover": { "contentFormat": ["markdown", "plaintext"] },
                         "definition": {},
                         "references": {},

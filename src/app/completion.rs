@@ -28,9 +28,60 @@ impl App {
         while start > 0 && is_word_char(chars[start - 1]) {
             start -= 1;
         }
-        let start = Position::new(cursor.row, start);
-        let end = Position::new(cursor.row, end);
-        self.with_doc(|doc| doc.replace_range(start, end, &item.label));
+        let prefix_start = Position::new(cursor.row, start);
+        let prefix_end = Position::new(cursor.row, end);
+        let language = doc.buffer.language;
+        let path = doc.buffer.path.clone();
+        let index = self.editor.active_index();
+        let range = item.edit.text_edit_range.and_then(|range| {
+            let path = path.as_deref()?;
+            Some((
+                Position::new(
+                    range.0.0,
+                    self.lsp_col(language, path, range.0.0, range.0.1),
+                ),
+                Position::new(
+                    range.1.0,
+                    self.lsp_col(language, path, range.1.0, range.1.1),
+                ),
+            ))
+        });
+        let (start, end) = range.unwrap_or((prefix_start, prefix_end));
+        let text = item
+            .edit
+            .insert_text
+            .clone()
+            .unwrap_or_else(|| item.label.clone());
+
+        if !item.edit.snippet {
+            self.with_doc(|doc| doc.replace_range(start, end, &text));
+            return;
+        }
+
+        let expanded = crate::editor::snippet::expand(&text);
+        let mut stops: Vec<Position> = expanded
+            .stops
+            .iter()
+            .map(|offset| crate::editor::snippet::position_at(start, &expanded.text, *offset))
+            .collect();
+        let final_stop =
+            crate::editor::snippet::position_at(start, &expanded.text, expanded.final_stop);
+        if let Some(doc) = self.editor.documents.get_mut(index) {
+            doc.replace_range(start, end, &expanded.text);
+            doc.move_to(stops.first().copied().unwrap_or(final_stop));
+        }
+        self.after_edit();
+        if !stops.is_empty() {
+            stops.push(final_stop);
+            self.snippet = Some(SnippetState {
+                doc: index,
+                stops,
+                index: 0,
+            });
+        } else {
+            self.snippet = None;
+        }
+        self.set_status(format!("Inserted snippet: {}", item.label));
     }
 
     /// Build and show the completion popup.

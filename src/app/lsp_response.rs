@@ -49,9 +49,10 @@ impl App {
                 let Some((_, _, label)) = self.pending_completion_resolve.take() else {
                     return;
                 };
-                let (detail, documentation) = crate::language::lsp::completion::resolved(&value);
+                let (detail, documentation, edit) =
+                    crate::language::lsp::completion::resolved(&value);
                 if let Some(state) = self.completion.as_mut() {
-                    state.update_item(&label, detail, documentation);
+                    state.update_item(&label, detail, documentation, edit);
                 }
             }
             RequestKind::Hover => {

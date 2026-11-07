@@ -29,9 +29,10 @@ describes the current state.
 - **`perf` is untested at the extremes.** There is no budget test for a 50 MB
   file or for startup time; large-file behaviour is only known to be
   rope-backed, not measured.
-- **Completion still inserts only the label.** Server documentation and resolve
-  are shown, but `insertText`, `textEdit` and snippet placeholders are not
-  applied; a documented completion inserts its label verbatim.
+- **Completion snippets are a subset of LSP snippet syntax.** `insertText`/
+  `textEdit`, `$1`, `${1:default}` and `$0` work, but variables, choices,
+  transforms and `additionalTextEdits` are not implemented. Unsupported
+  placeholders remain literal text.
 - **Workspace folders cover one root, and progress is statusline-only.** Kemori
   advertises the active project root rather than a multi-root list; multi-root
   workspaces remain Phase 4. Progress messages are not a navigable log and a

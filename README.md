@@ -98,7 +98,8 @@ keep you productive **offline**.
   prefix-biased, so `mrs` finds `main_result` while exact prefixes still rank
   first. It stays quiet in comments and strings; `Ctrl+Space` opens it manually
   as a fallback. Server-provided documentation is shown for the selected item,
-  and servers with resolve support fill it in on selection.
+  servers with resolve support fill it in on selection, and snippet completions
+  expand with working tab stops.
 - **Hover** — `Ctrl+Shift+H`, with the symbol's kind, definition and usage count.
 - **Signature help** — parameter hints appear automatically as you type `(` or `,`
   in a call, highlighting the argument you are on. It comes from the language

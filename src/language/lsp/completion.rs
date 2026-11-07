@@ -2,7 +2,7 @@
 
 use serde_json::Value;
 
-use crate::language::completion::{Completion, CompletionKind};
+use crate::language::completion::{Completion, CompletionEdit, CompletionKind};
 
 /// Convert a completion list or array into Kemori completions.
 pub fn completions(value: &Value) -> Vec<Completion> {
@@ -26,19 +26,19 @@ pub fn completions(value: &Value) -> Vec<Completion> {
                 .unwrap_or("")
                 .to_string();
             let documentation = documentation(item.get("documentation"));
-            Some(
-                Completion::new(
-                    label,
-                    completion_kind(item.get("kind").and_then(Value::as_u64)),
-                )
-                .with_metadata(detail, documentation, Some(item.to_string())),
+            let mut completion = Completion::new(
+                label,
+                completion_kind(item.get("kind").and_then(Value::as_u64)),
             )
+            .with_metadata(detail, documentation, Some(item.to_string()));
+            completion.edit = edit(item);
+            Some(completion)
         })
         .collect()
 }
 
-/// Read the resolved detail/documentation from a `completionItem/resolve` result.
-pub fn resolved(value: &Value) -> (String, String) {
+/// Read the resolved detail, documentation and edit from a resolve result.
+pub fn resolved(value: &Value) -> (String, String, CompletionEdit) {
     (
         value
             .get("detail")
@@ -46,7 +46,38 @@ pub fn resolved(value: &Value) -> (String, String) {
             .unwrap_or("")
             .to_string(),
         documentation(value.get("documentation")),
+        edit(value),
     )
+}
+
+fn edit(value: &Value) -> CompletionEdit {
+    let snippet = value.get("insertTextFormat").and_then(Value::as_u64) == Some(2);
+    let text_edit = value.get("textEdit");
+    let text_edit_range = text_edit.and_then(|text_edit| {
+        let range = text_edit.get("range")?;
+        let start = range.get("start")?;
+        let end = range.get("end")?;
+        Some((
+            (
+                start.get("line")?.as_u64()? as usize,
+                start.get("character")?.as_u64()? as usize,
+            ),
+            (
+                end.get("line")?.as_u64()? as usize,
+                end.get("character")?.as_u64()? as usize,
+            ),
+        ))
+    });
+    let insert_text = text_edit
+        .and_then(|text_edit| text_edit.get("newText"))
+        .or_else(|| value.get("insertText"))
+        .and_then(Value::as_str)
+        .map(str::to_string);
+    CompletionEdit {
+        insert_text,
+        snippet,
+        text_edit_range,
+    }
 }
 
 fn documentation(value: Option<&Value>) -> String {
@@ -109,11 +140,44 @@ mod tests {
 
     #[test]
     fn parses_resolved_metadata() {
-        let (detail, documentation) = resolved(&json!({
+        let (detail, documentation, edit) = resolved(&json!({
             "detail": "fn() -> i32",
-            "documentation": "Returns a value."
+            "documentation": "Returns a value.",
+            "insertTextFormat": 2,
+            "insertText": "fn ${1:name}()"
         }));
         assert_eq!(detail, "fn() -> i32");
         assert_eq!(documentation, "Returns a value.");
+        assert!(edit.snippet);
+        assert_eq!(edit.insert_text.as_deref(), Some("fn ${1:name}()"));
+    }
+
+    #[test]
+    fn parses_snippet_text_edits() {
+        let value = json!({
+            "items": [{
+                "label": "fn_item",
+                "insertTextFormat": 2,
+                "textEdit": {
+                    "range": {
+                        "start": { "line": 1, "character": 2 },
+                        "end": { "line": 1, "character": 5 }
+                    },
+                    "newText": "fn ${1:name}() {\n    $0\n}"
+                }
+            }]
+        });
+        let items = completions(&value);
+        assert_eq!(items.len(), 1);
+        assert!(items[0].edit.snippet);
+        assert_eq!(items[0].edit.text_edit_range, Some(((1, 2), (1, 5))));
+        assert!(
+            items[0]
+                .edit
+                .insert_text
+                .as_deref()
+                .unwrap()
+                .contains("${1:name}")
+        );
     }
 }

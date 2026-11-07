@@ -12,3 +12,4 @@ include!("tests_11.rs");
 include!("tests_12.rs");
 include!("tests_13.rs");
 include!("tests_14.rs");
+include!("tests_15.rs");

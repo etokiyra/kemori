@@ -208,15 +208,23 @@ impl CompletionState {
     }
 
     /// Merge resolved metadata into every copy of `label`.
-    pub fn update_item(&mut self, label: &str, detail: String, documentation: String) {
+    pub fn update_item(
+        &mut self,
+        label: &str,
+        detail: String,
+        documentation: String,
+        edit: crate::language::completion::CompletionEdit,
+    ) {
         for item in &mut self.pool {
             if item.label == label {
                 item.set_metadata(detail.clone(), documentation.clone());
+                item.apply_edit(edit.clone());
             }
         }
         for item in &mut self.items {
             if item.label == label {
                 item.set_metadata(detail.clone(), documentation.clone());
+                item.apply_edit(edit.clone());
             }
         }
     }

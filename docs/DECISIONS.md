@@ -214,6 +214,12 @@ this file, and add or change a test.
   inserts them before the character at their position as dim virtual text, so
   they never affect widths, selection, undo or saving. Re-requesting is keyed to
   the version, not cursor movement, and large files opt out.
+- **Snippet completions reuse the editor snippet engine.** `insertTextFormat: 2`
+  text (from `textEdit.newText` or `insertText`) expands through the same
+  lexical `$1`/`${1:default}`/`$0` engine as built-in snippets, and the resulting
+  stops drive the existing Tab navigation. `textEdit` ranges are converted with
+  the negotiated LSP encoding; unsupported snippet features degrade to literal
+  text rather than failing the insertion.
 - **Completion metadata is preserved and resolved lazily.** Each server item keeps
   its raw JSON, detail and documentation; the popup previews the selected item.
   When the server advertises `completionItem/resolve`, selecting an item without

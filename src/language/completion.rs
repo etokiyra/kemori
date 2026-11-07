@@ -30,6 +30,17 @@ impl CompletionKind {
     }
 }
 
+/// How a server wants a completion inserted.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct CompletionEdit {
+    /// The text to insert instead of the label.
+    pub insert_text: Option<String>,
+    /// The text uses snippet placeholders (`insertTextFormat: 2`).
+    pub snippet: bool,
+    /// The LSP range the text replaces, in `(line, character)` units.
+    pub text_edit_range: Option<((usize, usize), (usize, usize))>,
+}
+
 /// A single completion suggestion.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Completion {
@@ -37,6 +48,8 @@ pub struct Completion {
     pub kind: CompletionKind,
     pub detail: String,
     pub documentation: String,
+    /// Insert text, snippet flag and optional range.
+    pub edit: CompletionEdit,
     /// The original LSP item, serialized for `completionItem/resolve`.
     pub raw: Option<String>,
 }
@@ -48,6 +61,7 @@ impl Completion {
             kind,
             detail: String::new(),
             documentation: String::new(),
+            edit: CompletionEdit::default(),
             raw: None,
         }
     }
@@ -72,6 +86,19 @@ impl Completion {
         }
         if !documentation.is_empty() {
             self.documentation = documentation;
+        }
+    }
+
+    /// Merge a resolved edit into this item.
+    pub fn apply_edit(&mut self, edit: CompletionEdit) {
+        if edit.insert_text.is_some() {
+            self.edit.insert_text = edit.insert_text;
+        }
+        if edit.snippet {
+            self.edit.snippet = true;
+        }
+        if edit.text_edit_range.is_some() {
+            self.edit.text_edit_range = edit.text_edit_range;
         }
     }
 }

@@ -89,6 +89,10 @@
   detail and documentation, and servers advertising `resolveProvider` are asked
   to resolve the selected item; the popup shows its first documentation line
   while resolved metadata merges back into the list.
+- **Snippet completions use the editor's snippet engine.** Server items with
+  `insertTextFormat: 2` expand `$1`/`${1:default}`/`$0` as one edit and leave
+  Tab/Shift+Tab navigation active. `textEdit` ranges are converted before
+  insertion; `additionalTextEdits` are not applied yet.
 - **Search in selection is scoped, not pre-filled.** **Find in Selection** and
   **Replace in Selection** store the contiguous selection as a range and filter
   every match against it; `Alt+S` clears the scope and returns to the whole
@@ -196,7 +200,7 @@
   diagnostics and workspace trust are all implemented, and Phase 0's
   oversized-file splits are complete.
 
-> Next action: LSP completion snippets and signature-help depth.
+> Next action: LSP signature-help depth, then Swift debugging.
 
 
 - **Released 3.1.0.** crates.io, docs.rs and the GitHub `v3.1.0` release carry
@@ -583,8 +587,8 @@ jump to errors, replace across the project, all without config.
 
 **Status:** in progress — editor depth, formatter coverage, the DAP debugger,
 adapter provisioning, attach and the main LSP intelligence features have landed.
-Remaining: completion snippets/signature depth, Swift debugging, Java/Ruby
-attach, formatter provisioning and a dedicated variable tree.
+Remaining: signature-help depth, Swift debugging, Java/Ruby attach, formatter
+provisioning and a dedicated variable tree.
 
 **Goal:** the editor and LSP feel like a modern IDE, not a collection of pickers.
 
@@ -603,10 +607,11 @@ attach, formatter provisioning and a dedicated variable tree.
       notifications, `$/cancelRequest` for superseded or timed-out requests,
       one workspace folder advertised to the server, and `$/progress`
       begin/report/end shown in the statusline.*
-- [ ] Completion: snippets and better signature help.
+- [ ] Completion: better signature help.
       *Shipped: completion item detail/documentation, `completionItem/resolve`
-      for servers that advertise it, and documentation preview in the popup.
-      Snippet insertion and richer signature help remain.*
+      for servers that advertise it, documentation preview in the popup, and
+      snippet insertion (`insertTextFormat: 2`, `insertText`/`textEdit`) with
+      tab stops. Richer signature help remains.*
 - [x] Editor: snippet engine, format on save, trim trailing whitespace, final
       newline, line-ending conversion, persistent undo, read-only toggle,
       column/rectangular selection, search in selection, replace preview,
