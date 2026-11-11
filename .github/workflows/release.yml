@@ -61,7 +61,10 @@ jobs:
         # drift under a release.
         include:
           - name: linux-x86_64-gnu
-            os: ubuntu-latest
+            # Pinned, not `ubuntu-latest`: the glibc build inherits the runner's
+            # glibc, and a binary built on 24.04 refuses to start on Debian 12,
+            # Ubuntu 22.04 or RHEL 9. 22.04 keeps the floor at glibc 2.35.
+            os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
           - name: linux-x86_64-musl
             os: ubuntu-latest

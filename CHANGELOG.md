@@ -17,6 +17,13 @@ Historical entries below retain the old name; 3.0.0 is the rename release.
   that is already on `PATH` — `/usr/local/bin` when it is writable, otherwise
   `~/.local/bin`, `~/bin` or `~/.bin` — without `sudo` and without touching
   shell startup files. See [`scripts/install.sh`](scripts/install.sh).
+
+### Fixed
+- **The glibc Linux binary no longer requires `GLIBC_2.39`.** It was built on
+  `ubuntu-latest` and inherited that runner's glibc, so it refused to start on
+  Debian 12, Ubuntu 22.04, RHEL 9 and anything older. The release job now pins
+  `ubuntu-22.04`, and the installer checks that the downloaded binary can load
+  before trusting it, falling back to the static musl build when it cannot.
 - **A recorded demo.** [`docs/images/demo.gif`](docs/images/demo.gif) shows a
   project being opened, the missing-`rust-analyzer` offer, the welcome scenes
   and Quick Open. It is produced from [`docs/demo.tape`](docs/demo.tape) by

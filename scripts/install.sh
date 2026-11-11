@@ -36,15 +36,17 @@ case "$arch" in
     *)             die "unsupported architecture: $arch" ;;
 esac
 
+# Candidate builds, best first. The glibc build is linked against the glibc of
+# the machine that built it, so it refuses to start on older distributions; the
+# static musl build runs anywhere but cannot use the glibc-only managed bundles
+# (clangd, asm-lsp). Try the native build, then fall back.
 if [ "$platform" = "macos" ]; then
-    asset_platform="macos-$cpu"
+    candidates="macos-$cpu"
 elif [ "$cpu" = "x86_64" ]; then
-    # Prefer glibc; fall back to the static musl build when glibc is absent
-    # (Alpine and friends). There is no aarch64 musl release.
     if ldd --version 2>/dev/null | grep -qi musl; then
-        asset_platform="linux-x86_64-musl"
+        candidates="linux-x86_64-musl"
     else
-        asset_platform="linux-x86_64-gnu"
+        candidates="linux-x86_64-gnu linux-x86_64-musl"
     fi
 else
     die "no prebuilt Linux $cpu release; build from source (see README)"
@@ -87,7 +89,6 @@ if [ -z "$version" ]; then
     [ -n "$version" ] || die "could not determine the latest version; set KEMORI_VERSION"
 fi
 
-archive="$BIN-$version-$asset_platform.tar.gz"
 base="https://github.com/$REPO/releases/download/v$version"
 
 # --- download and verify --------------------------------------------------
@@ -95,19 +96,45 @@ base="https://github.com/$REPO/releases/download/v$version"
 tmp="$(mktemp -d "${TMPDIR:-/tmp}/kemori-install.XXXXXX")"
 trap 'rm -rf "$tmp"' EXIT INT TERM
 
-say "→ downloading $archive"
-fetch "$base/$archive" "$tmp/$archive" || die "download failed: $base/$archive"
 fetch "$base/SHA256SUMS" "$tmp/SHA256SUMS" || die "could not download SHA256SUMS"
 
-expected="$(sed -n "s/^\([0-9a-f]\{64\}\)  *$archive$/\1/p" "$tmp/SHA256SUMS" | head -n1)"
-[ -n "$expected" ] || die "no checksum published for $archive"
+# A glibc build that cannot start is worse than a portable one that can: the
+# loader fails before main() with "version `GLIBC_x.y' not found". Ask the
+# loader whether it can run the extracted binary and move on if it cannot.
+can_run() {
+    command -v ldd >/dev/null 2>&1 || return 0
+    ! ldd "$1" 2>&1 | grep -q "not found"
+}
 
-actual="$(sha256_of "$tmp/$archive")"
-[ "$expected" = "$actual" ] || die "checksum mismatch for $archive"
+unpacked=""
+for asset_platform in $candidates; do
+    archive="$BIN-$version-$asset_platform.tar.gz"
 
-say "→ checksum verified"
+    say "→ downloading $archive"
+    if ! fetch "$base/$archive" "$tmp/$archive"; then
+        say "  download failed; trying the next build"
+        continue
+    fi
 
-tar -xzf "$tmp/$archive" -C "$tmp" "$BIN" || die "could not unpack $archive"
+    expected="$(sed -n "s/^\([0-9a-f]\{64\}\)  *$archive$/\1/p" "$tmp/SHA256SUMS" | head -n1)"
+    [ -n "$expected" ] || die "no checksum published for $archive"
+
+    actual="$(sha256_of "$tmp/$archive")"
+    [ "$expected" = "$actual" ] || die "checksum mismatch for $archive"
+    say "→ checksum verified"
+
+    rm -rf "$tmp/unpack"
+    mkdir -p "$tmp/unpack"
+    tar -xzf "$tmp/$archive" -C "$tmp/unpack" "$BIN" || die "could not unpack $archive"
+
+    if can_run "$tmp/unpack/$BIN"; then
+        unpacked="$tmp/unpack/$BIN"
+        break
+    fi
+    say "  this build needs a newer glibc; trying the portable build"
+done
+
+[ -n "$unpacked" ] || die "no prebuilt build runs on this system; build from source (see README)"
 
 # --- install --------------------------------------------------------------
 #
@@ -152,8 +179,8 @@ else
     fi
 fi
 
-install -m 755 "$tmp/$BIN" "$dir/$BIN" 2>/dev/null \
-    || { cp "$tmp/$BIN" "$dir/$BIN" && chmod 755 "$dir/$BIN"; } \
+install -m 755 "$unpacked" "$dir/$BIN" 2>/dev/null \
+    || { cp "$unpacked" "$dir/$BIN" && chmod 755 "$dir/$BIN"; } \
     || die "could not write to $dir"
 
 say "→ installed $BIN $version to $dir/$BIN"

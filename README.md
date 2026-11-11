@@ -454,10 +454,12 @@ The script detects Linux (glibc or musl) or macOS (Intel or Apple silicon),
 downloads the matching release archive, checks it against the published
 `SHA256SUMS`, and installs `kemori` into a directory that is already on your
 `PATH` — `/usr/local/bin` when it is writable, otherwise whichever of
-`~/.local/bin`, `~/bin` or `~/.bin` comes first. It never uses `sudo` and never
-edits your shell startup files. If none of those is on your `PATH`, it falls
-back to `~/.local/bin` and prints the single line to add. Read it before running
-it: [`scripts/install.sh`](scripts/install.sh). Set `KEMORI_VERSION` to pin a
+`~/.local/bin`, `~/bin` or `~/.bin` comes first. On Linux it prefers the glibc
+build and falls back to the static musl build if that one cannot load on your
+system. It never uses `sudo` and never edits your shell startup files. If none
+of those is on your `PATH`, it falls back to `~/.local/bin` and prints the
+single line to add. Read it before running it:
+[`scripts/install.sh`](scripts/install.sh). Set `KEMORI_VERSION` to pin a
 version or `KEMORI_INSTALL_DIR` to choose another destination.
 
 ### crates.io
