@@ -11,6 +11,16 @@ Historical entries below retain the old name; 3.0.0 is the rename release.
 ## [Unreleased]
 
 ### Added
+- **One-line installer.** `curl -fsSL https://kiyra.lol/kemori/install.sh | sh`
+  detects the platform, downloads the matching prebuilt archive, verifies it
+  against the published `SHA256SUMS`, and installs `kemori` into a directory
+  that is already on `PATH` — `/usr/local/bin` when it is writable, otherwise
+  `~/.local/bin`, `~/bin` or `~/.bin` — without `sudo` and without touching
+  shell startup files. See [`scripts/install.sh`](scripts/install.sh).
+- **A recorded demo.** [`docs/images/demo.gif`](docs/images/demo.gif) shows a
+  project being opened, the missing-`rust-analyzer` offer, the welcome scenes
+  and Quick Open. It is produced from [`docs/demo.tape`](docs/demo.tape) by
+  [`scripts/demo.sh`](scripts/demo.sh).
 - **Organize imports and format selection.** **Organize Imports** asks the
   server for `source.organizeImports` code actions and applies the returned
   edit or command. **Format Selection** uses `textDocument/rangeFormatting` on

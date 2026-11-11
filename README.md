@@ -1,88 +1,65 @@
 # Kemori
 
-<p align="center"><em>Kemori — a zero-configuration, terminal-native IDE.</em></p>
+<p align="center"><em>The terminal IDE that sets itself up.</em></p>
 
 <p align="center">
-  <a href="LICENSE"><img alt="License: MPL 2.0" src="https://img.shields.io/badge/license-MPL--2.0-90b99f?style=flat-square"></a>
   <a href="https://crates.io/crates/kemori"><img alt="crates.io" src="https://img.shields.io/crates/v/kemori?style=flat-square&color=e6b99d"></a>
-  <img alt="Rust 2024" src="https://img.shields.io/badge/rust-2024-ea83a5?style=flat-square&logo=rust&logoColor=white">
   <a href="https://github.com/etokiyra/kemori/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/etokiyra/kemori/actions/workflows/ci.yml/badge.svg?branch=master"></a>
-  <a href="https://github.com/etokiyra/kemori/commits/master"><img alt="Last commit" src="https://img.shields.io/github/last-commit/etokiyra/kemori?style=flat-square&color=e29eca"></a>
-  <a href="https://github.com/etokiyra/kemori/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/etokiyra/kemori?style=flat-square&color=aca1cf"></a>
-  <a href="https://github.com/etokiyra/kemori/issues"><img alt="Issues" src="https://img.shields.io/github/issues/etokiyra/kemori?style=flat-square&color=e6b99d"></a>
+  <a href="LICENSE"><img alt="License: MPL 2.0" src="https://img.shields.io/badge/license-MPL--2.0-90b99f?style=flat-square"></a>
+  <img alt="Platform: Linux and macOS" src="https://img.shields.io/badge/platform-linux%20%7C%20macOS-aca1cf?style=flat-square">
 </p>
 
 <p align="center">
-  <img alt="Zero configuration" src="https://img.shields.io/badge/config-zero-ea83a5?style=flat-square">
-  <img alt="Terminal native" src="https://img.shields.io/badge/terminal-native-aca1cf?style=flat-square">
-  <a href="https://github.com/helix-editor/helix/blob/master/runtime/themes/mellow.toml"><img alt="Theme: Mellow" src="https://img.shields.io/badge/theme-Mellow-e29eca?style=flat-square"></a>
-  <img alt="Made with Rust" src="https://img.shields.io/badge/made%20with-Rust-b9aeda?style=flat-square&logo=rust&logoColor=white">
-  <a href="https://github.com/etokiyra/kemori/issues"><img alt="PRs welcome" src="https://img.shields.io/badge/PRs-welcome-90b99f?style=flat-square"></a>
+  <img src="docs/images/demo.gif" alt="Kemori opening a project, offering to install rust-analyzer, and quick-opening a file" width="100%">
 </p>
 
-```text
-    ✦ ───────────────────────────────────────── ☾
+Kemori is a small development environment that lives in your terminal — fast,
+minimal, keyboard-first and, above all, **zero configuration**.
 
-     _  __  _____  __  __   ___    ____    ___
-    | |/ / |  ___| |  \/  |  / _ \  |  _ \  |_ _|
-    | ' /  | |___  | |\/| | | | | | | |_) |  | |
-    | . \  |  ___| | |  | | | |_| | |  _ <   | |
-    |_|\_\ |_____| |_|  |_|  \___/  |_| \_\ |___|
+**Open a project and it sets itself up.** Kemori detects the languages in the
+project, then fetches, checksum-verifies and configures the language servers,
+formatters and debug adapters it needs — `rust-analyzer`, `gopls`, `clangd`, a
+JDK for Java and Kotlin, `ElixirLS`, `debugpy` and more — with no config file,
+no plugin marketplace and no dotfiles. A missing server is offered, not
+demanded; a language without one keeps working through built-in providers.
 
-    ✦   your cozy little coding space   ✦
-
-                   /\___/\
-                   ( ･ω･ )
-                    > ω <
-                   /|   |\
-
-    ✦ ───────────────────────────────────────── ☾
+```bash
+curl -fsSL https://kiyra.lol/kemori/install.sh | sh
+kemori .
 ```
 
-Kemori is not another terminal text editor. It is a small development environment
-that happens to live in your terminal — fast, minimal, keyboard-first and,
-above all, **zero configuration**.
-
-> Install Kemori. Open a project. Start coding.
-
-> **Koda is the former name of Kemori.** The project was renamed in 3.0 because
-> “Koda” is used by several unrelated terminal and AI coding projects, which
-> made Kemori hard to find and easy to confuse with them. The old `koda-ide`
-> crate and `koda` binary are deprecated; install `kemori` instead. Existing
-> Koda settings and sessions are imported automatically on first launch.
-
-No LSP config. No plugin marketplace. No dotfiles to hand-write. Kemori detects the
-language, brings its own intelligence, and lets you get on with the interesting
-part.
-
-```text
- ✦ kemori  ·  Rust  ·  src/main.rs                                    ✧  ·  ✧
- ✦ files ────────────────────────────│ ▏ main.rs
- ▏ ▸ src                             │ ● 1  use std::io;
-   ▸ tests                           │   2
-   · Cargo.toml                      │   3  fn main() -> io::Result<()> {
-   · CHANGELOG.md                    │   4      let name = "kemori";
-   · README.md                       │   5      println!("hello from {name}");
-   · ROADMAP.md                      │   6      Ok(())
-                                     │   7  }
- Rust  1✖  ☾ main 2±  ✧ lsp           LF   Ln 5, Col 16   ☾ 42%
-```
+Or `cargo install kemori`, a `.deb`/`.rpm`, or a prebuilt archive — see
+[Install](#-install).
 
 ---
 
 ## ✦ Why Kemori
 
-- **Zero configuration.** Supported languages work out of the box. Kemori writes
-  no config, asks for none, and needs none.
-- **Kemori owns language intelligence.** Detection, providers and the language
-  server lifecycle are first-class subsystems — including fetching the tools
-  you are missing, from trusted package managers, with one keystroke.
+- **It installs its own toolchain.** Language servers, formatters and debug
+  adapters are fetched from verified sources, checksum- or signature-checked,
+  and kept in Kemori's own directory. You never install or wire up an LSP by
+  hand, and you are never asked to edit a config file to make it work.
+- **Zero configuration.** Supported languages work out of the box. Kemori
+  writes no config, asks for none, and needs none.
+- **Offline intelligence.** When no language server is available, built-in
+  providers keep diagnostics, completion, hover, symbols and navigation
+  working — so a fresh machine is never a dead editor.
 - **Terminal-native.** Kemori cooperates with your terminal. It never paints an
   opaque background, so transparency, blur and wallpaper keep working.
 - **Keyboard-first.** Familiar shortcuts for muscle memory, plus a command
   palette that makes everything discoverable.
 - **Fast by design.** A rope-backed editor, a lazy file tree, background
   workers, and a UI that only repaints when something actually changes.
+
+<details>
+<summary>Formerly named Koda</summary>
+
+Kemori was published as **Koda** (`koda-ide` crate, `koda` binary) before 3.0.
+The name collided with several unrelated terminal and AI coding projects, which
+made it hard to find and easy to confuse. The old crate and binary are
+deprecated; install `kemori` instead. Existing Koda settings and sessions are
+imported automatically on first launch.
+</details>
 
 ## ☾ Language intelligence
 
@@ -466,6 +443,22 @@ Kemori has a personality, but the code always comes first.
 [mellow]: https://github.com/helix-editor/helix/blob/master/runtime/themes/mellow.toml
 
 ## ✦ Install
+
+### One line
+
+```bash
+curl -fsSL https://kiyra.lol/kemori/install.sh | sh
+```
+
+The script detects Linux (glibc or musl) or macOS (Intel or Apple silicon),
+downloads the matching release archive, checks it against the published
+`SHA256SUMS`, and installs `kemori` into a directory that is already on your
+`PATH` — `/usr/local/bin` when it is writable, otherwise whichever of
+`~/.local/bin`, `~/bin` or `~/.bin` comes first. It never uses `sudo` and never
+edits your shell startup files. If none of those is on your `PATH`, it falls
+back to `~/.local/bin` and prints the single line to add. Read it before running
+it: [`scripts/install.sh`](scripts/install.sh). Set `KEMORI_VERSION` to pin a
+version or `KEMORI_INSTALL_DIR` to choose another destination.
 
 ### crates.io
 
@@ -992,6 +985,25 @@ Contributions are developed commit-by-commit: small, focused, compiling and
 tested. See [`docs/PRODUCT.md`](docs/PRODUCT.md) for the product direction,
 [`ROADMAP.md`](ROADMAP.md) for where this is going and
 [`CHANGELOG.md`](CHANGELOG.md) for what has changed.
+
+```text
+    ✦ ───────────────────────────────────────── ☾
+
+     _  __  _____  __  __   ___    ____    ___
+    | |/ / |  ___| |  \/  |  / _ \  |  _ \  |_ _|
+    | ' /  | |___  | |\/| | | | | | | |_) |  | |
+    | . \  |  ___| | |  | | | |_| | |  _ <   | |
+    |_|\_\ |_____| |_|  |_|  \___/  |_| \_\ |___|
+
+    ✦   your cozy little coding space   ✦
+
+                   /\___/\
+                   ( ･ω･ )
+                    > ω <
+                   /|   |\
+
+    ✦ ───────────────────────────────────────── ☾
+```
 
 ## ✦ Credits & license
 
