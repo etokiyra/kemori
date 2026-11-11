@@ -28,6 +28,16 @@ curl -fsSL https://kiyra.lol/kemori/install.sh | sh
 kemori .
 ```
 
+Not comfortable piping a script into a shell? Fair. The installer is under 200
+lines, never uses `sudo`, and does three things: pick the release for your
+platform, check it against the published `SHA256SUMS`, and copy the binary into
+a directory already on your `PATH`. Read it first if you would rather:
+
+```bash
+curl -fsSLO https://kiyra.lol/kemori/install.sh
+less install.sh && sh install.sh
+```
+
 Or `cargo install kemori`, a `.deb`/`.rpm`, or a prebuilt archive — see
 [Install](#-install).
 
